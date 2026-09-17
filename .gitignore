@@ -12,3 +12,4 @@ npm-debug.*
 .venv/
 __pycache__/
 .DS_Store
+prompts/
