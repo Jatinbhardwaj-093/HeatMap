@@ -27,7 +27,7 @@ import { useAppTheme, useIsDark } from './src/theme/theme';
 
 type ScreenState = 'landing' | 'login' | 'dashboard';
 
-export default function App() {
+function AppContent() {
   const [currentScreen, setCurrentScreen] = useState<ScreenState>('landing');
   const [userEmail, setUserEmail] = useState<string | undefined>(undefined);
   
@@ -374,3 +374,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
 });
+
+import { ThemeProvider } from './src/theme/theme';
+export default function App() {
+  return (
+    <ThemeProvider>
+      <AppContent />
+    </ThemeProvider>
+  );
+}

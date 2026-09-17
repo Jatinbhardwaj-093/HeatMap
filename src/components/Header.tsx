@@ -2,8 +2,8 @@ import React from 'react';
 import { StyleSheet, View, Text, TouchableOpacity, Platform } from 'react-native';
 import { ViewMode } from '../types/heatmap';
 import { ViewSwitcher } from './ViewSwitcher';
-import { LogOut, Smartphone, Grid3X3 } from 'lucide-react-native';
-import { useAppTheme } from '../theme/theme';
+import { LogOut, Smartphone, Grid3X3, Sun, Moon, Monitor } from 'lucide-react-native';
+import { useAppTheme, useThemeMode } from '../theme/theme';
 
 interface HeaderProps {
   currentView: ViewMode;
@@ -21,7 +21,20 @@ export const Header: React.FC<HeaderProps> = ({
   userEmail,
 }) => {
   const theme = useAppTheme();
+  const { themeMode, setThemeMode } = useThemeMode();
   
+  const cycleTheme = () => {
+    if (themeMode === 'system') setThemeMode('light');
+    else if (themeMode === 'light') setThemeMode('dark');
+    else setThemeMode('system');
+  };
+
+  const getThemeIcon = () => {
+    if (themeMode === 'light') return <Sun size={14} color={theme.textSecondary} />;
+    if (themeMode === 'dark') return <Moon size={14} color={theme.textSecondary} />;
+    return <Monitor size={14} color={theme.textSecondary} />;
+  };
+
   return (
     <View style={[styles.header, { backgroundColor: theme.surface, borderBottomColor: theme.border }]}>
       {/* Brand row */}
@@ -40,6 +53,14 @@ export const Header: React.FC<HeaderProps> = ({
 
         {/* Action Buttons */}
         <View style={styles.actionButtons}>
+          <TouchableOpacity
+            style={[styles.logoutBtn, { backgroundColor: theme.surfaceHighlight, borderColor: theme.border }]}
+            onPress={cycleTheme}
+            activeOpacity={0.7}
+          >
+            {getThemeIcon()}
+          </TouchableOpacity>
+
           {Platform.OS !== 'web' && (
             <TouchableOpacity
               style={[styles.widgetBtn, { backgroundColor: theme.surfaceHighlight, borderColor: theme.border }]}
