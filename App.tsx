@@ -22,11 +22,13 @@ import { WidgetStudioModal } from './src/components/WidgetStudioModal';
 import { LandingPage } from './src/components/LandingPage';
 import { LoginScreen } from './src/components/LoginScreen';
 import { Search, Plus } from 'lucide-react-native';
+import { supabase } from './src/utils/supabase';
 
 type ScreenState = 'landing' | 'login' | 'dashboard';
 
 export default function App() {
   const [currentScreen, setCurrentScreen] = useState<ScreenState>('landing');
+  const [userEmail, setUserEmail] = useState<string | undefined>(undefined);
   
   const [heatmaps, setHeatmaps] = useState<HeatMapModel[]>([]);
   const [loading, setLoading] = useState(true);
@@ -39,13 +41,41 @@ export default function App() {
   const [showWidgetStudio, setShowWidgetStudio] = useState(false);
 
   useEffect(() => {
-    async function initData() {
+    async function initAuthAndData() {
+      // 1. Check Auth Session
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        setUserEmail(session.user.email);
+        setCurrentScreen('dashboard');
+      }
+
+      // 2. Load Local Data (if applicable)
       const data = await loadHeatMaps();
       setHeatmaps(data);
       setLoading(false);
     }
-    initData();
+
+    initAuthAndData();
+
+    // Listen for auth changes
+    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        setUserEmail(session.user.email);
+        setCurrentScreen('dashboard');
+      } else {
+        setUserEmail(undefined);
+        setCurrentScreen('landing');
+      }
+    });
+
+    return () => {
+      authListener.subscription.unsubscribe();
+    };
   }, []);
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+  };
 
   const updateHeatmaps = (updated: HeatMapModel[]) => {
     setHeatmaps(updated);
@@ -136,7 +166,6 @@ export default function App() {
     );
   }
 
-  // Routing
   if (currentScreen === 'landing') {
     return (
       <SafeAreaView style={styles.container}>
@@ -166,9 +195,11 @@ export default function App() {
       <ExpoStatusBar style="light" />
 
       <Header
-        viewMode={viewMode}
+        currentView={viewMode}
         onChangeViewMode={setViewMode}
         onOpenWidgetStudio={() => setShowWidgetStudio(true)}
+        onLogout={handleLogout}
+        userEmail={userEmail}
       />
 
       <View style={styles.mainContent}>
@@ -285,6 +316,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 12,
     marginBottom: 16,
+    marginTop: 16,
   },
   searchBar: {
     flex: 1,

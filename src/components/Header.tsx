@@ -1,23 +1,23 @@
 import React from 'react';
-import { StyleSheet, View, Text, TouchableOpacity } from 'react-native';
+import { StyleSheet, View, Text, TouchableOpacity, Platform } from 'react-native';
 import { ViewMode } from '../types/heatmap';
 import { ViewSwitcher } from './ViewSwitcher';
-import { Plus, Smartphone, Grid3X3 } from 'lucide-react-native';
+import { LogOut, Smartphone, Grid3X3 } from 'lucide-react-native';
 
 interface HeaderProps {
   currentView: ViewMode;
-  onViewChange: (mode: ViewMode) => void;
-  onOpenCreate: () => void;
+  onChangeViewMode: (mode: ViewMode) => void;
   onOpenWidgetStudio: () => void;
-  mapsCount: number;
+  onLogout: () => void;
+  userEmail?: string;
 }
 
 export const Header: React.FC<HeaderProps> = ({
   currentView,
-  onViewChange,
-  onOpenCreate,
+  onChangeViewMode,
   onOpenWidgetStudio,
-  mapsCount,
+  onLogout,
+  userEmail,
 }) => {
   return (
     <View style={styles.header}>
@@ -29,9 +29,9 @@ export const Header: React.FC<HeaderProps> = ({
           </View>
           <View>
             <Text style={styles.brandName}>HEATMAP</Text>
-            <Text style={styles.brandSub}>
-              {mapsCount} {mapsCount === 1 ? 'TRACKER' : 'TRACKERS'} ACTIVE
-            </Text>
+            {userEmail ? (
+              <Text style={styles.brandSub}>{userEmail}</Text>
+            ) : null}
           </View>
         </View>
 
@@ -47,19 +47,18 @@ export const Header: React.FC<HeaderProps> = ({
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={styles.newMapBtn}
-            onPress={onOpenCreate}
+            style={styles.logoutBtn}
+            onPress={onLogout}
             activeOpacity={0.7}
           >
-            <Plus size={14} color="#FFFFFF" strokeWidth={2.5} />
-            <Text style={styles.newMapBtnText}>NEW MAP</Text>
+            <LogOut size={14} color="#8B949E" />
           </TouchableOpacity>
         </View>
       </View>
 
       {/* View Switcher bar */}
       <View style={styles.switcherBar}>
-        <ViewSwitcher currentView={currentView} onViewChange={onViewChange} />
+        <ViewSwitcher currentView={currentView} onViewChange={onChangeViewMode} />
       </View>
     </View>
   );
@@ -99,14 +98,13 @@ const styles = StyleSheet.create({
     color: '#F0F6FC',
     fontSize: 15,
     fontWeight: '700',
-    
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
     letterSpacing: 1,
   },
   brandSub: {
-    color: '#6E7681',
-    fontSize: 9,
-    
-    letterSpacing: 0.5,
+    color: '#8B949E',
+    fontSize: 10,
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
   },
   actionButtons: {
     flexDirection: 'row',
@@ -128,26 +126,18 @@ const styles = StyleSheet.create({
     color: '#F0F6FC',
     fontSize: 11,
     fontWeight: '600',
-    
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
     letterSpacing: 0.5,
   },
-  newMapBtn: {
+  logoutBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    backgroundColor: '#238636',
-    borderColor: '#2EA043',
+    justifyContent: 'center',
+    padding: 7,
+    backgroundColor: '#161B22',
+    borderColor: '#30363D',
     borderWidth: 1,
     borderRadius: 3,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-  },
-  newMapBtnText: {
-    color: '#FFFFFF',
-    fontSize: 11,
-    fontWeight: '700',
-    
-    letterSpacing: 0.5,
   },
   switcherBar: {
     flexDirection: 'row',

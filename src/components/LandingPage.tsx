@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, View, Text, TouchableOpacity, ScrollView, Platform, Image } from 'react-native';
+import { StyleSheet, View, Text, TouchableOpacity, ScrollView, Platform, Alert } from 'react-native';
 import { Activity, Monitor, Smartphone, Download, ArrowRight, Github } from 'lucide-react-native';
 
 interface LandingPageProps {
@@ -8,6 +8,15 @@ interface LandingPageProps {
 }
 
 export const LandingPage: React.FC<LandingPageProps> = ({ onLogin, onDashboard }) => {
+  const handleDownload = (platform: string) => {
+    const msg = `${platform} download is coming soon. The build pipeline is currently deploying to GitHub Releases.`;
+    if (Platform.OS === 'web') {
+      window.alert(msg);
+    } else {
+      Alert.alert('Coming Soon', msg);
+    }
+  };
+
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       {/* Navbar */}
@@ -50,7 +59,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLogin, onDashboard }
             <Monitor color="#58A6FF" size={24} style={styles.cardIcon} />
             <Text style={styles.cardTitle}>macOS Desktop</Text>
             <Text style={styles.cardDesc}>Native window wrapper, system tray support, and offline persistence.</Text>
-            <TouchableOpacity style={styles.downloadBtn} activeOpacity={0.7}>
+            <TouchableOpacity style={styles.downloadBtn} activeOpacity={0.7} onPress={() => handleDownload('macOS')}>
               <Download color="#F0F6FC" size={14} />
               <Text style={styles.downloadText}>Download .dmg</Text>
             </TouchableOpacity>
@@ -60,7 +69,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLogin, onDashboard }
             <Smartphone color="#3FB950" size={24} style={styles.cardIcon} />
             <Text style={styles.cardTitle}>Android</Text>
             <Text style={styles.cardDesc}>Standalone APK. Includes live RemoteViews home screen widgets.</Text>
-            <TouchableOpacity style={styles.downloadBtn} activeOpacity={0.7}>
+            <TouchableOpacity style={styles.downloadBtn} activeOpacity={0.7} onPress={() => handleDownload('Android APK')}>
               <Download color="#F0F6FC" size={14} />
               <Text style={styles.downloadText}>Download .apk</Text>
             </TouchableOpacity>
@@ -70,7 +79,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLogin, onDashboard }
             <Smartphone color="#A371F7" size={24} style={styles.cardIcon} />
             <Text style={styles.cardTitle}>iOS</Text>
             <Text style={styles.cardDesc}>TestFlight beta. Includes WidgetKit integrations for Lock Screen.</Text>
-            <TouchableOpacity style={styles.downloadBtn} activeOpacity={0.7}>
+            <TouchableOpacity style={styles.downloadBtn} activeOpacity={0.7} onPress={() => handleDownload('iOS TestFlight')}>
               <Text style={styles.downloadText}>Join TestFlight</Text>
             </TouchableOpacity>
           </View>
@@ -81,7 +90,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLogin, onDashboard }
       {/* Footer */}
       <View style={styles.footer}>
         <Text style={styles.footerText}>© 2026 HeatMap Open Source</Text>
-        <TouchableOpacity style={styles.githubLink} activeOpacity={0.7}>
+        <TouchableOpacity style={styles.githubLink} activeOpacity={0.7} onPress={() => handleDownload('Source code')}>
           <Github color="#8B949E" size={16} />
           <Text style={styles.footerText}>Source Code</Text>
         </TouchableOpacity>

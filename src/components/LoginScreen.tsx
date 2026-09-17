@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { StyleSheet, View, Text, TextInput, TouchableOpacity, Platform, ActivityIndicator } from 'react-native';
 import { Activity, ArrowLeft } from 'lucide-react-native';
+import { supabase } from '../utils/supabase';
 
 interface LoginScreenProps {
   onBack: () => void;
@@ -11,14 +12,33 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onBack, onLoginSuccess
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
+  const [isSignUp, setIsSignUp] = useState(false);
 
-  const handleLogin = () => {
-    // Simulated Supabase Login
+  const handleAuth = async () => {
+    if (!email || !password) {
+      setErrorMsg('Email and password required.');
+      return;
+    }
     setLoading(true);
-    setTimeout(() => {
+    setErrorMsg('');
+    
+    try {
+      if (isSignUp) {
+        const { error } = await supabase.auth.signUp({ email, password });
+        if (error) throw error;
+        // Depending on confirm email settings, they might be logged in instantly or need to check email.
+        onLoginSuccess();
+      } else {
+        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        if (error) throw error;
+        onLoginSuccess();
+      }
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Authentication failed');
+    } finally {
       setLoading(false);
-      onLoginSuccess();
-    }, 800);
+    }
   };
 
   return (
@@ -30,11 +50,19 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onBack, onLoginSuccess
       <View style={styles.box}>
         <View style={styles.header}>
           <Activity color="#58A6FF" size={32} style={{ marginBottom: 16 }} />
-          <Text style={styles.title}>Sign in to HeatMap</Text>
-          <Text style={styles.subtitle}>Welcome back. Continue building your streak.</Text>
+          <Text style={styles.title}>{isSignUp ? 'Create an account' : 'Sign in to HeatMap'}</Text>
+          <Text style={styles.subtitle}>
+            {isSignUp ? 'Start tracking your habits.' : 'Welcome back. Continue building your streak.'}
+          </Text>
         </View>
 
         <View style={styles.form}>
+          {errorMsg ? (
+            <View style={styles.errorBox}>
+              <Text style={styles.errorText}>{errorMsg}</Text>
+            </View>
+          ) : null}
+
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Email address</Text>
             <TextInput
@@ -44,14 +72,17 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onBack, onLoginSuccess
               keyboardType="email-address"
               autoCapitalize="none"
               value={email}
-              onChangeText={setEmail}
+              onChangeText={(t) => {
+                setEmail(t);
+                setErrorMsg('');
+              }}
             />
           </View>
 
           <View style={styles.inputGroup}>
             <View style={styles.labelRow}>
               <Text style={styles.label}>Password</Text>
-              <Text style={styles.forgot}>Forgot password?</Text>
+              {!isSignUp && <Text style={styles.forgot}>Forgot password?</Text>}
             </View>
             <TextInput
               style={styles.input}
@@ -59,27 +90,33 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onBack, onLoginSuccess
               placeholderTextColor="#484F58"
               secureTextEntry
               value={password}
-              onChangeText={setPassword}
+              onChangeText={(t) => {
+                setPassword(t);
+                setErrorMsg('');
+              }}
             />
           </View>
 
           <TouchableOpacity
             style={styles.loginBtn}
-            onPress={handleLogin}
+            onPress={handleAuth}
             activeOpacity={0.8}
             disabled={loading}
           >
             {loading ? (
               <ActivityIndicator color="#090A0C" />
             ) : (
-              <Text style={styles.loginBtnText}>Sign in</Text>
+              <Text style={styles.loginBtnText}>{isSignUp ? 'Sign up' : 'Sign in'}</Text>
             )}
           </TouchableOpacity>
         </View>
 
         <View style={styles.footer}>
           <Text style={styles.footerText}>
-            New to HeatMap? <Text style={styles.link}>Create an account.</Text>
+            {isSignUp ? 'Already have an account? ' : 'New to HeatMap? '}
+            <Text style={styles.link} onPress={() => setIsSignUp(!isSignUp)}>
+              {isSignUp ? 'Sign in.' : 'Create an account.'}
+            </Text>
           </Text>
         </View>
       </View>
@@ -128,6 +165,18 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     padding: 20,
     gap: 16,
+  },
+  errorBox: {
+    backgroundColor: '#381014',
+    borderColor: '#7F1D1D',
+    borderWidth: 1,
+    borderRadius: 4,
+    padding: 10,
+  },
+  errorText: {
+    color: '#F85149',
+    fontSize: 12,
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
   },
   inputGroup: {
     gap: 8,
