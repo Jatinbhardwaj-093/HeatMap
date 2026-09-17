@@ -1,7 +1,7 @@
 import React from 'react';
 import { StyleSheet, View, Text, Platform } from 'react-native';
 import { HeatMapModel } from '../types/heatmap';
-import { getWeeklyGrid } from '../utils/dateUtils';
+import { getCurrentWeeklyGrid } from '../utils/dateUtils';
 import { getStreakIntensityLevel } from '../utils/streakUtils';
 import { DayCell } from './DayCell';
 import { useAppTheme } from '../theme/theme';
@@ -13,7 +13,7 @@ interface WeeklyViewProps {
 }
 
 export const WeeklyView: React.FC<WeeklyViewProps> = ({ heatmap, streakMap, onSelectDate }) => {
-  const grid = getWeeklyGrid(new Date());
+  const grid = getCurrentWeeklyGrid();
   const theme = useAppTheme();
 
   return (
