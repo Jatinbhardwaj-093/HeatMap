@@ -19,66 +19,39 @@ import { HeatmapCard } from './src/components/HeatmapCard';
 import { DayDetailModal } from './src/components/DayDetailModal';
 import { CreateHeatmapModal } from './src/components/CreateHeatmapModal';
 import { WidgetStudioModal } from './src/components/WidgetStudioModal';
+import { LandingPage } from './src/components/LandingPage';
+import { LoginScreen } from './src/components/LoginScreen';
 import { Search, Plus } from 'lucide-react-native';
 
+type ScreenState = 'landing' | 'login' | 'dashboard';
+
 export default function App() {
+  const [currentScreen, setCurrentScreen] = useState<ScreenState>('landing');
+  
   const [heatmaps, setHeatmaps] = useState<HeatMapModel[]>([]);
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState<ViewMode>('monthly');
   const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
   const [searchQuery, setSearchQuery] = useState<string>('');
 
-  // Modals state
-  const [selectedDayInfo, setSelectedDayInfo] = useState<{
-    mapId: string;
-    dateKey: string;
-  } | null>(null);
-  const [isCreateOpen, setIsCreateOpen] = useState(false);
-  const [isWidgetOpen, setIsWidgetOpen] = useState(false);
+  const [selectedDayInfo, setSelectedDayInfo] = useState<{ mapId: string; dateKey: string } | null>(null);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showWidgetStudio, setShowWidgetStudio] = useState(false);
 
-  // Load from storage on mount
   useEffect(() => {
-    async function init() {
-      try {
-        const loaded = await loadHeatMaps();
-        setHeatmaps(loaded);
-      } finally {
-        setLoading(false);
-      }
+    async function initData() {
+      const data = await loadHeatMaps();
+      setHeatmaps(data);
+      setLoading(false);
     }
-    init();
+    initData();
   }, []);
 
-  // Update storage whenever heatmaps state changes
-  const updateHeatmaps = (newMaps: HeatMapModel[]) => {
-    setHeatmaps(newMaps);
-    saveHeatMaps(newMaps);
+  const updateHeatmaps = (updated: HeatMapModel[]) => {
+    setHeatmaps(updated);
+    saveHeatMaps(updated);
   };
 
-  // Distinct categories
-  const categories = useMemo(() => {
-    const set = new Set<string>();
-    heatmaps.forEach((m) => {
-      if (m.category) set.add(m.category.toUpperCase());
-    });
-    return ['ALL', ...Array.from(set)];
-  }, [heatmaps]);
-
-  // Filtered heatmaps
-  const filteredMaps = useMemo(() => {
-    return heatmaps.filter((m) => {
-      const matchCategory =
-        selectedCategory === 'ALL' ||
-        m.category.toUpperCase() === selectedCategory;
-      const matchSearch =
-        !searchQuery.trim() ||
-        m.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (m.description && m.description.toLowerCase().includes(searchQuery.toLowerCase()));
-      return matchCategory && matchSearch;
-    });
-  }, [heatmaps, selectedCategory, searchQuery]);
-
-  // Quick log today
   const handleQuickLogToday = (mapId: string) => {
     const todayKey = getTodayKey();
     const updated = heatmaps.map((m) => {
@@ -94,7 +67,6 @@ export default function App() {
     updateHeatmaps(updated);
   };
 
-  // Save specific day entry
   const handleSaveDayEntry = (dateKey: string, completed: boolean, notes?: string) => {
     if (!selectedDayInfo) return;
     const { mapId } = selectedDayInfo;
@@ -111,7 +83,6 @@ export default function App() {
     updateHeatmaps(updated);
   };
 
-  // Delete day entry
   const handleDeleteDayEntry = (dateKey: string) => {
     if (!selectedDayInfo) return;
     const { mapId } = selectedDayInfo;
@@ -124,122 +95,141 @@ export default function App() {
     updateHeatmaps(updated);
   };
 
-  // Delete entire heatmap
   const handleDeleteMap = (mapId: string) => {
     const updated = heatmaps.filter((m) => m.id !== mapId);
     updateHeatmaps(updated);
   };
 
-  // Create new heatmap
-  const handleCreateMap = (
-    newMapData: Omit<HeatMapModel, 'id' | 'createdAt' | 'entries'>
-  ) => {
-    const newMap: HeatMapModel = {
-      ...newMapData,
-      id: `map-${Date.now()}`,
+  const handleCreateMap = (newMap: Omit<HeatMapModel, 'id' | 'createdAt' | 'entries'>) => {
+    const id = `hm-${Date.now()}`;
+    const mapToSave: HeatMapModel = {
+      ...newMap,
+      id,
       createdAt: new Date().toISOString(),
       entries: {},
     };
-    const updated = [newMap, ...heatmaps];
-    updateHeatmaps(updated);
+    updateHeatmaps([...heatmaps, mapToSave]);
   };
 
-  const activeModalHeatmap = selectedDayInfo
-    ? heatmaps.find((m) => m.id === selectedDayInfo.mapId) || null
-    : null;
+  const categories = useMemo(() => {
+    const cats = new Set(heatmaps.map((m) => m.category.toUpperCase()));
+    return ['ALL', ...Array.from(cats)];
+  }, [heatmaps]);
+
+  const filteredHeatmaps = useMemo(() => {
+    let filtered = heatmaps;
+    if (selectedCategory !== 'ALL') {
+      filtered = filtered.filter((m) => m.category.toUpperCase() === selectedCategory);
+    }
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      filtered = filtered.filter((m) => m.title.toLowerCase().includes(q));
+    }
+    return filtered;
+  }, [heatmaps, selectedCategory, searchQuery]);
+
+  if (loading) {
+    return (
+      <View style={[styles.container, styles.center]}>
+        <Text style={styles.loadingText}>Loading HeatMaps...</Text>
+      </View>
+    );
+  }
+
+  // Routing
+  if (currentScreen === 'landing') {
+    return (
+      <SafeAreaView style={styles.container}>
+        <ExpoStatusBar style="light" />
+        <LandingPage 
+          onLogin={() => setCurrentScreen('login')} 
+          onDashboard={() => setCurrentScreen('dashboard')} 
+        />
+      </SafeAreaView>
+    );
+  }
+
+  if (currentScreen === 'login') {
+    return (
+      <SafeAreaView style={styles.container}>
+        <ExpoStatusBar style="light" />
+        <LoginScreen 
+          onBack={() => setCurrentScreen('landing')} 
+          onLoginSuccess={() => setCurrentScreen('dashboard')} 
+        />
+      </SafeAreaView>
+    );
+  }
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={styles.container}>
       <ExpoStatusBar style="light" />
-      <StatusBar barStyle="light-content" backgroundColor="#090B0E" />
 
-      {/* Main container with max-width for desktop window layout */}
-      <View style={styles.appContainer}>
-        {/* Header */}
-        <Header
-          currentView={viewMode}
-          onViewChange={setViewMode}
-          onOpenCreate={() => setIsCreateOpen(true)}
-          onOpenWidgetStudio={() => setIsWidgetOpen(true)}
-          mapsCount={heatmaps.length}
-        />
+      <Header
+        viewMode={viewMode}
+        onChangeViewMode={setViewMode}
+        onOpenWidgetStudio={() => setShowWidgetStudio(true)}
+      />
 
-        {/* Filter & Search Bar */}
-        <View style={styles.filterBar}>
-          {/* Category Tabs */}
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.categoryScroll}
-          >
-            {categories.map((cat) => {
-              const isSelected = selectedCategory === cat;
-              return (
-                <TouchableOpacity
-                  key={cat}
-                  style={[styles.categoryTab, isSelected && styles.categoryTabActive]}
-                  onPress={() => setSelectedCategory(cat)}
-                  activeOpacity={0.7}
-                >
-                  <Text
-                    style={[styles.categoryTabText, isSelected && styles.categoryTabTextActive]}
-                  >
-                    {cat}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </ScrollView>
-
-          {/* Search Input */}
-          <View style={styles.searchBox}>
-            <Search size={13} color="#6E7681" />
+      <View style={styles.mainContent}>
+        <View style={styles.controlsRow}>
+          <View style={styles.searchBar}>
+            <Search size={14} color="#8B949E" style={styles.searchIcon} />
             <TextInput
               style={styles.searchInput}
-              placeholder="Filter maps..."
-              placeholderTextColor="#484F58"
+              placeholder="Search heatmaps..."
+              placeholderTextColor="#8B949E"
               value={searchQuery}
               onChangeText={setSearchQuery}
             />
           </View>
+          <TouchableOpacity
+            style={styles.createButton}
+            onPress={() => setShowCreateModal(true)}
+            activeOpacity={0.7}
+          >
+            <Plus size={14} color="#FFFFFF" strokeWidth={3} />
+            <Text style={styles.createButtonText}>New</Text>
+          </TouchableOpacity>
         </View>
 
-        {/* Heatmaps List */}
-        <ScrollView
-          style={styles.listContainer}
-          contentContainerStyle={styles.listContent}
-          showsVerticalScrollIndicator={false}
-        >
-          {loading ? (
-            <View style={styles.emptyState}>
-              <Text style={styles.emptyText}>INITIALIZING LOCAL DATA...</Text>
-            </View>
-          ) : filteredMaps.length === 0 ? (
-            <View style={styles.emptyState}>
-              <Text style={styles.emptyTitle}>NO HEATMAPS FOUND</Text>
-              <Text style={styles.emptySubtitle}>
-                {searchQuery
-                  ? 'Try modifying your search filter.'
-                  : 'Start tracking your habits, fitness goals, and routines.'}
-              </Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoryScroll}>
+          <View style={styles.categoryContainer}>
+            {categories.map((cat) => (
               <TouchableOpacity
-                style={styles.emptyButton}
-                onPress={() => setIsCreateOpen(true)}
+                key={cat}
                 activeOpacity={0.7}
+                style={[
+                  styles.categoryPill,
+                  selectedCategory === cat && styles.categoryPillActive,
+                ]}
+                onPress={() => setSelectedCategory(cat)}
               >
-                <Plus size={14} color="#FFFFFF" />
-                <Text style={styles.emptyButtonText}>CREATE FIRST HEATMAP</Text>
+                <Text
+                  style={[
+                    styles.categoryText,
+                    selectedCategory === cat && styles.categoryTextActive,
+                  ]}
+                >
+                  {cat}
+                </Text>
               </TouchableOpacity>
+            ))}
+          </View>
+        </ScrollView>
+
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.cardsScroll}>
+          {filteredHeatmaps.length === 0 ? (
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyStateText}>No heatmaps found.</Text>
             </View>
           ) : (
-            filteredMaps.map((map) => (
+            filteredHeatmaps.map((hm) => (
               <HeatmapCard
-                key={map.id}
-                heatmap={map}
+                key={hm.id}
+                heatmap={hm}
                 viewMode={viewMode}
-                onSelectDate={(mId, dKey) =>
-                  setSelectedDayInfo({ mapId: mId, dateKey: dKey })
-                }
+                onSelectDate={(mapId, dKey) => setSelectedDayInfo({ mapId, dateKey: dKey })}
                 onQuickLogToday={handleQuickLogToday}
                 onDeleteMap={handleDeleteMap}
               />
@@ -248,148 +238,131 @@ export default function App() {
         </ScrollView>
       </View>
 
-      {/* Day Inspection & Edit Modal */}
       <DayDetailModal
         visible={!!selectedDayInfo}
         dateKey={selectedDayInfo?.dateKey || null}
-        heatmap={activeModalHeatmap}
+        heatmap={heatmaps.find((m) => m.id === selectedDayInfo?.mapId) || null}
         onClose={() => setSelectedDayInfo(null)}
         onSave={handleSaveDayEntry}
         onDelete={handleDeleteDayEntry}
       />
 
-      {/* Create New HeatMap Modal */}
       <CreateHeatmapModal
-        visible={isCreateOpen}
-        onClose={() => setIsCreateOpen(false)}
+        visible={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
         onCreate={handleCreateMap}
       />
 
-      {/* Widget Studio Modal */}
       <WidgetStudioModal
-        visible={isWidgetOpen}
+        visible={showWidgetStudio}
         heatmaps={heatmaps}
-        onClose={() => setIsWidgetOpen(false)}
+        onClose={() => setShowWidgetStudio(false)}
       />
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
+  container: {
     flex: 1,
-    backgroundColor: '#07080A',
+    backgroundColor: '#090A0C',
+    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
   },
-  appContainer: {
-    flex: 1,
-    width: '100%',
-    maxWidth: 960,
-    alignSelf: 'center',
-    backgroundColor: '#07080A',
-  },
-  filterBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    backgroundColor: '#090B0E',
-    borderBottomWidth: 1,
-    borderBottomColor: '#161B22',
-    gap: 12,
-  },
-  categoryScroll: {
-    flexDirection: 'row',
-    gap: 6,
+  center: {
+    justifyContent: 'center',
     alignItems: 'center',
   },
-  categoryTab: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 3,
-    borderWidth: 1,
-    borderColor: '#21262D',
-    backgroundColor: '#0E1116',
-  },
-  categoryTabActive: {
-    borderColor: '#58A6FF',
-    backgroundColor: '#161B22',
-  },
-  categoryTabText: {
+  loadingText: {
     color: '#8B949E',
-    fontSize: 10,
-    fontWeight: '600',
-    
-    letterSpacing: 0.5,
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
   },
-  categoryTabTextActive: {
-    color: '#F0F6FC',
+  mainContent: {
+    flex: 1,
+    paddingHorizontal: 16,
   },
-  searchBox: {
+  controlsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 12,
+    marginBottom: 16,
+  },
+  searchBar: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: '#0E1116',
-    borderColor: '#21262D',
     borderWidth: 1,
-    borderRadius: 3,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    minWidth: 140,
+    borderColor: '#30363D',
+    borderRadius: 4,
+    paddingHorizontal: 10,
+    height: 36,
+  },
+  searchIcon: {
+    marginRight: 6,
   },
   searchInput: {
-    color: '#F0F6FC',
-    fontSize: 11,
-    
-    padding: 0,
-  },
-  listContainer: {
     flex: 1,
-  },
-  listContent: {
-    padding: 16,
-  },
-  emptyState: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 60,
-    paddingHorizontal: 20,
-  },
-  emptyTitle: {
     color: '#F0F6FC',
-    fontSize: 14,
-    fontWeight: '700',
-    
-    letterSpacing: 0.5,
-    marginBottom: 6,
+    fontSize: 13,
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
   },
-  emptySubtitle: {
-    color: '#6E7681',
-    fontSize: 12,
-    textAlign: 'center',
-    marginBottom: 20,
-    maxWidth: 320,
-    lineHeight: 18,
-  },
-  emptyText: {
-    color: '#6E7681',
-    fontSize: 12,
-    
-  },
-  emptyButton: {
+  createButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
     backgroundColor: '#238636',
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 3,
+    paddingHorizontal: 12,
+    height: 36,
+    borderRadius: 4,
+    gap: 6,
   },
-  emptyButtonText: {
+  createButtonText: {
     color: '#FFFFFF',
+    fontWeight: '600',
+    fontSize: 13,
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
+  },
+  categoryScroll: {
+    maxHeight: 40,
+    minHeight: 40,
+    marginBottom: 12,
+  },
+  categoryContainer: {
+    flexDirection: 'row',
+    gap: 8,
+    alignItems: 'center',
+  },
+  categoryPill: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#21262D',
+    backgroundColor: '#0E1116',
+  },
+  categoryPillActive: {
+    borderColor: '#58A6FF',
+    backgroundColor: '#0D1117',
+  },
+  categoryText: {
+    color: '#8B949E',
     fontSize: 11,
-    fontWeight: '700',
-    
-    letterSpacing: 0.5,
+    fontWeight: '500',
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
+  },
+  categoryTextActive: {
+    color: '#F0F6FC',
+    fontWeight: '600',
+  },
+  cardsScroll: {
+    paddingBottom: 40,
+  },
+  emptyState: {
+    marginTop: 60,
+    alignItems: 'center',
+  },
+  emptyStateText: {
+    color: '#6E7681',
+    fontSize: 14,
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
   },
 });
