@@ -2,6 +2,7 @@ import React from 'react';
 import { StyleSheet, TouchableOpacity, View, Text, Platform } from 'react-native';
 import { PALETTES } from '../constants/palettes';
 import { PaletteId } from '../types/heatmap';
+import { useAppTheme, useIsDark } from '../theme/theme';
 
 interface DayCellProps {
   dateKey: string;
@@ -29,7 +30,18 @@ export const DayCell: React.FC<DayCellProps> = ({
   dimmed = false,
 }) => {
   const palette = PALETTES[paletteId] || PALETTES.emerald;
-  const cellColor = palette.levels[level];
+  const theme = useAppTheme();
+  const isDark = useIsDark();
+  
+  let cellColor = palette.levels[level];
+  if (!isDark && level === 0) {
+    cellColor = theme.surfaceHighlight; // light gray for empty cell in light mode
+  }
+
+  let borderColor = isDark ? '#22272E' : theme.borderSubtle;
+  if (isToday) {
+    borderColor = isDark ? '#FFFFFF' : '#000000';
+  }
 
   const handlePress = () => {
     if (!disabled && onPress) {
@@ -49,7 +61,7 @@ export const DayCell: React.FC<DayCellProps> = ({
           height: size,
           backgroundColor: cellColor,
           opacity: dimmed ? 0.35 : 1,
-          borderColor: isToday ? '#FFFFFF' : '#22272E',
+          borderColor: borderColor,
           borderWidth: isToday ? 1.5 : 1,
         },
       ]}
@@ -59,7 +71,7 @@ export const DayCell: React.FC<DayCellProps> = ({
           style={[
             styles.dayText,
             {
-              color: level >= 2 ? '#FFFFFF' : '#8B949E',
+              color: level >= 2 ? '#FFFFFF' : (isDark ? '#8B949E' : '#57606A'),
               fontSize: size * 0.36,
             },
           ]}

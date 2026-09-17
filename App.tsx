@@ -23,6 +23,7 @@ import { LandingPage } from './src/components/LandingPage';
 import { LoginScreen } from './src/components/LoginScreen';
 import { Search, Plus } from 'lucide-react-native';
 import { supabase } from './src/utils/supabase';
+import { useAppTheme, useIsDark } from './src/theme/theme';
 
 type ScreenState = 'landing' | 'login' | 'dashboard';
 
@@ -40,16 +41,16 @@ export default function App() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showWidgetStudio, setShowWidgetStudio] = useState(false);
 
+  const theme = useAppTheme();
+  const isDark = useIsDark();
+
   useEffect(() => {
     async function initAuthAndData() {
-      // 1. Check Auth Session
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.user) {
         setUserEmail(session.user.email);
         setCurrentScreen('dashboard');
       }
-
-      // 2. Load Local Data (if applicable)
       const data = await loadHeatMaps();
       setHeatmaps(data);
       setLoading(false);
@@ -57,7 +58,6 @@ export default function App() {
 
     initAuthAndData();
 
-    // Listen for auth changes
     const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session?.user) {
         setUserEmail(session.user.email);
@@ -160,16 +160,18 @@ export default function App() {
 
   if (loading) {
     return (
-      <View style={[styles.container, styles.center]}>
-        <Text style={styles.loadingText}>Loading HeatMaps...</Text>
+      <View style={[{ flex: 1, backgroundColor: theme.background, justifyContent: 'center', alignItems: 'center' }]}>
+        <Text style={{ color: theme.textSecondary, fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif' }}>
+          Loading HeatMaps...
+        </Text>
       </View>
     );
   }
 
   if (currentScreen === 'landing') {
     return (
-      <SafeAreaView style={styles.container}>
-        <ExpoStatusBar style="light" />
+      <SafeAreaView style={{ flex: 1, backgroundColor: theme.background }}>
+        <ExpoStatusBar style={isDark ? "light" : "dark"} />
         <LandingPage 
           onLogin={() => setCurrentScreen('login')} 
           onDashboard={() => setCurrentScreen('dashboard')} 
@@ -180,8 +182,8 @@ export default function App() {
 
   if (currentScreen === 'login') {
     return (
-      <SafeAreaView style={styles.container}>
-        <ExpoStatusBar style="light" />
+      <SafeAreaView style={{ flex: 1, backgroundColor: theme.background }}>
+        <ExpoStatusBar style={isDark ? "light" : "dark"} />
         <LoginScreen 
           onBack={() => setCurrentScreen('landing')} 
           onLoginSuccess={() => setCurrentScreen('dashboard')} 
@@ -191,8 +193,8 @@ export default function App() {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <ExpoStatusBar style="light" />
+    <SafeAreaView style={{ flex: 1, backgroundColor: theme.background, paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0 }}>
+      <ExpoStatusBar style={isDark ? "light" : "dark"} />
 
       <Header
         currentView={viewMode}
@@ -204,18 +206,18 @@ export default function App() {
 
       <View style={styles.mainContent}>
         <View style={styles.controlsRow}>
-          <View style={styles.searchBar}>
-            <Search size={14} color="#8B949E" style={styles.searchIcon} />
+          <View style={[styles.searchBar, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+            <Search size={14} color={theme.textSecondary} style={styles.searchIcon} />
             <TextInput
-              style={styles.searchInput}
+              style={[styles.searchInput, { color: theme.text }]}
               placeholder="Search heatmaps..."
-              placeholderTextColor="#8B949E"
+              placeholderTextColor={theme.textMuted}
               value={searchQuery}
               onChangeText={setSearchQuery}
             />
           </View>
           <TouchableOpacity
-            style={styles.createButton}
+            style={[styles.createButton, { backgroundColor: theme.success }]}
             onPress={() => setShowCreateModal(true)}
             activeOpacity={0.7}
           >
@@ -232,14 +234,16 @@ export default function App() {
                 activeOpacity={0.7}
                 style={[
                   styles.categoryPill,
-                  selectedCategory === cat && styles.categoryPillActive,
+                  { backgroundColor: theme.surfaceHighlight, borderColor: theme.borderSubtle },
+                  selectedCategory === cat && { borderColor: '#58A6FF', backgroundColor: theme.surface },
                 ]}
                 onPress={() => setSelectedCategory(cat)}
               >
                 <Text
                   style={[
                     styles.categoryText,
-                    selectedCategory === cat && styles.categoryTextActive,
+                    { color: theme.textSecondary },
+                    selectedCategory === cat && { color: theme.text, fontWeight: '600' },
                   ]}
                 >
                   {cat}
@@ -252,7 +256,9 @@ export default function App() {
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.cardsScroll}>
           {filteredHeatmaps.length === 0 ? (
             <View style={styles.emptyState}>
-              <Text style={styles.emptyStateText}>No heatmaps found.</Text>
+              <Text style={{ color: theme.textMuted, fontSize: 14, fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif' }}>
+                No heatmaps found.
+              </Text>
             </View>
           ) : (
             filteredHeatmaps.map((hm) => (
@@ -294,96 +300,71 @@ export default function App() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#090A0C',
-    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
-  },
-  center: {
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  loadingText: {
-    color: '#8B949E',
-    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
-  },
   mainContent: {
     flex: 1,
-    paddingHorizontal: 16,
+    paddingHorizontal: 20,
+    width: '100%',
+    maxWidth: 1000,
+    alignSelf: 'center',
   },
   controlsRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
     marginBottom: 16,
-    marginTop: 16,
+    marginTop: 20,
   },
   searchBar: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#0E1116',
     borderWidth: 1,
-    borderColor: '#30363D',
-    borderRadius: 4,
-    paddingHorizontal: 10,
-    height: 36,
+    borderRadius: 6,
+    paddingHorizontal: 12,
+    height: 40,
   },
   searchIcon: {
-    marginRight: 6,
+    marginRight: 8,
   },
   searchInput: {
     flex: 1,
-    color: '#F0F6FC',
-    fontSize: 13,
+    fontSize: 14,
     fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
   },
   createButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#238636',
-    paddingHorizontal: 12,
-    height: 36,
-    borderRadius: 4,
-    gap: 6,
+    paddingHorizontal: 16,
+    height: 40,
+    borderRadius: 6,
+    gap: 8,
   },
   createButtonText: {
     color: '#FFFFFF',
     fontWeight: '600',
-    fontSize: 13,
+    fontSize: 14,
     fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
   },
   categoryScroll: {
-    maxHeight: 40,
-    minHeight: 40,
-    marginBottom: 12,
+    maxHeight: 44,
+    minHeight: 44,
+    marginBottom: 16,
   },
   categoryContainer: {
     flexDirection: 'row',
-    gap: 8,
+    gap: 10,
     alignItems: 'center',
   },
   categoryPill: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: '#21262D',
-    backgroundColor: '#0E1116',
-  },
-  categoryPillActive: {
-    borderColor: '#58A6FF',
-    backgroundColor: '#0D1117',
   },
   categoryText: {
-    color: '#8B949E',
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '500',
     fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
-  },
-  categoryTextActive: {
-    color: '#F0F6FC',
-    fontWeight: '600',
   },
   cardsScroll: {
     paddingBottom: 40,
@@ -391,10 +372,5 @@ const styles = StyleSheet.create({
   emptyState: {
     marginTop: 60,
     alignItems: 'center',
-  },
-  emptyStateText: {
-    color: '#6E7681',
-    fontSize: 14,
-    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
   },
 });

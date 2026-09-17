@@ -5,6 +5,7 @@ import { getMonthlyGrid, getMonthNames } from '../utils/dateUtils';
 import { getStreakIntensityLevel } from '../utils/streakUtils';
 import { DayCell } from './DayCell';
 import { ChevronLeft, ChevronRight } from 'lucide-react-native';
+import { useAppTheme } from '../theme/theme';
 
 interface MonthlyViewProps {
   heatmap: HeatMapModel;
@@ -16,6 +17,7 @@ export const MonthlyView: React.FC<MonthlyViewProps> = ({ heatmap, streakMap, on
   const today = new Date();
   const [currentYear, setCurrentYear] = useState<number>(today.getFullYear());
   const [currentMonth, setCurrentMonth] = useState<number>(today.getMonth());
+  const theme = useAppTheme();
 
   const monthGrid = getMonthlyGrid(currentYear, currentMonth);
   const monthNames = getMonthNames();
@@ -47,39 +49,27 @@ export const MonthlyView: React.FC<MonthlyViewProps> = ({ heatmap, streakMap, on
   return (
     <View style={styles.container}>
       <View style={styles.headerRow}>
-        <View style={styles.navGroup}>
-          <TouchableOpacity
-            style={styles.navButton}
-            onPress={handlePrevMonth}
-            activeOpacity={0.7}
-          >
-            <ChevronLeft size={16} color="#8B949E" />
+        <View style={[styles.navGroup, { backgroundColor: theme.surfaceHighlight, borderColor: theme.border }]}>
+          <TouchableOpacity style={styles.navButton} onPress={handlePrevMonth}>
+            <ChevronLeft size={16} color={theme.textSecondary} />
           </TouchableOpacity>
-          <Text style={styles.monthTitle}>
+          <Text style={[styles.monthTitle, { color: theme.text }]}>
             {monthNames[currentMonth]} {currentYear}
           </Text>
-          <TouchableOpacity
-            style={styles.navButton}
-            onPress={handleNextMonth}
-            activeOpacity={0.7}
-          >
-            <ChevronRight size={16} color="#8B949E" />
+          <TouchableOpacity style={styles.navButton} onPress={handleNextMonth}>
+            <ChevronRight size={16} color={theme.textSecondary} />
           </TouchableOpacity>
         </View>
 
-        <TouchableOpacity
-          style={styles.todayButton}
-          onPress={handleTodayJump}
-          activeOpacity={0.7}
-        >
-          <Text style={styles.todayButtonText}>Current</Text>
+        <TouchableOpacity style={[styles.todayButton, { backgroundColor: theme.surfaceHighlight, borderColor: theme.border }]} onPress={handleTodayJump}>
+          <Text style={[styles.todayButtonText, { color: theme.textSecondary }]}>Current</Text>
         </TouchableOpacity>
       </View>
 
       <View style={styles.weekdaysRow}>
         {dayNames.map((name, i) => (
           <View key={`th-${i}`} style={styles.weekdayCol}>
-            <Text style={styles.weekdayText}>{name}</Text>
+            <Text style={[styles.weekdayText, { color: theme.textMuted }]}>{name}</Text>
           </View>
         ))}
       </View>
@@ -110,70 +100,16 @@ export const MonthlyView: React.FC<MonthlyViewProps> = ({ heatmap, streakMap, on
 };
 
 const styles = StyleSheet.create({
-  container: {
-    paddingVertical: 12,
-  },
-  headerRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 14,
-  },
-  navGroup: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#161B22',
-    borderColor: '#30363D',
-    borderWidth: 1,
-    borderRadius: 4,
-    paddingHorizontal: 6,
-    paddingVertical: 3,
-  },
-  navButton: {
-    padding: 3,
-  },
-  monthTitle: {
-    color: '#F0F6FC',
-    fontSize: 13,
-    fontWeight: '600',
-    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
-    marginHorizontal: 8,
-  },
-  todayButton: {
-    backgroundColor: '#161B22',
-    borderColor: '#30363D',
-    borderWidth: 1,
-    borderRadius: 4,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-  },
-  todayButtonText: {
-    color: '#8B949E',
-    fontSize: 11,
-    fontWeight: '500',
-    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
-  },
-  weekdaysRow: {
-    flexDirection: 'row',
-    marginBottom: 6,
-  },
-  weekdayCol: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  weekdayText: {
-    color: '#6E7681',
-    fontSize: 10,
-    fontWeight: '500',
-    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
-  },
-  gridContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-  },
-  cellWrapper: {
-    width: `${100 / 7}%`,
-    alignItems: 'center',
-    paddingVertical: 3,
-  },
+  container: { paddingVertical: 12 },
+  headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 },
+  navGroup: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderRadius: 4, paddingHorizontal: 6, paddingVertical: 3 },
+  navButton: { padding: 3 },
+  monthTitle: { fontSize: 13, fontWeight: '600', fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif', marginHorizontal: 8 },
+  todayButton: { borderWidth: 1, borderRadius: 4, paddingHorizontal: 10, paddingVertical: 4 },
+  todayButtonText: { fontSize: 11, fontWeight: '500', fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif' },
+  weekdaysRow: { flexDirection: 'row', marginBottom: 6 },
+  weekdayCol: { flex: 1, alignItems: 'center' },
+  weekdayText: { fontSize: 10, fontWeight: '500', fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif' },
+  gridContainer: { flexDirection: 'row', flexWrap: 'wrap' },
+  cellWrapper: { width: `${100 / 7}%`, alignItems: 'center', paddingVertical: 3 },
 });

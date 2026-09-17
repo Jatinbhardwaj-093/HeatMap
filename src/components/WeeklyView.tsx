@@ -1,9 +1,10 @@
 import React from 'react';
 import { StyleSheet, View, Text, Platform } from 'react-native';
 import { HeatMapModel } from '../types/heatmap';
-import { getCurrentWeeklyGrid } from '../utils/dateUtils';
+import { getWeeklyGrid } from '../utils/dateUtils';
 import { getStreakIntensityLevel } from '../utils/streakUtils';
 import { DayCell } from './DayCell';
+import { useAppTheme } from '../theme/theme';
 
 interface WeeklyViewProps {
   heatmap: HeatMapModel;
@@ -12,97 +13,49 @@ interface WeeklyViewProps {
 }
 
 export const WeeklyView: React.FC<WeeklyViewProps> = ({ heatmap, streakMap, onSelectDate }) => {
-  const week = getCurrentWeeklyGrid();
-
-  let completedCount = 0;
-  for (const day of week.days) {
-    if (heatmap.entries[day.dateKey]?.completed) {
-      completedCount++;
-    }
-  }
-  const pct = Math.round((completedCount / 7) * 100);
+  const grid = getWeeklyGrid(new Date());
+  const theme = useAppTheme();
 
   return (
     <View style={styles.container}>
-      <View style={styles.weekCard}>
-        <View style={styles.weekHeader}>
-          <Text style={styles.weekLabel}>THIS WEEK: {week.weekLabel}</Text>
-          <Text style={styles.weekStats}>
-            {completedCount}/7 active | {pct}%
-          </Text>
-        </View>
-
-        <View style={styles.daysRow}>
-          {week.days.map((day) => {
-            const entry = heatmap.entries[day.dateKey];
-            const level = entry?.completed ? getStreakIntensityLevel(streakMap[day.dateKey] || 1) : 0;
-            return (
-              <View key={day.dateKey} style={styles.dayCol}>
-                <Text style={[styles.dayHeaderLabel, day.isToday && styles.todayLabel]}>
-                  {day.dayName[0]}
-                </Text>
-                <DayCell
-                  dateKey={day.dateKey}
-                  level={level}
-                  paletteId={heatmap.paletteId}
-                  size={32}
-                  isToday={day.isToday}
-                  showDayNumber={true}
-                  dayNumber={day.dayNumber}
-                  onPress={onSelectDate}
-                />
-              </View>
-            );
-          })}
-        </View>
+      <Text style={[styles.title, { color: theme.textMuted }]}>THIS WEEK</Text>
+      
+      <View style={styles.grid}>
+        {grid.days.map((day) => {
+          const entry = heatmap.entries[day.dateKey];
+          const level = entry?.completed ? getStreakIntensityLevel(streakMap[day.dateKey] || 1) : 0;
+          
+          return (
+            <View key={day.dateKey} style={styles.dayColumn}>
+              <Text style={[styles.dayName, { color: day.isToday ? theme.text : theme.textSecondary }]}>
+                {day.dayName}
+              </Text>
+              
+              <DayCell
+                dateKey={day.dateKey}
+                level={level}
+                paletteId={heatmap.paletteId}
+                size={34}
+                isToday={day.isToday}
+                onPress={onSelectDate}
+              />
+              
+              <Text style={[styles.dateText, { color: day.isToday ? theme.text : theme.textMuted }]}>
+                {day.dateKey.split('-')[2]}
+              </Text>
+            </View>
+          );
+        })}
       </View>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    paddingVertical: 8,
-  },
-  weekCard: {
-    backgroundColor: '#0E1116',
-    borderColor: '#21262D',
-    borderWidth: 1,
-    borderRadius: 4,
-    padding: 10,
-  },
-  weekHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  weekLabel: {
-    color: '#F0F6FC',
-    fontSize: 11,
-    fontWeight: '600',
-    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
-  },
-  weekStats: {
-    color: '#8B949E',
-    fontSize: 10,
-    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
-  },
-  daysRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  dayCol: {
-    alignItems: 'center',
-    gap: 6,
-  },
-  dayHeaderLabel: {
-    color: '#6E7681',
-    fontSize: 10,
-    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
-  },
-  todayLabel: {
-    color: '#F0F6FC',
-    fontWeight: '700',
-  },
+  container: { paddingVertical: 12 },
+  title: { fontSize: 10, fontWeight: '700', fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif', letterSpacing: 1, marginBottom: 16 },
+  grid: { flexDirection: 'row', justifyContent: 'space-between' },
+  dayColumn: { alignItems: 'center', gap: 8 },
+  dayName: { fontSize: 11, fontWeight: '600', fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif' },
+  dateText: { fontSize: 10, fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif' },
 });

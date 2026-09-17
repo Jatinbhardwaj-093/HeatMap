@@ -8,7 +8,8 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "desktop": "npm run dev:desktop",
-    "dev:desktop": "concurrently -k \"npx expo start --web --port 8081\" \"wait-on http://localhost:8081 && electron electron/main.js\""
+    "dev:desktop": "concurrently -k \"npx expo start --web --port 8081\" \"wait-on http://localhost:8081 && electron electron/main.js\"",
+    "build:mac": "npx expo export -p web && electron-builder --mac"
   },
   "dependencies": {
     "@expo/metro-runtime": "~4.0.1",
@@ -32,8 +33,24 @@
     "@types/react": "~18.3.12",
     "concurrently": "^9.1.2",
     "electron": "^34.2.0",
+    "electron-builder": "^25.1.8",
     "typescript": "^5.3.3",
     "wait-on": "^8.0.2"
+  },
+  "build": {
+    "appId": "com.heatmap.app",
+    "productName": "HeatMap",
+    "directories": {
+      "output": "release"
+    },
+    "mac": {
+      "target": "dmg"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/main.js",
+      "package.json"
+    ]
   },
   "private": true
 }

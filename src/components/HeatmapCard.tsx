@@ -9,6 +9,7 @@ import { YearlyView } from './YearlyView';
 import { MonthlyView } from './MonthlyView';
 import { WeeklyView } from './WeeklyView';
 import { Check, Plus, Trash2 } from 'lucide-react-native';
+import { useAppTheme } from '../theme/theme';
 
 interface HeatmapCardProps {
   heatmap: HeatMapModel;
@@ -25,6 +26,7 @@ export const HeatmapCard: React.FC<HeatmapCardProps> = ({
   onQuickLogToday,
   onDeleteMap,
 }) => {
+  const theme = useAppTheme();
   const { stats, streakMap } = calculateStats(heatmap);
   const palette = PALETTES[heatmap.paletteId] || PALETTES.emerald;
   const todayKey = getTodayKey();
@@ -49,7 +51,7 @@ export const HeatmapCard: React.FC<HeatmapCardProps> = ({
   };
 
   return (
-    <View style={styles.card}>
+    <View style={[styles.card, { backgroundColor: theme.surface, borderColor: theme.border }]}>
       <View style={styles.cardHeader}>
         <View style={styles.titleInfo}>
           <View style={styles.badgeRow}>
@@ -58,11 +60,11 @@ export const HeatmapCard: React.FC<HeatmapCardProps> = ({
                 {heatmap.category.toUpperCase()}
               </Text>
             </View>
-            <Text style={styles.targetHint}>Daily Check-in</Text>
+            <Text style={[styles.targetHint, { color: theme.textMuted }]}>Daily Check-in</Text>
           </View>
-          <Text style={styles.titleText}>{heatmap.title}</Text>
+          <Text style={[styles.titleText, { color: theme.text }]}>{heatmap.title}</Text>
           {heatmap.description ? (
-            <Text style={styles.descriptionText}>{heatmap.description}</Text>
+            <Text style={[styles.descriptionText, { color: theme.textSecondary }]}>{heatmap.description}</Text>
           ) : null}
         </View>
 
@@ -74,7 +76,7 @@ export const HeatmapCard: React.FC<HeatmapCardProps> = ({
               styles.quickLogButton,
               isTodayLogged
                 ? { backgroundColor: palette.levels[2], borderColor: palette.accent }
-                : styles.quickLogUnlogged,
+                : { backgroundColor: theme.surfaceHighlight, borderColor: theme.border },
             ]}
           >
             {isTodayLogged ? (
@@ -84,8 +86,8 @@ export const HeatmapCard: React.FC<HeatmapCardProps> = ({
               </>
             ) : (
               <>
-                <Plus size={13} color="#F0F6FC" strokeWidth={2.5} />
-                <Text style={styles.quickLogText}>LOG</Text>
+                <Plus size={13} color={theme.text} strokeWidth={2.5} />
+                <Text style={[styles.quickLogText, { color: theme.text }]}>LOG</Text>
               </>
             )}
           </TouchableOpacity>
@@ -93,9 +95,9 @@ export const HeatmapCard: React.FC<HeatmapCardProps> = ({
           <TouchableOpacity
             activeOpacity={0.7}
             onPress={handleDelete}
-            style={styles.deleteButton}
+            style={[styles.deleteButton, { backgroundColor: theme.surfaceHighlight, borderColor: theme.border }]}
           >
-            <Trash2 size={13} color="#6E7681" />
+            <Trash2 size={13} color={theme.textMuted} />
           </TouchableOpacity>
         </View>
       </View>
@@ -134,8 +136,6 @@ export const HeatmapCard: React.FC<HeatmapCardProps> = ({
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: '#090B0E',
-    borderColor: '#21262D',
     borderWidth: 1,
     borderRadius: 4,
     padding: 16,
@@ -170,18 +170,15 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   targetHint: {
-    color: '#6E7681',
     fontSize: 10,
     fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
   },
   titleText: {
-    color: '#F0F6FC',
     fontSize: 17,
     fontWeight: '600',
     letterSpacing: -0.2,
   },
   descriptionText: {
-    color: '#8B949E',
     fontSize: 12,
     marginTop: 2,
     lineHeight: 16,
@@ -200,12 +197,7 @@ const styles = StyleSheet.create({
     borderRadius: 3,
     borderWidth: 1,
   },
-  quickLogUnlogged: {
-    backgroundColor: '#161B22',
-    borderColor: '#30363D',
-  },
   quickLogText: {
-    color: '#F0F6FC',
     fontSize: 11,
     fontWeight: '700',
     fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
@@ -218,8 +210,6 @@ const styles = StyleSheet.create({
   },
   deleteButton: {
     padding: 6,
-    backgroundColor: '#161B22',
-    borderColor: '#30363D',
     borderWidth: 1,
     borderRadius: 3,
   },

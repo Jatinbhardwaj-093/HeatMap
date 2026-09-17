@@ -1,5 +1,6 @@
 const { app, BrowserWindow } = require('electron');
 const path = require('path');
+const url = require('url');
 
 function createWindow() {
   const iconPath = path.join(__dirname, '../assets/icon.png');
@@ -22,14 +23,26 @@ function createWindow() {
     },
   });
 
-  const devUrl = 'http://localhost:8081';
-  win.loadURL(devUrl);
+  const isDev = process.env.NODE_ENV !== 'production' && !app.isPackaged;
 
-  win.webContents.on('did-fail-load', () => {
-    setTimeout(() => {
-      win.loadURL(devUrl);
-    }, 1000);
-  });
+  if (isDev) {
+    const devUrl = 'http://localhost:8081';
+    win.loadURL(devUrl);
+    win.webContents.on('did-fail-load', () => {
+      setTimeout(() => {
+        win.loadURL(devUrl);
+      }, 1000);
+    });
+  } else {
+    // In production (packaged), load the exported web build index.html
+    win.loadURL(
+      url.format({
+        pathname: path.join(__dirname, '../dist/index.html'),
+        protocol: 'file:',
+        slashes: true
+      })
+    );
+  }
 }
 
 app.whenReady().then(() => {

@@ -3,6 +3,7 @@ import { StyleSheet, View, Text, TouchableOpacity, Platform } from 'react-native
 import { ViewMode } from '../types/heatmap';
 import { ViewSwitcher } from './ViewSwitcher';
 import { LogOut, Smartphone, Grid3X3 } from 'lucide-react-native';
+import { useAppTheme } from '../theme/theme';
 
 interface HeaderProps {
   currentView: ViewMode;
@@ -19,39 +20,43 @@ export const Header: React.FC<HeaderProps> = ({
   onLogout,
   userEmail,
 }) => {
+  const theme = useAppTheme();
+  
   return (
-    <View style={styles.header}>
+    <View style={[styles.header, { backgroundColor: theme.surface, borderBottomColor: theme.border }]}>
       {/* Brand row */}
       <View style={styles.brandRow}>
         <View style={styles.logoGroup}>
-          <View style={styles.logoIcon}>
-            <Grid3X3 size={15} color="#26A641" strokeWidth={2.5} />
+          <View style={[styles.logoIcon, { backgroundColor: theme.surfaceHighlight, borderColor: theme.border }]}>
+            <Grid3X3 size={15} color={theme.success} strokeWidth={2.5} />
           </View>
           <View>
-            <Text style={styles.brandName}>HEATMAP</Text>
+            <Text style={[styles.brandName, { color: theme.text }]}>HEATMAP</Text>
             {userEmail ? (
-              <Text style={styles.brandSub}>{userEmail}</Text>
+              <Text style={[styles.brandSub, { color: theme.textSecondary }]}>{userEmail}</Text>
             ) : null}
           </View>
         </View>
 
         {/* Action Buttons */}
         <View style={styles.actionButtons}>
-          <TouchableOpacity
-            style={styles.widgetBtn}
-            onPress={onOpenWidgetStudio}
-            activeOpacity={0.7}
-          >
-            <Smartphone size={13} color="#F0F6FC" strokeWidth={2} />
-            <Text style={styles.widgetBtnText}>WIDGETS</Text>
-          </TouchableOpacity>
+          {Platform.OS !== 'web' && (
+            <TouchableOpacity
+              style={[styles.widgetBtn, { backgroundColor: theme.surfaceHighlight, borderColor: theme.border }]}
+              onPress={onOpenWidgetStudio}
+              activeOpacity={0.7}
+            >
+              <Smartphone size={13} color={theme.text} strokeWidth={2} />
+              <Text style={[styles.widgetBtnText, { color: theme.text }]}>WIDGETS</Text>
+            </TouchableOpacity>
+          )}
 
           <TouchableOpacity
-            style={styles.logoutBtn}
+            style={[styles.logoutBtn, { backgroundColor: theme.surfaceHighlight, borderColor: theme.border }]}
             onPress={onLogout}
             activeOpacity={0.7}
           >
-            <LogOut size={14} color="#8B949E" />
+            <LogOut size={14} color={theme.textSecondary} />
           </TouchableOpacity>
         </View>
       </View>
@@ -66,9 +71,7 @@ export const Header: React.FC<HeaderProps> = ({
 
 const styles = StyleSheet.create({
   header: {
-    backgroundColor: '#090B0E',
     borderBottomWidth: 1,
-    borderBottomColor: '#21262D',
     paddingTop: 16,
     paddingBottom: 12,
     paddingHorizontal: 16,
@@ -78,6 +81,9 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 12,
+    maxWidth: 1000,
+    width: '100%',
+    alignSelf: 'center',
   },
   logoGroup: {
     flexDirection: 'row',
@@ -87,22 +93,18 @@ const styles = StyleSheet.create({
   logoIcon: {
     width: 30,
     height: 30,
-    backgroundColor: '#161B22',
-    borderColor: '#30363D',
     borderWidth: 1,
     borderRadius: 4,
     justifyContent: 'center',
     alignItems: 'center',
   },
   brandName: {
-    color: '#F0F6FC',
     fontSize: 15,
     fontWeight: '700',
     fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
     letterSpacing: 1,
   },
   brandSub: {
-    color: '#8B949E',
     fontSize: 10,
     fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
   },
@@ -115,15 +117,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: '#161B22',
-    borderColor: '#30363D',
     borderWidth: 1,
     borderRadius: 3,
     paddingHorizontal: 10,
     paddingVertical: 7,
   },
   widgetBtnText: {
-    color: '#F0F6FC',
     fontSize: 11,
     fontWeight: '600',
     fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
@@ -134,8 +133,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     padding: 7,
-    backgroundColor: '#161B22',
-    borderColor: '#30363D',
     borderWidth: 1,
     borderRadius: 3,
   },
@@ -143,5 +140,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    maxWidth: 1000,
+    width: '100%',
+    alignSelf: 'center',
   },
 });
