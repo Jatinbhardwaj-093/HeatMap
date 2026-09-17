@@ -1,0 +1,30 @@
+{
+  "expo": {
+    "name": "HeatMap",
+    "slug": "heatmap-tracker",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "splash": {
+      "backgroundColor": "#090A0C"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.heatmap.tracker"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#090A0C"
+      },
+      "package": "com.heatmap.tracker"
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro"
+    },
+    "plugins": [
+      "expo-asset"
+    ]
+  }
+}

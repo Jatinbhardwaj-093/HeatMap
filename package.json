@@ -1,0 +1,37 @@
+{
+  "name": "heatmap-app",
+  "version": "1.0.0",
+  "main": "index.ts",
+  "scripts": {
+    "start": "expo start",
+    "android": "expo start --android",
+    "ios": "expo start --ios",
+    "web": "expo start --web",
+    "desktop": "electron electron/main.js",
+    "dev:desktop": "concurrently -k \"npx expo start --web --port 8081\" \"wait-on http://localhost:8081 && electron electron/main.js\""
+  },
+  "dependencies": {
+    "@expo/metro-runtime": "~4.0.1",
+    "@react-native-async-storage/async-storage": "1.23.1",
+    "expo": "~52.0.37",
+    "expo-asset": "~11.0.5",
+    "expo-crypto": "~14.0.2",
+    "expo-haptics": "~14.0.1",
+    "expo-status-bar": "~2.0.1",
+    "lucide-react-native": "^0.475.0",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "react-native": "0.76.7",
+    "react-native-svg": "15.8.0",
+    "react-native-web": "~0.19.13"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.25.2",
+    "@types/react": "~18.3.12",
+    "concurrently": "^9.1.2",
+    "electron": "^34.2.0",
+    "typescript": "^5.3.3",
+    "wait-on": "^8.0.2"
+  },
+  "private": true
+}
