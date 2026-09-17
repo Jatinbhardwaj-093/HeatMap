@@ -1,71 +1,53 @@
 import React from 'react';
-import { StyleSheet, View, Text } from 'react-native';
-import { HeatMapStats, UnitType } from '../types/heatmap';
-import { Zap, Trophy, Percent, Activity } from 'lucide-react-native';
+import { StyleSheet, View, Text, Platform } from 'react-native';
+import { HeatMapStats } from '../types/heatmap';
 
 interface StatsOverviewProps {
   stats: HeatMapStats;
-  unitType: UnitType;
-  unitLabel?: string;
   accentColor: string;
 }
 
 export const StatsOverview: React.FC<StatsOverviewProps> = ({
   stats,
-  unitType,
-  unitLabel,
   accentColor,
 }) => {
   return (
     <View style={styles.container}>
-      <View style={styles.metricBlock}>
-        <View style={styles.metricHeader}>
-          <Zap size={11} color={accentColor} strokeWidth={2} />
-          <Text style={styles.metricLabel}>STREAK</Text>
-        </View>
-        <Text style={[styles.metricValue, { color: accentColor }]}>
+      <View style={styles.statCol}>
+        <Text style={styles.statLabel}>STREAK</Text>
+        <Text style={[styles.statValue, { color: accentColor }]}>
           {stats.currentStreak}
-          <Text style={styles.unitSmall}>d</Text>
+          <Text style={styles.statUnit}>d</Text>
         </Text>
       </View>
 
       <View style={styles.divider} />
 
-      <View style={styles.metricBlock}>
-        <View style={styles.metricHeader}>
-          <Trophy size={11} color="#8B949E" strokeWidth={2} />
-          <Text style={styles.metricLabel}>BEST</Text>
-        </View>
-        <Text style={styles.metricValue}>
+      <View style={styles.statCol}>
+        <Text style={styles.statLabel}>BEST</Text>
+        <Text style={styles.statValue}>
           {stats.longestStreak}
-          <Text style={styles.unitSmall}>d</Text>
+          <Text style={styles.statUnit}>d</Text>
         </Text>
       </View>
 
       <View style={styles.divider} />
 
-      <View style={styles.metricBlock}>
-        <View style={styles.metricHeader}>
-          <Percent size={11} color="#8B949E" strokeWidth={2} />
-          <Text style={styles.metricLabel}>90D RATE</Text>
-        </View>
-        <Text style={styles.metricValue}>
+      <View style={styles.statCol}>
+        <Text style={styles.statLabel}>90d %</Text>
+        <Text style={styles.statValue}>
           {stats.completionRate}
-          <Text style={styles.unitSmall}>%</Text>
+          <Text style={styles.statUnit}>%</Text>
         </Text>
       </View>
 
       <View style={styles.divider} />
 
-      <View style={styles.metricBlock}>
-        <View style={styles.metricHeader}>
-          <Activity size={11} color="#8B949E" strokeWidth={2} />
-          <Text style={styles.metricLabel}>
-            {unitType === 'boolean' ? 'TOTAL' : unitLabel ? unitLabel.toUpperCase() : 'TOTAL'}
-          </Text>
-        </View>
-        <Text style={styles.metricValue}>
-          {unitType === 'boolean' ? `${stats.totalActiveDays}d` : stats.totalValue.toLocaleString()}
+      <View style={styles.statCol}>
+        <Text style={styles.statLabel}>TOTAL</Text>
+        <Text style={styles.statValue}>
+          {stats.totalActiveDays}
+          <Text style={styles.statUnit}>d</Text>
         </Text>
       </View>
     </View>
@@ -78,43 +60,39 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     backgroundColor: '#0E1116',
-    borderColor: '#21262D',
     borderWidth: 1,
+    borderColor: '#21262D',
     borderRadius: 4,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    marginTop: 8,
   },
-  metricBlock: {
+  statCol: {
+    alignItems: 'center',
     flex: 1,
-    alignItems: 'center',
-  },
-  metricHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    marginBottom: 2,
-  },
-  metricLabel: {
-    color: '#6E7681',
-    fontSize: 9,
-    fontWeight: '600',
-    fontFamily: 'Courier',
-    letterSpacing: 0.5,
-  },
-  metricValue: {
-    color: '#F0F6FC',
-    fontSize: 16,
-    fontWeight: '700',
-    fontFamily: 'Courier',
-  },
-  unitSmall: {
-    fontSize: 10,
-    color: '#8B949E',
-    fontWeight: '400',
   },
   divider: {
     width: 1,
-    height: 22,
-    backgroundColor: '#21262D',
+    height: 24,
+    backgroundColor: '#30363D',
+  },
+  statLabel: {
+    color: '#6E7681',
+    fontSize: 9,
+    fontWeight: '700',
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
+    letterSpacing: 0.5,
+    marginBottom: 4,
+  },
+  statValue: {
+    color: '#F0F6FC',
+    fontSize: 16,
+    fontWeight: '700',
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
+  },
+  statUnit: {
+    fontSize: 11,
+    fontWeight: '500',
+    color: '#8B949E',
   },
 });

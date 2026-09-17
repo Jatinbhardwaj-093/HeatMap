@@ -1,13 +1,11 @@
 import React from 'react';
-import { StyleSheet, TouchableOpacity, View, Text } from 'react-native';
+import { StyleSheet, TouchableOpacity, View, Text, Platform } from 'react-native';
 import { PALETTES } from '../constants/palettes';
 import { PaletteId } from '../types/heatmap';
-import { getIntensityLevel } from '../utils/dateUtils';
 
 interface DayCellProps {
   dateKey: string;
-  value?: number;
-  target?: number;
+  level: 0 | 1 | 2 | 3 | 4;
   paletteId: PaletteId;
   size?: number;
   isToday?: boolean;
@@ -20,8 +18,7 @@ interface DayCellProps {
 
 export const DayCell: React.FC<DayCellProps> = ({
   dateKey,
-  value = 0,
-  target = 1,
+  level,
   paletteId,
   size = 13,
   isToday = false,
@@ -32,7 +29,6 @@ export const DayCell: React.FC<DayCellProps> = ({
   dimmed = false,
 }) => {
   const palette = PALETTES[paletteId] || PALETTES.emerald;
-  const level = getIntensityLevel(value, target);
   const cellColor = palette.levels[level];
 
   const handlePress = () => {
@@ -82,7 +78,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   dayText: {
-    fontFamily: 'Courier',
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
     fontWeight: '600',
   },
 });

@@ -7,7 +7,7 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
-    "desktop": "electron electron/main.js",
+    "desktop": "npm run dev:desktop",
     "dev:desktop": "concurrently -k \"npx expo start --web --port 8081\" \"wait-on http://localhost:8081 && electron electron/main.js\""
   },
   "dependencies": {

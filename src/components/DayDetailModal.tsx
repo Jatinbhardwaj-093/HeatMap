@@ -7,17 +7,18 @@ import {
   TouchableOpacity,
   TextInput,
   TouchableWithoutFeedback,
+  Platform,
 } from 'react-native';
 import { HeatMapModel } from '../types/heatmap';
 import { PALETTES } from '../constants/palettes';
-import { X, Plus, Minus, Check, Trash2 } from 'lucide-react-native';
+import { X, Check, Trash2 } from 'lucide-react-native';
 
 interface DayDetailModalProps {
   visible: boolean;
   dateKey: string | null;
   heatmap: HeatMapModel | null;
   onClose: () => void;
-  onSave: (dateKey: string, value: number, notes?: string) => void;
+  onSave: (dateKey: string, completed: boolean, notes?: string) => void;
   onDelete: (dateKey: string) => void;
 }
 
@@ -32,13 +33,13 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
   if (!visible || !dateKey || !heatmap) return null;
 
   const existingEntry = heatmap.entries[dateKey];
-  const [val, setVal] = useState<number>(existingEntry ? existingEntry.value : 0);
+  const [completed, setCompleted] = useState<boolean>(!!existingEntry?.completed);
   const [notes, setNotes] = useState<string>(existingEntry?.notes || '');
 
   useEffect(() => {
     if (heatmap && dateKey) {
       const entry = heatmap.entries[dateKey];
-      setVal(entry ? entry.value : 0);
+      setCompleted(!!entry?.completed);
       setNotes(entry?.notes || '');
     }
   }, [dateKey, heatmap]);
@@ -46,7 +47,7 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
   const palette = PALETTES[heatmap.paletteId] || PALETTES.emerald;
 
   const handleSave = () => {
-    onSave(dateKey, val, notes.trim() || undefined);
+    onSave(dateKey, completed, notes.trim() || undefined);
     onClose();
   };
 
@@ -56,7 +57,7 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
   };
 
   const handleToggle = () => {
-    setVal((prev) => (prev > 0 ? 0 : heatmap.targetValue || 1));
+    setCompleted((prev) => !prev);
   };
 
   return (
@@ -65,7 +66,6 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
         <View style={styles.overlay}>
           <TouchableWithoutFeedback>
             <View style={styles.modalBox}>
-              {/* Header */}
               <View style={styles.modalHeader}>
                 <View>
                   <Text style={styles.modalSubtitle}>{heatmap.title.toUpperCase()}</Text>
@@ -76,74 +76,39 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
                 </TouchableOpacity>
               </View>
 
-              {/* Body */}
               <View style={styles.body}>
-                {heatmap.unitType === 'boolean' ? (
-                  <View style={styles.booleanRow}>
-                    <TouchableOpacity
-                      activeOpacity={0.8}
-                      onPress={handleToggle}
+                <View style={styles.booleanRow}>
+                  <TouchableOpacity
+                    activeOpacity={0.8}
+                    onPress={handleToggle}
+                    style={[
+                      styles.toggleButton,
+                      completed
+                        ? { backgroundColor: palette.levels[3], borderColor: palette.accent }
+                        : styles.toggleUnchecked,
+                    ]}
+                  >
+                    <Check
+                      size={18}
+                      color={completed ? '#FFFFFF' : '#484F58'}
+                      strokeWidth={2.5}
+                    />
+                    <Text
                       style={[
-                        styles.toggleButton,
-                        val > 0
-                          ? { backgroundColor: palette.levels[3], borderColor: palette.accent }
-                          : styles.toggleUnchecked,
+                        styles.toggleText,
+                        { color: completed ? '#FFFFFF' : '#8B949E' },
                       ]}
                     >
-                      <Check
-                        size={18}
-                        color={val > 0 ? '#FFFFFF' : '#484F58'}
-                        strokeWidth={2.5}
-                      />
-                      <Text
-                        style={[
-                          styles.toggleText,
-                          { color: val > 0 ? '#FFFFFF' : '#8B949E' },
-                        ]}
-                      >
-                        {val > 0 ? 'COMPLETED' : 'MARK AS COMPLETED'}
-                      </Text>
-                    </TouchableOpacity>
-                  </View>
-                ) : (
-                  <View style={styles.counterSection}>
-                    <Text style={styles.counterLabel}>
-                      VALUE ({heatmap.unitLabel || 'units'}) | TARGET: {heatmap.targetValue}
+                      {completed ? 'COMPLETED' : 'MARK AS COMPLETED'}
                     </Text>
-                    <View style={styles.counterRow}>
-                      <TouchableOpacity
-                        style={styles.stepBtn}
-                        onPress={() => setVal((v) => Math.max(0, v - 1))}
-                      >
-                        <Minus size={16} color="#F0F6FC" />
-                      </TouchableOpacity>
+                  </TouchableOpacity>
+                </View>
 
-                      <TextInput
-                        style={styles.numberInput}
-                        keyboardType="numeric"
-                        value={String(val)}
-                        onChangeText={(txt) => {
-                          const parsed = parseInt(txt, 10);
-                          setVal(isNaN(parsed) ? 0 : parsed);
-                        }}
-                      />
-
-                      <TouchableOpacity
-                        style={styles.stepBtn}
-                        onPress={() => setVal((v) => v + 1)}
-                      >
-                        <Plus size={16} color="#F0F6FC" />
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-                )}
-
-                {/* Notes input */}
                 <View style={styles.notesSection}>
                   <Text style={styles.notesLabel}>LOG NOTES</Text>
                   <TextInput
                     style={styles.notesInput}
-                    placeholder="Brief detail, weight, or milestone..."
+                    placeholder="Brief detail or milestone..."
                     placeholderTextColor="#484F58"
                     value={notes}
                     onChangeText={setNotes}
@@ -152,9 +117,8 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
                 </View>
               </View>
 
-              {/* Footer Actions */}
               <View style={styles.modalFooter}>
-                {existingEntry && existingEntry.value > 0 ? (
+                {existingEntry?.completed ? (
                   <TouchableOpacity
                     onPress={handleClear}
                     style={styles.clearButton}
@@ -223,7 +187,7 @@ const styles = StyleSheet.create({
     color: '#8B949E',
     fontSize: 10,
     fontWeight: '700',
-    fontFamily: 'Courier',
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
     letterSpacing: 0.5,
   },
   modalDate: {
@@ -231,7 +195,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     marginTop: 2,
-    fontFamily: 'Courier',
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
   },
   closeBtn: {
     padding: 4,
@@ -260,42 +224,8 @@ const styles = StyleSheet.create({
   toggleText: {
     fontSize: 12,
     fontWeight: '700',
-    fontFamily: 'Courier',
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
     letterSpacing: 0.5,
-  },
-  counterSection: {
-    gap: 6,
-  },
-  counterLabel: {
-    color: '#8B949E',
-    fontSize: 10,
-    fontWeight: '600',
-    fontFamily: 'Courier',
-  },
-  counterRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  stepBtn: {
-    backgroundColor: '#161B22',
-    borderColor: '#30363D',
-    borderWidth: 1,
-    borderRadius: 3,
-    padding: 10,
-  },
-  numberInput: {
-    flex: 1,
-    backgroundColor: '#161B22',
-    borderColor: '#30363D',
-    borderWidth: 1,
-    borderRadius: 3,
-    color: '#F0F6FC',
-    fontSize: 16,
-    fontWeight: '700',
-    fontFamily: 'Courier',
-    textAlign: 'center',
-    paddingVertical: 8,
   },
   notesSection: {
     gap: 6,
@@ -304,7 +234,7 @@ const styles = StyleSheet.create({
     color: '#8B949E',
     fontSize: 10,
     fontWeight: '600',
-    fontFamily: 'Courier',
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
   },
   notesInput: {
     backgroundColor: '#161B22',
@@ -335,7 +265,7 @@ const styles = StyleSheet.create({
   clearText: {
     color: '#F85149',
     fontSize: 12,
-    fontFamily: 'Courier',
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
   },
   rightButtons: {
     flexDirection: 'row',
@@ -354,7 +284,7 @@ const styles = StyleSheet.create({
     color: '#8B949E',
     fontSize: 12,
     fontWeight: '600',
-    fontFamily: 'Courier',
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
   },
   saveButton: {
     paddingVertical: 7,
@@ -365,6 +295,6 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 12,
     fontWeight: '700',
-    fontFamily: 'Courier',
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
   },
 });

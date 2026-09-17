@@ -1,18 +1,11 @@
 import React, { useState } from 'react';
-import {
-  StyleSheet,
-  View,
-  Text,
-  Modal,
-  TouchableOpacity,
-  TouchableWithoutFeedback,
-  ScrollView,
-} from 'react-native';
+import { StyleSheet, View, Text, Modal, TouchableOpacity, ScrollView, Platform } from 'react-native';
 import { HeatMapModel } from '../types/heatmap';
 import { PALETTES } from '../constants/palettes';
-import { calculateStats } from '../utils/streakUtils';
-import { formatDateKey, getIntensityLevel, getTodayKey } from '../utils/dateUtils';
-import { X, Smartphone, Layers, Check, Zap, Trophy, Copy } from 'lucide-react-native';
+import { getTodayKey } from '../utils/dateUtils';
+import { calculateStats, getStreakIntensityLevel } from '../utils/streakUtils';
+import { DayCell } from './DayCell';
+import { X, Copy, Code, Check } from 'lucide-react-native';
 
 interface WidgetStudioModalProps {
   visible: boolean;
@@ -20,30 +13,37 @@ interface WidgetStudioModalProps {
   onClose: () => void;
 }
 
-type WidgetSize = 'small' | 'medium' | 'large' | 'lockscreen';
-
 export const WidgetStudioModal: React.FC<WidgetStudioModalProps> = ({
   visible,
   heatmaps,
   onClose,
 }) => {
-  const [selectedMapId, setSelectedMapId] = useState<string>(
-    heatmaps[0]?.id || ''
-  );
-  const [widgetSize, setWidgetSize] = useState<WidgetSize>('medium');
+  const [selectedMapId, setSelectedMapId] = useState<string | null>(heatmaps[0]?.id || null);
   const [copiedNotification, setCopiedNotification] = useState(false);
 
   if (!visible) return null;
 
   const currentMap = heatmaps.find((m) => m.id === selectedMapId) || heatmaps[0];
-  if (!currentMap) return null;
+  if (!currentMap) {
+    return (
+      <Modal visible={visible} transparent animationType="fade">
+        <View style={styles.overlay}>
+          <View style={styles.modalBox}>
+            <Text style={styles.emptyText}>No HeatMaps available for Widgets.</Text>
+            <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
+              <X size={16} color="#8B949E" />
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+    );
+  }
 
-  const stats = calculateStats(currentMap);
+  const { stats, streakMap } = calculateStats(currentMap);
   const palette = PALETTES[currentMap.paletteId] || PALETTES.emerald;
   const todayKey = getTodayKey();
-  const isTodayLogged = !!(currentMap.entries[todayKey]?.value > 0);
+  const isTodayLogged = !!currentMap.entries[todayKey]?.completed;
 
-  // Generate last N days for widget previews
   const getRecentDays = (count: number) => {
     const list: Array<{ dateKey: string; level: 0 | 1 | 2 | 3 | 4 }> = [];
     const today = new Date();
@@ -52,10 +52,10 @@ export const WidgetStudioModal: React.FC<WidgetStudioModalProps> = ({
       d.setDate(today.getDate() - i);
       const key = formatDateKey(d);
       const entry = currentMap.entries[key];
-      const val = entry ? entry.value : 0;
+      const level = entry?.completed ? getStreakIntensityLevel(streakMap[key] || 1) : 0;
       list.push({
         dateKey: key,
-        level: getIntensityLevel(val, currentMap.targetValue),
+        level,
       });
     }
     return list;
@@ -66,281 +66,153 @@ export const WidgetStudioModal: React.FC<WidgetStudioModalProps> = ({
     setTimeout(() => setCopiedNotification(false), 2000);
   };
 
+  // Helper inside here just for WidgetStudio formatting
+  function formatDateKey(date: Date): string {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <TouchableWithoutFeedback onPress={onClose}>
-        <View style={styles.overlay}>
-          <TouchableWithoutFeedback>
-            <View style={styles.modalBox}>
-              {/* Header */}
-              <View style={styles.modalHeader}>
-                <View>
-                  <View style={styles.headerTagRow}>
-                    <Smartphone size={12} color="#58A6FF" />
-                    <Text style={styles.modalSubtitle}>WIDGET STUDIO</Text>
-                  </View>
-                  <Text style={styles.modalTitle}>Native Widget Simulation</Text>
-                </View>
-                <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
-                  <X size={16} color="#8B949E" />
+      <View style={styles.overlay}>
+        <View style={styles.modalBox}>
+          <View style={styles.header}>
+            <View>
+              <Text style={styles.modalSubtitle}>WIDGET STUDIO</Text>
+              <Text style={styles.modalTitle}>Native Integrations</Text>
+            </View>
+            <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
+              <X size={20} color="#8B949E" />
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.selectorRow}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.mapSelector}>
+              {heatmaps.map((m) => (
+                <TouchableOpacity
+                  key={m.id}
+                  style={[
+                    styles.mapPill,
+                    selectedMapId === m.id && { borderColor: PALETTES[m.paletteId]?.accent || '#58A6FF' },
+                  ]}
+                  onPress={() => setSelectedMapId(m.id)}
+                >
+                  <Text style={[
+                    styles.mapPillText,
+                    selectedMapId === m.id && { color: '#F0F6FC', fontWeight: '600' }
+                  ]}>
+                    {m.title}
+                  </Text>
                 </TouchableOpacity>
-              </View>
+              ))}
+            </ScrollView>
+          </View>
 
-              <ScrollView showsVerticalScrollIndicator={false} style={styles.contentScroll}>
-                {/* Map Selector */}
-                <View style={styles.section}>
-                  <Text style={styles.sectionLabel}>BIND HEATMAP TARGET</Text>
-                  <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.mapPickerScroll}>
-                    {heatmaps.map((m) => {
-                      const isSelected = m.id === currentMap.id;
-                      const p = PALETTES[m.paletteId] || PALETTES.emerald;
-                      return (
-                        <TouchableOpacity
-                          key={m.id}
-                          style={[
-                            styles.mapPickerItem,
-                            isSelected && { borderColor: p.accent, backgroundColor: '#1C2128' },
-                          ]}
-                          onPress={() => setSelectedMapId(m.id)}
-                        >
-                          <View style={[styles.miniDot, { backgroundColor: p.accent }]} />
-                          <Text style={[styles.mapPickerText, isSelected && { color: '#F0F6FC' }]}>
-                            {m.title}
-                          </Text>
-                        </TouchableOpacity>
-                      );
-                    })}
-                  </ScrollView>
-                </View>
-
-                {/* Size Selector */}
-                <View style={styles.section}>
-                  <Text style={styles.sectionLabel}>WIDGET DIMENSION</Text>
-                  <View style={styles.sizeSwitcher}>
-                    {(['small', 'medium', 'large', 'lockscreen'] as WidgetSize[]).map((sz) => (
-                      <TouchableOpacity
-                        key={sz}
-                        style={[styles.sizeBtn, widgetSize === sz && styles.sizeBtnActive]}
-                        onPress={() => setWidgetSize(sz)}
-                      >
-                        <Text style={[styles.sizeBtnText, widgetSize === sz && styles.sizeBtnTextActive]}>
-                          {sz.toUpperCase()}
-                        </Text>
-                      </TouchableOpacity>
+          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollBody}>
+            
+            {/* Small Square Widget Preview */}
+            <View style={styles.widgetSection}>
+              <Text style={styles.sectionTitle}>Small Square (iOS / Android)</Text>
+              <View style={styles.widgetPreviewBox}>
+                <View style={styles.widgetSmall}>
+                  <View style={styles.widgetSmallHeader}>
+                    <Text style={styles.widgetSmallTitle} numberOfLines={1}>{currentMap.title}</Text>
+                  </View>
+                  <View style={styles.widgetSmallStats}>
+                    <Text style={[styles.widgetSmallVal, { color: palette.accent }]}>
+                      {stats.currentStreak}
+                      <Text style={styles.widgetSmallUnit}>d streak</Text>
+                    </Text>
+                  </View>
+                  <View style={styles.widgetSmallGrid}>
+                    {getRecentDays(14).map((d) => (
+                      <DayCell
+                        key={`sm-${d.dateKey}`}
+                        dateKey={d.dateKey}
+                        level={d.level}
+                        paletteId={currentMap.paletteId}
+                        size={14}
+                      />
                     ))}
                   </View>
                 </View>
+              </View>
+            </View>
 
-                {/* Live Simulated Widget Display */}
-                <View style={styles.previewCanvas}>
-                  <Text style={styles.previewHint}>
-                    LIVE OS PREVIEW | iOS WIDGETKIT / ANDROID / MACOS
-                  </Text>
-
-                  {/* SMALL WIDGET (155x155) */}
-                  {widgetSize === 'small' && (
-                    <View style={styles.smallWidgetContainer}>
-                      <View style={styles.widgetHeaderRow}>
-                        <Text style={styles.smallWidgetTitle} numberOfLines={1}>
-                          {currentMap.title}
-                        </Text>
-                        <View
-                          style={[
-                            styles.statusIndicator,
-                            { backgroundColor: isTodayLogged ? palette.accent : '#30363D' },
-                          ]}
+            {/* Medium Rectangle Widget Preview */}
+            <View style={styles.widgetSection}>
+              <Text style={styles.sectionTitle}>Medium Rectangle (iOS / Android / Mac)</Text>
+              <View style={styles.widgetPreviewBox}>
+                <View style={styles.widgetMedium}>
+                  <View style={styles.widgetMediumHeader}>
+                    <View>
+                      <Text style={styles.widgetMediumSubtitle}>{currentMap.category.toUpperCase()}</Text>
+                      <Text style={styles.widgetMediumTitle}>{currentMap.title}</Text>
+                    </View>
+                    <View style={styles.widgetMediumBadge}>
+                      <Text style={[styles.widgetMediumBadgeText, { color: palette.accent }]}>
+                        {isTodayLogged ? 'DONE' : 'PENDING'}
+                      </Text>
+                    </View>
+                  </View>
+                  
+                  <View style={styles.widgetMediumGridContainer}>
+                    <View style={styles.widgetMediumGrid}>
+                      {getRecentDays(35).map((d) => (
+                        <DayCell
+                          key={`md-${d.dateKey}`}
+                          dateKey={d.dateKey}
+                          level={d.level}
+                          paletteId={currentMap.paletteId}
+                          size={14}
                         />
+                      ))}
+                    </View>
+                    
+                    <View style={styles.widgetMediumStats}>
+                      <View>
+                        <Text style={styles.wStatLabel}>STREAK</Text>
+                        <Text style={styles.wStatVal}>{stats.currentStreak}d</Text>
                       </View>
-
-                      <View style={styles.smallStreakBlock}>
-                        <View style={styles.streakLabelRow}>
-                          <Zap size={11} color={palette.accent} />
-                          <Text style={[styles.smallStreakNumber, { color: palette.accent }]}>
-                            {stats.currentStreak}
-                          </Text>
-                          <Text style={styles.smallStreakDays}>days</Text>
-                        </View>
-                        <Text style={styles.smallStreakSub}>
-                          {isTodayLogged ? 'Done today' : 'Needs log today'}
-                        </Text>
-                      </View>
-
-                      {/* 14-day mini spark grid (2 rows of 7) */}
-                      <View style={styles.smallSparkMatrix}>
-                        {getRecentDays(14).map((d, i) => (
-                          <View
-                            key={`sw-${i}`}
-                            style={[
-                              styles.smallSparkCell,
-                              { backgroundColor: palette.levels[d.level] },
-                            ]}
-                          />
-                        ))}
+                      <View style={{marginTop: 6}}>
+                        <Text style={styles.wStatLabel}>TOTAL</Text>
+                        <Text style={styles.wStatVal}>{stats.totalActiveDays}d</Text>
                       </View>
                     </View>
-                  )}
-
-                  {/* MEDIUM WIDGET (320x155) */}
-                  {widgetSize === 'medium' && (
-                    <View style={styles.mediumWidgetContainer}>
-                      <View style={styles.mediumTopBar}>
-                        <View>
-                          <Text style={styles.mediumCategory}>{currentMap.category.toUpperCase()}</Text>
-                          <Text style={styles.mediumTitle}>{currentMap.title}</Text>
-                        </View>
-                        <View style={styles.mediumStatPill}>
-                          <Zap size={12} color={palette.accent} />
-                          <Text style={[styles.mediumStatText, { color: palette.accent }]}>
-                            {stats.currentStreak}d streak
-                          </Text>
-                        </View>
-                      </View>
-
-                      {/* 28 days mini heatmap (4 rows of 7 days) */}
-                      <View style={styles.mediumGridRow}>
-                        {Array.from({ length: 4 }).map((_, colIdx) => (
-                          <View key={`mcol-${colIdx}`} style={styles.mediumGridCol}>
-                            {getRecentDays(28)
-                              .slice(colIdx * 7, colIdx * 7 + 7)
-                              .map((d, rowIdx) => (
-                                <View
-                                  key={`mcell-${colIdx}-${rowIdx}`}
-                                  style={[
-                                    styles.mediumCell,
-                                    { backgroundColor: palette.levels[d.level] },
-                                  ]}
-                                />
-                              ))}
-                          </View>
-                        ))}
-                      </View>
-
-                      <View style={styles.mediumFooter}>
-                        <Text style={styles.mediumFooterText}>
-                          Best: {stats.longestStreak}d | Rate: {stats.completionRate}%
-                        </Text>
-                        <Text style={styles.mediumFooterHint}>
-                          {isTodayLogged ? 'Logged' : 'Tap to log'}
-                        </Text>
-                      </View>
-                    </View>
-                  )}
-
-                  {/* LARGE WIDGET (320x320) */}
-                  {widgetSize === 'large' && (
-                    <View style={styles.largeWidgetContainer}>
-                      <View style={styles.mediumTopBar}>
-                        <View>
-                          <Text style={styles.mediumCategory}>{currentMap.category.toUpperCase()}</Text>
-                          <Text style={styles.largeTitle}>{currentMap.title}</Text>
-                        </View>
-                        <View style={styles.largeStatsRight}>
-                          <Text style={[styles.largeStreak, { color: palette.accent }]}>
-                            {stats.currentStreak}d
-                          </Text>
-                          <Text style={styles.largeStreakLabel}>STREAK</Text>
-                        </View>
-                      </View>
-
-                      {/* 12 weeks matrix (12 cols x 7 days = 84 days) */}
-                      <View style={styles.largeHeatmapWrapper}>
-                        {Array.from({ length: 12 }).map((_, colIdx) => (
-                          <View key={`lcol-${colIdx}`} style={styles.largeGridCol}>
-                            {getRecentDays(84)
-                              .slice(colIdx * 7, colIdx * 7 + 7)
-                              .map((d, rowIdx) => (
-                                <View
-                                  key={`lcell-${colIdx}-${rowIdx}`}
-                                  style={[
-                                    styles.largeCell,
-                                    { backgroundColor: palette.levels[d.level] },
-                                  ]}
-                                />
-                              ))}
-                          </View>
-                        ))}
-                      </View>
-
-                      <View style={styles.largeStatsBar}>
-                        <View style={styles.largeStatItem}>
-                          <Text style={styles.largeStatNum}>{stats.longestStreak}d</Text>
-                          <Text style={styles.largeStatDesc}>LONGEST</Text>
-                        </View>
-                        <View style={styles.largeStatItem}>
-                          <Text style={styles.largeStatNum}>{stats.completionRate}%</Text>
-                          <Text style={styles.largeStatDesc}>90D RATE</Text>
-                        </View>
-                        <View style={styles.largeStatItem}>
-                          <Text style={styles.largeStatNum}>{stats.totalActiveDays}</Text>
-                          <Text style={styles.largeStatDesc}>ACTIVE DAYS</Text>
-                        </View>
-                      </View>
-                    </View>
-                  )}
-
-                  {/* LOCK SCREEN ACCESSORY */}
-                  {widgetSize === 'lockscreen' && (
-                    <View style={styles.lockscreenWidget}>
-                      <View style={styles.lockscreenRow}>
-                        <Zap size={13} color="#FFFFFF" />
-                        <Text style={styles.lockscreenTitle}>{currentMap.title}</Text>
-                      </View>
-                      <View style={styles.lockscreenStreak}>
-                        <Text style={styles.lockscreenNumber}>{stats.currentStreak}</Text>
-                        <Text style={styles.lockscreenSub}>DAY STREAK</Text>
-                      </View>
-                      <View style={styles.lockscreenDots}>
-                        {getRecentDays(7).map((d, i) => (
-                          <View
-                            key={`lsd-${i}`}
-                            style={[
-                              styles.lockscreenDot,
-                              { backgroundColor: d.level > 0 ? '#FFFFFF' : '#333333' },
-                            ]}
-                          />
-                        ))}
-                      </View>
-                    </View>
-                  )}
+                  </View>
                 </View>
+              </View>
+            </View>
 
-                {/* Integration Details */}
-                <View style={styles.infoBox}>
-                  <Text style={styles.infoTitle}>NATIVE WIDGET INTEGRATION</Text>
-                  <Text style={styles.infoDesc}>
-                    Code exports available in project directory:
+            {/* Integration Details */}
+            <View style={styles.integrationBox}>
+              <View style={styles.integrationHeader}>
+                <Code size={16} color="#8B949E" />
+                <Text style={styles.integrationTitle}>Export Configuration</Text>
+              </View>
+              <Text style={styles.integrationText}>
+                Use this Map ID to configure your native iOS WidgetKit or Android RemoteViews instance.
+              </Text>
+              <View style={styles.codeRow}>
+                <Text style={styles.codeText}>{currentMap.id}</Text>
+                <TouchableOpacity style={styles.copyBtn} onPress={handleCopyConfig}>
+                  {copiedNotification ? (
+                    <Check size={14} color="#3FB950" />
+                  ) : (
+                    <Copy size={14} color="#8B949E" />
+                  )}
+                  <Text style={[styles.copyBtnText, copiedNotification && {color: '#3FB950'}]}>
+                    {copiedNotification ? 'Copied' : 'Copy ID'}
                   </Text>
-                  <Text style={styles.codePath}>• iOS: widgets/ios/HeatMapWidget.swift</Text>
-                  <Text style={styles.codePath}>• Android: widgets/android/HeatMapWidgetProvider.kt</Text>
-                  <Text style={styles.codePath}>• Shared Data: AppGroup UserDefaults & SQLite</Text>
-                </View>
-              </ScrollView>
-
-              {/* Footer */}
-              <View style={styles.modalFooter}>
-                <TouchableOpacity
-                  style={styles.copyBtn}
-                  onPress={handleCopyConfig}
-                  activeOpacity={0.7}
-                >
-                  <Copy size={13} color="#8B949E" />
-                  <Text style={styles.copyBtnText}>
-                    {copiedNotification ? 'Config Copied' : 'Copy Widget Schema'}
-                  </Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={styles.closeActionBtn}
-                  onPress={onClose}
-                  activeOpacity={0.7}
-                >
-                  <Text style={styles.closeActionText}>Done</Text>
                 </TouchableOpacity>
               </View>
             </View>
-          </TouchableWithoutFeedback>
+
+          </ScrollView>
         </View>
-      </TouchableWithoutFeedback>
+      </View>
     </Modal>
   );
 };
@@ -348,433 +220,265 @@ export const WidgetStudioModal: React.FC<WidgetStudioModalProps> = ({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.82)',
+    backgroundColor: 'rgba(0,0,0,0.85)',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 16,
+    padding: 20,
   },
   modalBox: {
     width: '100%',
-    maxWidth: 580,
-    maxHeight: '90%',
+    maxWidth: 600,
+    maxHeight: '95%',
     backgroundColor: '#0D1117',
     borderColor: '#30363D',
     borderWidth: 1,
-    borderRadius: 4,
-    padding: 20,
+    borderRadius: 6,
+    padding: 0,
+    overflow: 'hidden',
   },
-  modalHeader: {
+  header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 16,
+    padding: 20,
     borderBottomWidth: 1,
     borderBottomColor: '#21262D',
-    paddingBottom: 12,
-  },
-  headerTagRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
   },
   modalSubtitle: {
-    color: '#58A6FF',
+    color: '#8B949E',
     fontSize: 10,
     fontWeight: '700',
-    fontFamily: 'Courier',
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
     letterSpacing: 0.5,
   },
   modalTitle: {
     color: '#F0F6FC',
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: '600',
     marginTop: 2,
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
   },
   closeBtn: {
     padding: 4,
   },
-  contentScroll: {
-    marginBottom: 12,
-  },
-  section: {
-    marginBottom: 14,
-    gap: 6,
-  },
-  sectionLabel: {
-    color: '#8B949E',
-    fontSize: 10,
-    fontWeight: '600',
-    fontFamily: 'Courier',
-    letterSpacing: 0.5,
-  },
-  mapPickerScroll: {
-    flexDirection: 'row',
-  },
-  mapPickerItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
+  selectorRow: {
+    borderBottomWidth: 1,
+    borderBottomColor: '#21262D',
     backgroundColor: '#161B22',
-    borderColor: '#30363D',
-    borderWidth: 1,
-    borderRadius: 3,
-    paddingHorizontal: 10,
+  },
+  mapSelector: {
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    gap: 8,
+  },
+  mapPill: {
+    paddingHorizontal: 12,
     paddingVertical: 6,
-    marginRight: 8,
-  },
-  miniDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 1,
-  },
-  mapPickerText: {
-    color: '#8B949E',
-    fontSize: 11,
-    fontFamily: 'Courier',
-  },
-  sizeSwitcher: {
-    flexDirection: 'row',
-    gap: 6,
-  },
-  sizeBtn: {
-    flex: 1,
-    backgroundColor: '#161B22',
-    borderColor: '#30363D',
-    borderWidth: 1,
-    borderRadius: 3,
-    paddingVertical: 7,
-    alignItems: 'center',
-  },
-  sizeBtnActive: {
-    backgroundColor: '#21262D',
-    borderColor: '#58A6FF',
-  },
-  sizeBtnText: {
-    color: '#8B949E',
-    fontSize: 10,
-    fontWeight: '600',
-    fontFamily: 'Courier',
-  },
-  sizeBtnTextActive: {
-    color: '#F0F6FC',
-  },
-  previewCanvas: {
-    backgroundColor: '#010409',
-    borderColor: '#21262D',
-    borderWidth: 1,
-    borderRadius: 4,
-    padding: 16,
-    alignItems: 'center',
-    marginBottom: 14,
-  },
-  previewHint: {
-    color: '#6E7681',
-    fontSize: 9,
-    fontFamily: 'Courier',
-    marginBottom: 12,
-    letterSpacing: 0.5,
-  },
-  smallWidgetContainer: {
-    width: 155,
-    height: 155,
-    backgroundColor: '#161B22',
-    borderColor: '#30363D',
-    borderWidth: 1,
     borderRadius: 16,
-    padding: 12,
-    justifyContent: 'space-between',
+    borderWidth: 1,
+    borderColor: '#30363D',
+    backgroundColor: '#090B0E',
   },
-  widgetHeaderRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  mapPillText: {
+    color: '#8B949E',
+    fontSize: 12,
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
+  },
+  scrollBody: {
+    padding: 20,
+  },
+  widgetSection: {
+    marginBottom: 24,
+  },
+  sectionTitle: {
+    color: '#F0F6FC',
+    fontSize: 13,
+    fontWeight: '600',
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
+    marginBottom: 10,
+  },
+  widgetPreviewBox: {
+    backgroundColor: '#090B0E',
+    borderWidth: 1,
+    borderColor: '#21262D',
+    borderRadius: 8,
+    padding: 20,
     alignItems: 'center',
+    justifyContent: 'center',
+    backgroundImage: 'radial-gradient(#21262D 1px, transparent 0)',
+    backgroundSize: '20px 20px',
   },
-  smallWidgetTitle: {
+  widgetSmall: {
+    width: 140,
+    height: 140,
+    backgroundColor: '#0D1117',
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#30363D',
+    padding: 14,
+    shadowColor: '#000',
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+  },
+  widgetSmallHeader: {
+    marginBottom: 4,
+  },
+  widgetSmallTitle: {
     color: '#F0F6FC',
     fontSize: 12,
     fontWeight: '600',
-    fontFamily: 'Courier',
-    maxWidth: 105,
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
   },
-  statusIndicator: {
-    width: 7,
-    height: 7,
-    borderRadius: 3.5,
+  widgetSmallStats: {
+    marginBottom: 12,
   },
-  smallStreakBlock: {
-    marginVertical: 4,
-  },
-  streakLabelRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  smallStreakNumber: {
-    fontSize: 22,
+  widgetSmallVal: {
+    fontSize: 18,
     fontWeight: '700',
-    fontFamily: 'Courier',
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
   },
-  smallStreakDays: {
+  widgetSmallUnit: {
+    fontSize: 10,
+    fontWeight: '500',
     color: '#8B949E',
-    fontSize: 11,
-    fontFamily: 'Courier',
   },
-  smallStreakSub: {
-    color: '#6E7681',
-    fontSize: 9,
-    fontFamily: 'Courier',
-  },
-  smallSparkMatrix: {
+  widgetSmallGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 3,
   },
-  smallSparkCell: {
-    width: 14,
-    height: 14,
-    borderRadius: 2,
-  },
-  mediumWidgetContainer: {
+  widgetMedium: {
     width: 320,
-    height: 155,
-    backgroundColor: '#161B22',
-    borderColor: '#30363D',
+    height: 140,
+    backgroundColor: '#0D1117',
+    borderRadius: 20,
     borderWidth: 1,
-    borderRadius: 16,
-    padding: 12,
-    justifyContent: 'space-between',
+    borderColor: '#30363D',
+    padding: 16,
+    shadowColor: '#000',
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
   },
-  mediumTopBar: {
+  widgetMediumHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 12,
+  },
+  widgetMediumSubtitle: {
+    color: '#8B949E',
+    fontSize: 9,
+    fontWeight: '700',
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
+    letterSpacing: 0.5,
+  },
+  widgetMediumTitle: {
+    color: '#F0F6FC',
+    fontSize: 14,
+    fontWeight: '600',
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
+    marginTop: 2,
+  },
+  widgetMediumBadge: {
+    backgroundColor: '#161B22',
+    borderWidth: 1,
+    borderColor: '#30363D',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  widgetMediumBadgeText: {
+    fontSize: 9,
+    fontWeight: '700',
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
+  },
+  widgetMediumGridContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
   },
-  mediumCategory: {
+  widgetMediumGrid: {
+    flexDirection: 'column',
+    flexWrap: 'wrap',
+    alignContent: 'flex-start',
+    height: 5 * 14 + 4 * 3, // 5 rows
+    width: 7 * 14 + 6 * 3, // 7 cols
+    gap: 3,
+  },
+  widgetMediumStats: {
+    alignItems: 'flex-end',
+    justifyContent: 'center',
+  },
+  wStatLabel: {
     color: '#6E7681',
     fontSize: 9,
-    fontWeight: '700',
-    fontFamily: 'Courier',
+    fontWeight: '600',
+    textAlign: 'right',
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
   },
-  mediumTitle: {
+  wStatVal: {
+    color: '#F0F6FC',
+    fontSize: 13,
+    fontWeight: '700',
+    textAlign: 'right',
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
+  },
+  integrationBox: {
+    backgroundColor: '#161B22',
+    borderColor: '#30363D',
+    borderWidth: 1,
+    borderRadius: 6,
+    padding: 16,
+    marginTop: 10,
+  },
+  integrationHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 6,
+  },
+  integrationTitle: {
     color: '#F0F6FC',
     fontSize: 14,
     fontWeight: '600',
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
   },
-  mediumStatPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: '#0D1117',
-    borderColor: '#30363D',
-    borderWidth: 1,
-    borderRadius: 3,
-    paddingHorizontal: 6,
-    paddingVertical: 3,
-  },
-  mediumStatText: {
-    fontSize: 11,
-    fontWeight: '700',
-    fontFamily: 'Courier',
-  },
-  mediumGridRow: {
-    flexDirection: 'row',
-    gap: 5,
-    justifyContent: 'center',
-    marginVertical: 4,
-  },
-  mediumGridCol: {
-    flexDirection: 'column',
-    gap: 4,
-  },
-  mediumCell: {
-    width: 10,
-    height: 10,
-    borderRadius: 2,
-  },
-  mediumFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  mediumFooterText: {
+  integrationText: {
     color: '#8B949E',
-    fontSize: 10,
-    fontFamily: 'Courier',
+    fontSize: 12,
+    lineHeight: 18,
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
+    marginBottom: 12,
   },
-  mediumFooterHint: {
-    color: '#6E7681',
-    fontSize: 9,
-    fontFamily: 'Courier',
-  },
-  largeWidgetContainer: {
-    width: 320,
-    height: 320,
-    backgroundColor: '#161B22',
-    borderColor: '#30363D',
-    borderWidth: 1,
-    borderRadius: 16,
-    padding: 14,
-    justifyContent: 'space-between',
-  },
-  largeTitle: {
-    color: '#F0F6FC',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  largeStatsRight: {
-    alignItems: 'flex-end',
-  },
-  largeStreak: {
-    fontSize: 20,
-    fontWeight: '700',
-    fontFamily: 'Courier',
-  },
-  largeStreakLabel: {
-    color: '#6E7681',
-    fontSize: 8,
-    fontFamily: 'Courier',
-  },
-  largeHeatmapWrapper: {
+  codeRow: {
     flexDirection: 'row',
-    gap: 4,
-    justifyContent: 'center',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#0D1117',
+    borderWidth: 1,
+    borderColor: '#30363D',
+    borderRadius: 4,
+    paddingHorizontal: 12,
     paddingVertical: 10,
   },
-  largeGridCol: {
-    flexDirection: 'column',
-    gap: 4,
-  },
-  largeCell: {
-    width: 12,
-    height: 12,
-    borderRadius: 2,
-  },
-  largeStatsBar: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    borderTopWidth: 1,
-    borderTopColor: '#30363D',
-    paddingTop: 8,
-  },
-  largeStatItem: {
-    alignItems: 'center',
-  },
-  largeStatNum: {
-    color: '#F0F6FC',
-    fontSize: 12,
-    fontWeight: '700',
-    fontFamily: 'Courier',
-  },
-  largeStatDesc: {
-    color: '#6E7681',
-    fontSize: 8,
-    fontFamily: 'Courier',
-  },
-  lockscreenWidget: {
-    width: 160,
-    height: 65,
-    backgroundColor: '#1A1A1A',
-    borderColor: '#333333',
-    borderWidth: 1,
-    borderRadius: 8,
-    padding: 8,
-    justifyContent: 'space-between',
-  },
-  lockscreenRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  lockscreenTitle: {
-    color: '#E0E0E0',
-    fontSize: 10,
-    fontWeight: '600',
-    fontFamily: 'Courier',
-  },
-  lockscreenStreak: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    gap: 4,
-  },
-  lockscreenNumber: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '700',
-    fontFamily: 'Courier',
-  },
-  lockscreenSub: {
-    color: '#888888',
-    fontSize: 8,
-    fontFamily: 'Courier',
-  },
-  lockscreenDots: {
-    flexDirection: 'row',
-    gap: 3,
-  },
-  lockscreenDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 1,
-  },
-  infoBox: {
-    backgroundColor: '#161B22',
-    borderColor: '#30363D',
-    borderWidth: 1,
-    borderRadius: 3,
-    padding: 10,
-    gap: 4,
-  },
-  infoTitle: {
-    color: '#58A6FF',
-    fontSize: 10,
-    fontWeight: '700',
-    fontFamily: 'Courier',
-  },
-  infoDesc: {
-    color: '#8B949E',
-    fontSize: 11,
-  },
-  codePath: {
-    color: '#F0F6FC',
-    fontSize: 10,
-    fontFamily: 'Courier',
-  },
-  modalFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    borderTopWidth: 1,
-    borderTopColor: '#21262D',
-    paddingTop: 12,
+  codeText: {
+    color: '#E6EDF3',
+    fontSize: 13,
   },
   copyBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    paddingVertical: 7,
-    paddingHorizontal: 10,
-    backgroundColor: '#161B22',
-    borderColor: '#30363D',
-    borderWidth: 1,
-    borderRadius: 3,
+    padding: 6,
+    backgroundColor: '#21262D',
+    borderRadius: 4,
   },
   copyBtnText: {
     color: '#8B949E',
     fontSize: 11,
-    fontFamily: 'Courier',
-  },
-  closeActionBtn: {
-    backgroundColor: '#21262D',
-    borderColor: '#30363D',
-    borderWidth: 1,
-    borderRadius: 3,
-    paddingVertical: 7,
-    paddingHorizontal: 16,
-  },
-  closeActionText: {
-    color: '#F0F6FC',
-    fontSize: 12,
     fontWeight: '600',
-    fontFamily: 'Courier',
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
   },
 });

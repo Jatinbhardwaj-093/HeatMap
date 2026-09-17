@@ -1,5 +1,5 @@
-import React from 'react';
-import { StyleSheet, View, Text, TouchableOpacity } from 'react-native';
+import React, { useState } from 'react';
+import { StyleSheet, View, Text, TouchableOpacity, Alert, Platform } from 'react-native';
 import { HeatMapModel, ViewMode } from '../types/heatmap';
 import { PALETTES } from '../constants/palettes';
 import { calculateStats } from '../utils/streakUtils';
@@ -25,15 +25,31 @@ export const HeatmapCard: React.FC<HeatmapCardProps> = ({
   onQuickLogToday,
   onDeleteMap,
 }) => {
-  const stats = calculateStats(heatmap);
+  const { stats, streakMap } = calculateStats(heatmap);
   const palette = PALETTES[heatmap.paletteId] || PALETTES.emerald;
   const todayKey = getTodayKey();
   const todayEntry = heatmap.entries[todayKey];
-  const isTodayLogged = !!(todayEntry && todayEntry.value > 0);
+  const isTodayLogged = !!todayEntry?.completed;
+
+  const handleDelete = () => {
+    if (Platform.OS === 'web') {
+      if (window.confirm(`Are you sure you want to delete "${heatmap.title}"? This cannot be undone.`)) {
+        onDeleteMap(heatmap.id);
+      }
+    } else {
+      Alert.alert(
+        'Delete Tracker',
+        `Are you sure you want to delete "${heatmap.title}"? This cannot be undone.`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Delete', style: 'destructive', onPress: () => onDeleteMap(heatmap.id) },
+        ]
+      );
+    }
+  };
 
   return (
     <View style={styles.card}>
-      {/* Top Header */}
       <View style={styles.cardHeader}>
         <View style={styles.titleInfo}>
           <View style={styles.badgeRow}>
@@ -42,10 +58,7 @@ export const HeatmapCard: React.FC<HeatmapCardProps> = ({
                 {heatmap.category.toUpperCase()}
               </Text>
             </View>
-            <Text style={styles.targetHint}>
-              Target: {heatmap.targetValue}{' '}
-              {heatmap.unitLabel || (heatmap.unitType === 'boolean' ? 'daily' : 'units')}
-            </Text>
+            <Text style={styles.targetHint}>Daily Check-in</Text>
           </View>
           <Text style={styles.titleText}>{heatmap.title}</Text>
           {heatmap.description ? (
@@ -53,7 +66,6 @@ export const HeatmapCard: React.FC<HeatmapCardProps> = ({
           ) : null}
         </View>
 
-        {/* Right Actions */}
         <View style={styles.actionsGroup}>
           <TouchableOpacity
             activeOpacity={0.7}
@@ -80,7 +92,7 @@ export const HeatmapCard: React.FC<HeatmapCardProps> = ({
 
           <TouchableOpacity
             activeOpacity={0.7}
-            onPress={() => onDeleteMap(heatmap.id)}
+            onPress={handleDelete}
             style={styles.deleteButton}
           >
             <Trash2 size={13} color="#6E7681" />
@@ -88,33 +100,32 @@ export const HeatmapCard: React.FC<HeatmapCardProps> = ({
         </View>
       </View>
 
-      {/* Dynamic View: Weekly, Monthly, Yearly */}
       <View style={styles.viewBody}>
         {viewMode === 'yearly' && (
           <YearlyView
             heatmap={heatmap}
+            streakMap={streakMap}
             onSelectDate={(dKey) => onSelectDate(heatmap.id, dKey)}
           />
         )}
         {viewMode === 'monthly' && (
           <MonthlyView
             heatmap={heatmap}
+            streakMap={streakMap}
             onSelectDate={(dKey) => onSelectDate(heatmap.id, dKey)}
           />
         )}
         {viewMode === 'weekly' && (
           <WeeklyView
             heatmap={heatmap}
+            streakMap={streakMap}
             onSelectDate={(dKey) => onSelectDate(heatmap.id, dKey)}
           />
         )}
       </View>
 
-      {/* Stats Summary Bar */}
       <StatsOverview
         stats={stats}
-        unitType={heatmap.unitType}
-        unitLabel={heatmap.unitLabel}
         accentColor={palette.accent}
       />
     </View>
@@ -155,13 +166,13 @@ const styles = StyleSheet.create({
   categoryText: {
     fontSize: 9,
     fontWeight: '700',
-    fontFamily: 'Courier',
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
     letterSpacing: 0.5,
   },
   targetHint: {
     color: '#6E7681',
     fontSize: 10,
-    fontFamily: 'Courier',
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
   },
   titleText: {
     color: '#F0F6FC',
@@ -197,13 +208,13 @@ const styles = StyleSheet.create({
     color: '#F0F6FC',
     fontSize: 11,
     fontWeight: '700',
-    fontFamily: 'Courier',
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
   },
   quickLogTextActive: {
     color: '#FFFFFF',
     fontSize: 11,
     fontWeight: '700',
-    fontFamily: 'Courier',
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
   },
   deleteButton: {
     padding: 6,

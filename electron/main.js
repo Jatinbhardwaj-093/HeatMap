@@ -2,6 +2,12 @@ const { app, BrowserWindow } = require('electron');
 const path = require('path');
 
 function createWindow() {
+  const iconPath = path.join(__dirname, '../assets/icon.png');
+  
+  if (process.platform === 'darwin') {
+    app.dock.setIcon(iconPath);
+  }
+
   const win = new BrowserWindow({
     width: 1180,
     height: 820,
@@ -9,6 +15,7 @@ function createWindow() {
     minHeight: 600,
     titleBarStyle: 'hiddenInset',
     backgroundColor: '#090A0C',
+    icon: iconPath,
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,

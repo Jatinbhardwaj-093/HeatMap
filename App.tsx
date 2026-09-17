@@ -84,17 +84,10 @@ export default function App() {
     const updated = heatmaps.map((m) => {
       if (m.id !== mapId) return m;
       const entries = { ...m.entries };
-      const currentVal = entries[todayKey]?.value || 0;
-      if (m.unitType === 'boolean') {
-        if (currentVal > 0) {
-          delete entries[todayKey];
-        } else {
-          entries[todayKey] = { date: todayKey, value: 1 };
-        }
+      if (entries[todayKey]?.completed) {
+        delete entries[todayKey];
       } else {
-        // Increment by daily target or 1
-        const step = m.targetValue > 1 ? Math.round(m.targetValue / 2) || 1 : 1;
-        entries[todayKey] = { date: todayKey, value: currentVal + step };
+        entries[todayKey] = { date: todayKey, completed: true };
       }
       return { ...m, entries };
     });
@@ -102,16 +95,16 @@ export default function App() {
   };
 
   // Save specific day entry
-  const handleSaveDayEntry = (dateKey: string, value: number, notes?: string) => {
+  const handleSaveDayEntry = (dateKey: string, completed: boolean, notes?: string) => {
     if (!selectedDayInfo) return;
     const { mapId } = selectedDayInfo;
     const updated = heatmaps.map((m) => {
       if (m.id !== mapId) return m;
       const entries = { ...m.entries };
-      if (value <= 0 && !notes) {
+      if (!completed && !notes) {
         delete entries[dateKey];
       } else {
-        entries[dateKey] = { date: dateKey, value, notes };
+        entries[dateKey] = { date: dateKey, completed, notes };
       }
       return { ...m, entries };
     });
@@ -326,7 +319,7 @@ const styles = StyleSheet.create({
     color: '#8B949E',
     fontSize: 10,
     fontWeight: '600',
-    fontFamily: 'Courier',
+    
     letterSpacing: 0.5,
   },
   categoryTabTextActive: {
@@ -347,7 +340,7 @@ const styles = StyleSheet.create({
   searchInput: {
     color: '#F0F6FC',
     fontSize: 11,
-    fontFamily: 'Courier',
+    
     padding: 0,
   },
   listContainer: {
@@ -366,7 +359,7 @@ const styles = StyleSheet.create({
     color: '#F0F6FC',
     fontSize: 14,
     fontWeight: '700',
-    fontFamily: 'Courier',
+    
     letterSpacing: 0.5,
     marginBottom: 6,
   },
@@ -381,7 +374,7 @@ const styles = StyleSheet.create({
   emptyText: {
     color: '#6E7681',
     fontSize: 12,
-    fontFamily: 'Courier',
+    
   },
   emptyButton: {
     flexDirection: 'row',
@@ -396,7 +389,7 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 11,
     fontWeight: '700',
-    fontFamily: 'Courier',
+    
     letterSpacing: 0.5,
   },
 });

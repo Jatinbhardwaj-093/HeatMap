@@ -99,13 +99,13 @@ const styles = StyleSheet.create({
     color: '#F0F6FC',
     fontSize: 15,
     fontWeight: '700',
-    fontFamily: 'Courier',
+    
     letterSpacing: 1,
   },
   brandSub: {
     color: '#6E7681',
     fontSize: 9,
-    fontFamily: 'Courier',
+    
     letterSpacing: 0.5,
   },
   actionButtons: {
@@ -128,7 +128,7 @@ const styles = StyleSheet.create({
     color: '#F0F6FC',
     fontSize: 11,
     fontWeight: '600',
-    fontFamily: 'Courier',
+    
     letterSpacing: 0.5,
   },
   newMapBtn: {
@@ -146,7 +146,7 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 11,
     fontWeight: '700',
-    fontFamily: 'Courier',
+    
     letterSpacing: 0.5,
   },
   switcherBar: {

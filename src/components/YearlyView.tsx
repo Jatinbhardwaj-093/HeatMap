@@ -1,33 +1,34 @@
 import React, { useState } from 'react';
-import { StyleSheet, View, Text, ScrollView, TouchableOpacity } from 'react-native';
+import { StyleSheet, View, Text, ScrollView, TouchableOpacity, Platform } from 'react-native';
 import { HeatMapModel } from '../types/heatmap';
 import { getYearlyGrid } from '../utils/dateUtils';
 import { PALETTES } from '../constants/palettes';
+import { getStreakIntensityLevel } from '../utils/streakUtils';
 import { DayCell } from './DayCell';
 import { ChevronLeft, ChevronRight } from 'lucide-react-native';
 
 interface YearlyViewProps {
   heatmap: HeatMapModel;
+  streakMap: Record<string, number>;
   onSelectDate: (dateKey: string) => void;
 }
 
-export const YearlyView: React.FC<YearlyViewProps> = ({ heatmap, onSelectDate }) => {
+export const YearlyView: React.FC<YearlyViewProps> = ({ heatmap, streakMap, onSelectDate }) => {
   const currentYear = new Date().getFullYear();
   const [selectedYear, setSelectedYear] = useState<number>(currentYear);
-  const [hoveredDate, setHoveredDate] = useState<{ date: string; value: number } | null>(null);
+  const [hoveredDate, setHoveredDate] = useState<{ date: string; streak: number } | null>(null);
 
   const { weeks, monthHeaders } = getYearlyGrid(selectedYear);
   const palette = PALETTES[heatmap.paletteId] || PALETTES.emerald;
 
   const handleCellPress = (dateKey: string) => {
     const entry = heatmap.entries[dateKey];
-    setHoveredDate({ date: dateKey, value: entry ? entry.value : 0 });
+    setHoveredDate({ date: dateKey, streak: streakMap[dateKey] || 0 });
     onSelectDate(dateKey);
   };
 
   return (
     <View style={styles.container}>
-      {/* Year navigation & info */}
       <View style={styles.headerRow}>
         <View style={styles.yearSelector}>
           <TouchableOpacity
@@ -50,21 +51,18 @@ export const YearlyView: React.FC<YearlyViewProps> = ({ heatmap, onSelectDate })
         {hoveredDate && (
           <View style={styles.hoverInfo}>
             <Text style={styles.hoverText}>
-              {hoveredDate.date}: {hoveredDate.value}{' '}
-              {heatmap.unitLabel || (heatmap.unitType === 'boolean' ? 'done' : 'units')}
+              {hoveredDate.date}: {hoveredDate.streak > 0 ? `${hoveredDate.streak}d streak` : 'Not done'}
             </Text>
           </View>
         )}
       </View>
 
-      {/* Grid container with horizontal scroll */}
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
         <View>
-          {/* Month labels */}
           <View style={styles.monthsRow}>
             <View style={{ width: 24 }} />
             {monthHeaders.map((m, idx) => (
@@ -82,7 +80,6 @@ export const YearlyView: React.FC<YearlyViewProps> = ({ heatmap, onSelectDate })
             ))}
           </View>
 
-          {/* Grid rows with day labels (Mon, Wed, Fri) */}
           <View style={styles.matrixWrapper}>
             <View style={styles.dayLabelsCol}>
               <Text style={styles.dayLabelText}>Mon</Text>
@@ -98,13 +95,12 @@ export const YearlyView: React.FC<YearlyViewProps> = ({ heatmap, onSelectDate })
                 <View key={`w-${weekIdx}`} style={styles.weekColumn}>
                   {week.map((day) => {
                     const entry = heatmap.entries[day.dateKey];
-                    const val = entry ? entry.value : 0;
+                    const level = entry?.completed ? getStreakIntensityLevel(streakMap[day.dateKey] || 1) : 0;
                     return (
                       <DayCell
                         key={day.dateKey}
                         dateKey={day.dateKey}
-                        value={val}
-                        target={heatmap.targetValue}
+                        level={level}
                         paletteId={heatmap.paletteId}
                         size={12}
                         dimmed={!day.inYear}
@@ -120,7 +116,6 @@ export const YearlyView: React.FC<YearlyViewProps> = ({ heatmap, onSelectDate })
         </View>
       </ScrollView>
 
-      {/* Legend row */}
       <View style={styles.legendRow}>
         <Text style={styles.legendLabel}>Less</Text>
         <View style={styles.legendSwatches}>
@@ -164,7 +159,7 @@ const styles = StyleSheet.create({
     color: '#F0F6FC',
     fontSize: 13,
     fontWeight: '600',
-    fontFamily: 'Courier',
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
     marginHorizontal: 8,
   },
   hoverInfo: {
@@ -178,7 +173,7 @@ const styles = StyleSheet.create({
   hoverText: {
     color: '#8B949E',
     fontSize: 11,
-    fontFamily: 'Courier',
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
   },
   scrollContent: {
     paddingRight: 16,
@@ -193,7 +188,7 @@ const styles = StyleSheet.create({
     color: '#8B949E',
     fontSize: 10,
     fontWeight: '500',
-    fontFamily: 'Courier',
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
   },
   matrixWrapper: {
     flexDirection: 'row',
@@ -207,7 +202,7 @@ const styles = StyleSheet.create({
   dayLabelText: {
     color: '#6E7681',
     fontSize: 9,
-    fontFamily: 'Courier',
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
     lineHeight: 12,
   },
   weeksContainer: {
@@ -228,7 +223,7 @@ const styles = StyleSheet.create({
   legendLabel: {
     color: '#6E7681',
     fontSize: 10,
-    fontFamily: 'Courier',
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
   },
   legendSwatches: {
     flexDirection: 'row',

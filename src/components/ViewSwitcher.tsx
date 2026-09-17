@@ -69,7 +69,7 @@ const styles = StyleSheet.create({
     color: '#8B949E',
     fontSize: 11,
     fontWeight: '600',
-    fontFamily: 'Courier',
+    
     letterSpacing: 0.5,
   },
   activeLabel: {
