@@ -1,6 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { HeatMapModel } from '../types/heatmap';
-import { SAMPLE_HEATMAPS } from '../constants/sampleData';
 
 const STORAGE_KEY = '@trace_heatmaps_v1';
 
@@ -8,18 +7,16 @@ export async function loadHeatMaps(): Promise<HeatMapModel[]> {
   try {
     const raw = await AsyncStorage.getItem(STORAGE_KEY);
     if (!raw) {
-      // First run: save sample data and return it
-      await saveHeatMaps(SAMPLE_HEATMAPS);
-      return SAMPLE_HEATMAPS;
+      return [];
     }
     const parsed = JSON.parse(raw);
-    if (Array.isArray(parsed) && parsed.length > 0) {
+    if (Array.isArray(parsed)) {
       return parsed;
     }
-    return SAMPLE_HEATMAPS;
+    return [];
   } catch (err) {
-    console.warn('Storage read error, falling back to sample data:', err);
-    return SAMPLE_HEATMAPS;
+    console.warn('Storage read error:', err);
+    return [];
   }
 }
 
