@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   StyleSheet,
   View,
@@ -22,20 +22,17 @@ import {
   X,
   Sun,
   Moon,
-  Terminal,
-  Shield,
-  Zap,
   Sparkles,
-  ExternalLink,
+  Lock,
 } from 'lucide-react-native';
 import { useAppTheme, useIsDark, useThemeMode } from '../theme/theme';
 
 interface LandingPageProps {
   onLogin: () => void;
   onDashboard: () => void;
+  isLoggedIn?: boolean;
 }
 
-// Preset demo matrix data for interactive showcase
 interface DemoPreset {
   id: string;
   name: string;
@@ -46,7 +43,6 @@ interface DemoPreset {
   streak: number;
   completionRate: string;
   totalDays: number;
-  patternSeed: number[];
 }
 
 const DEMO_PRESETS: DemoPreset[] = [
@@ -59,8 +55,7 @@ const DEMO_PRESETS: DemoPreset[] = [
     levelColors: ['#161B22', '#0E4429', '#006D32', '#26A641', '#39D353'],
     streak: 42,
     completionRate: '94.2%',
-    totalDays: 138,
-    patternSeed: [3, 4, 4, 4, 3, 0, 0, 4, 4, 3, 4, 4, 1, 0, 4, 4, 4, 3, 4, 2, 0, 4, 4, 4, 4, 4, 0, 0],
+    totalDays: 198,
   },
   {
     id: 'workout',
@@ -71,8 +66,7 @@ const DEMO_PRESETS: DemoPreset[] = [
     levelColors: ['#1A1713', '#43280B', '#78470E', '#B45309', '#F59E0B'],
     streak: 18,
     completionRate: '86.5%',
-    totalDays: 92,
-    patternSeed: [4, 0, 3, 4, 0, 4, 0, 3, 4, 0, 4, 4, 0, 4, 4, 0, 4, 4, 0, 3, 0, 4, 4, 0, 4, 4, 0, 4],
+    totalDays: 142,
   },
   {
     id: 'read-meditate',
@@ -83,12 +77,107 @@ const DEMO_PRESETS: DemoPreset[] = [
     levelColors: ['#111923', '#0C384D', '#0E5D7F', '#0284C7', '#38BDF8'],
     streak: 29,
     completionRate: '91.8%',
-    totalDays: 114,
-    patternSeed: [2, 3, 4, 4, 4, 4, 4, 3, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 3, 4, 4, 4, 4, 4, 4],
+    totalDays: 176,
   },
 ];
 
-export const LandingPage: React.FC<LandingPageProps> = ({ onLogin, onDashboard }) => {
+const MONTH_HEADERS = [
+  { label: 'Jan', week: 0 },
+  { label: 'Feb', week: 4 },
+  { label: 'Mar', week: 8 },
+  { label: 'Apr', week: 13 },
+  { label: 'May', week: 17 },
+  { label: 'Jun', week: 21 },
+  { label: 'Jul', week: 26 },
+  { label: 'Aug', week: 30 },
+  { label: 'Sep', week: 35 },
+  { label: 'Oct', week: 39 },
+  { label: 'Nov', week: 44 },
+  { label: 'Dec', week: 48 },
+];
+
+// Generate authentic full-year 52-week matrix patterns with realistic blanks and streaks
+function generateFullYearData(presetId: string): number[][] {
+  const weeks: number[][] = [];
+  const TOTAL_WEEKS = 52;
+  const CURRENT_WEEK = 42; // today is around week 42; weeks 43-51 are future blanks
+
+  for (let w = 0; w < TOTAL_WEEKS; w++) {
+    const weekDays: number[] = [];
+
+    for (let d = 0; d < 7; d++) {
+      if (w > CURRENT_WEEK) {
+        // Future days: unlogged blank place
+        weekDays.push(0);
+        continue;
+      }
+
+      if (presetId === 'deep-work') {
+        // Engineering: focus on weekdays (d = 0 to 4), weekends mostly blank
+        if (d >= 5) {
+          // Weekend: mostly unlogged, occasional light session
+          const r = (w * 7 + d * 13) % 10;
+          weekDays.push(r > 7 ? 2 : 0);
+        } else if (w >= 36) {
+          // Current unbroken streak (weeks 36 to 42)
+          weekDays.push(4);
+        } else if (w === 18 || w === 19) {
+          // Two-week vacation: blank place
+          weekDays.push(0);
+        } else {
+          // Normal weekday consistency with realistic gaps
+          const r = (w * 11 + d * 17) % 10;
+          if (r === 0 || r === 5) weekDays.push(0); // Rest / blank
+          else if (r < 4) weekDays.push(2);
+          else if (r < 8) weekDays.push(3);
+          else weekDays.push(4);
+        }
+      } else if (presetId === 'workout') {
+        // Fitness: 4 sessions per week (Mon, Wed, Fri, Sat)
+        const isWorkoutDay = d === 0 || d === 2 || d === 4 || d === 5;
+        if (w >= 39 && isWorkoutDay) {
+          // Current streak in recent weeks
+          weekDays.push(4);
+        } else if (w === 12 || w === 28) {
+          // Deload / travel week: blank
+          weekDays.push(0);
+        } else if (isWorkoutDay) {
+          const r = (w * 13 + d * 7) % 10;
+          if (r === 1) weekDays.push(0); // Missed day
+          else if (r < 5) weekDays.push(3);
+          else weekDays.push(4);
+        } else {
+          // Rest day: clean blank place
+          weekDays.push(0);
+        }
+      } else {
+        // Mind / Reading: daily habit with occasional missed days
+        if (w >= 38) {
+          // Current 29-day streak
+          weekDays.push(4);
+        } else if (w === 14 || w === 25) {
+          // Blank break
+          weekDays.push(0);
+        } else {
+          const r = (w * 7 + d * 5) % 10;
+          if (r <= 2) weekDays.push(0); // Blank day
+          else if (r <= 5) weekDays.push(2);
+          else if (r <= 8) weekDays.push(3);
+          else weekDays.push(4);
+        }
+      }
+    }
+    weeks.push(weekDays);
+  }
+
+  return weeks;
+}
+
+export const LandingPage: React.FC<LandingPageProps> = ({
+  onLogin,
+  onDashboard,
+  isLoggedIn = false,
+}) => {
   const theme = useAppTheme();
   const isDark = useIsDark();
   const { themeMode, setThemeMode } = useThemeMode();
@@ -96,13 +185,18 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLogin, onDashboard }
   const [activePresetIndex, setActivePresetIndex] = useState(0);
   const activePreset = DEMO_PRESETS[activePresetIndex];
 
-  // Interactive cell overrides for the demo
+  // Interactive user edits in the demo
   const [clickedCells, setClickedCells] = useState<Record<string, number>>({});
+
+  // 52-week full year data matrix for active preset
+  const baseMatrix = useMemo(() => {
+    return generateFullYearData(activePreset.id);
+  }, [activePreset.id]);
 
   const toggleDemoCell = (cellKey: string, currentLevel: number) => {
     setClickedCells((prev) => ({
       ...prev,
-      [cellKey]: prev[cellKey] !== undefined ? (prev[cellKey] === 0 ? 4 : 0) : (currentLevel > 0 ? 0 : 4),
+      [cellKey]: prev[cellKey] !== undefined ? (prev[cellKey] === 0 ? 4 : 0) : currentLevel > 0 ? 0 : 4,
     }));
   };
 
@@ -118,9 +212,14 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLogin, onDashboard }
     setThemeMode(isDark ? 'light' : 'dark');
   };
 
-  // Generate 18 weeks x 7 days for the demo preview
-  const demoWeeksCount = 18;
-  const daysPerWeek = 7;
+  // Auth gate: If logged in, go to dashboard. If not logged in, must go to login/register
+  const handlePrimaryAuthAction = () => {
+    if (isLoggedIn) {
+      onDashboard();
+    } else {
+      onLogin();
+    }
+  };
 
   return (
     <ScrollView
@@ -131,7 +230,12 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLogin, onDashboard }
       {/* ─── NAVIGATION BAR ────────────────────────────────────── */}
       <View style={[styles.navbar, { borderColor: theme.borderSubtle }]}>
         <View style={styles.brandGroup}>
-          <View style={[styles.logoBadge, { borderColor: isDark ? '#30363D' : '#D0D7DE', backgroundColor: theme.surface }]}>
+          <View
+            style={[
+              styles.logoBadge,
+              { borderColor: isDark ? '#30363D' : '#D0D7DE', backgroundColor: theme.surface },
+            ]}
+          >
             <Image
               source={require('../../assets/icon.png')}
               style={styles.logoImage}
@@ -141,7 +245,15 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLogin, onDashboard }
           <View>
             <View style={styles.brandTitleRow}>
               <Text style={[styles.brandText, { color: theme.text }]}>HEATMAP</Text>
-              <View style={[styles.statusTag, { backgroundColor: isDark ? 'rgba(57, 211, 83, 0.15)' : 'rgba(26, 127, 55, 0.12)', borderColor: isDark ? 'rgba(57, 211, 83, 0.4)' : 'rgba(26, 127, 55, 0.3)' }]}>
+              <View
+                style={[
+                  styles.statusTag,
+                  {
+                    backgroundColor: isDark ? 'rgba(57, 211, 83, 0.15)' : 'rgba(26, 127, 55, 0.12)',
+                    borderColor: isDark ? 'rgba(57, 211, 83, 0.4)' : 'rgba(26, 127, 55, 0.3)',
+                  },
+                ]}
+              >
                 <View style={[styles.statusDot, { backgroundColor: theme.success }]} />
                 <Text style={[styles.statusText, { color: theme.success }]}>V1.2 // LIVE</Text>
               </View>
@@ -168,20 +280,38 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLogin, onDashboard }
             <Text style={[styles.navGithubText, { color: theme.textSecondary }]}>GitHub</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity
-            style={[styles.navSignInBtn, { borderColor: theme.border, backgroundColor: theme.surfaceHighlight }]}
-            onPress={onLogin}
-            activeOpacity={0.8}
-          >
-            <Text style={[styles.navSignInText, { color: theme.text }]}>SIGN IN</Text>
-          </TouchableOpacity>
+          {isLoggedIn ? (
+            <TouchableOpacity
+              style={[styles.navSignInBtn, { borderColor: theme.success, backgroundColor: theme.surfaceHighlight }]}
+              onPress={onDashboard}
+              activeOpacity={0.8}
+            >
+              <Text style={[styles.navSignInText, { color: theme.success }]}>DASHBOARD</Text>
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity
+              style={[styles.navSignInBtn, { borderColor: theme.border, backgroundColor: theme.surfaceHighlight }]}
+              onPress={onLogin}
+              activeOpacity={0.8}
+            >
+              <Text style={[styles.navSignInText, { color: theme.text }]}>SIGN IN</Text>
+            </TouchableOpacity>
+          )}
         </View>
       </View>
 
       {/* ─── HERO SECTION ──────────────────────────────────────── */}
       <View style={styles.heroSection}>
         {/* Editorial Pill */}
-        <View style={[styles.heroPill, { borderColor: isDark ? 'rgba(57, 211, 83, 0.35)' : 'rgba(26, 127, 55, 0.3)', backgroundColor: isDark ? 'rgba(14, 68, 41, 0.2)' : 'rgba(26, 127, 55, 0.08)' }]}>
+        <View
+          style={[
+            styles.heroPill,
+            {
+              borderColor: isDark ? 'rgba(57, 211, 83, 0.35)' : 'rgba(26, 127, 55, 0.3)',
+              backgroundColor: isDark ? 'rgba(14, 68, 41, 0.2)' : 'rgba(26, 127, 55, 0.08)',
+            },
+          ]}
+        >
           <Flame size={13} color={isDark ? '#39D353' : '#1A7F37'} strokeWidth={2.5} />
           <Text style={[styles.heroPillText, { color: isDark ? '#39D353' : '#1A7F37' }]}>
             GITHUB-STYLE DISCIPLINE // ZERO NUMERIC FATIGUE
@@ -198,30 +328,36 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLogin, onDashboard }
           </Text>
         </View>
 
-        {/* Subtitle with Clear Hierarchy */}
+        {/* Subtitle with Clean Flow (No M-dash) */}
         <Text style={[styles.heroSubtitle, { color: theme.textSecondary }]}>
-          Stop drowning in continuous numbers, target meters, and bookkeeping anxiety. 
-          HeatMap strips routine tracking to an elegant <Text style={{ color: theme.text, fontWeight: '700' }}>binary check-in</Text>—transforming daily human consistency into the visual momentum of green contribution matrixes.
+          Stop drowning in continuous numbers, target meters, and bookkeeping anxiety.
+          HeatMap strips routine tracking down to an elegant <Text style={{ color: theme.text, fontWeight: '700' }}>binary check-in</Text>.
+          Log yes or no and let daily consistency compound into green contribution matrices.
         </Text>
 
-        {/* Hero Actions */}
+        {/* Hero Actions (Strict Auth Protection) */}
         <View style={styles.heroButtonsRow}>
           <TouchableOpacity
             style={[styles.primaryActionBtn, { backgroundColor: isDark ? '#39D353' : '#1A7F37' }]}
-            onPress={onDashboard}
+            onPress={handlePrimaryAuthAction}
             activeOpacity={0.85}
           >
-            <Text style={styles.primaryActionText}>LAUNCH WEB DASHBOARD</Text>
+            <Text style={styles.primaryActionText}>
+              {isLoggedIn ? 'OPEN YOUR DASHBOARD' : 'START TRACKING FREE'}
+            </Text>
             <ArrowRight size={16} color="#FFFFFF" strokeWidth={2.5} />
           </TouchableOpacity>
 
-          <TouchableOpacity
-            style={[styles.secondaryActionBtn, { borderColor: theme.border, backgroundColor: theme.surface }]}
-            onPress={onLogin}
-            activeOpacity={0.85}
-          >
-            <Text style={[styles.secondaryActionText, { color: theme.text }]}>CREATE FREE ACCOUNT</Text>
-          </TouchableOpacity>
+          {!isLoggedIn && (
+            <TouchableOpacity
+              style={[styles.secondaryActionBtn, { borderColor: theme.border, backgroundColor: theme.surface }]}
+              onPress={onLogin}
+              activeOpacity={0.85}
+            >
+              <Lock size={14} color={theme.textSecondary} />
+              <Text style={[styles.secondaryActionText, { color: theme.text }]}>SIGN IN TO ACCOUNT</Text>
+            </TouchableOpacity>
+          )}
         </View>
 
         {/* Micro Tech Guarantee */}
@@ -243,7 +379,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLogin, onDashboard }
         </View>
       </View>
 
-      {/* ─── LIVE INTERACTIVE MATRIX SHOWCASE ───────────────────── */}
+      {/* ─── LIVE FULL-WIDTH 52-WEEK MATRIX SHOWCASE ───────────── */}
       <View style={[styles.interactiveCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
         {/* Card Header */}
         <View style={[styles.interactiveHeader, { borderBottomColor: theme.borderSubtle }]}>
@@ -254,12 +390,12 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLogin, onDashboard }
                 {activePreset.name.toUpperCase()}
               </Text>
               <Text style={[styles.interactiveSub, { color: theme.textMuted }]}>
-                Matrix Engine // Palette: <Text style={{ color: activePreset.accentColor, fontWeight: '600' }}>{activePreset.colorName}</Text>
+                Annual Matrix Grid // Palette: <Text style={{ color: activePreset.accentColor, fontWeight: '600' }}>{activePreset.colorName}</Text>
               </Text>
             </View>
           </View>
 
-          {/* Interactive Preset Switcher */}
+          {/* Preset Switcher */}
           <View style={[styles.presetTabs, { backgroundColor: theme.surfaceHighlight, borderColor: theme.borderSubtle }]}>
             {DEMO_PRESETS.map((preset, idx) => {
               const isSelected = activePresetIndex === idx;
@@ -291,61 +427,89 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLogin, onDashboard }
           </View>
         </View>
 
-        {/* Matrix Grid Visualization */}
+        {/* Full-Width Matrix Grid Visualization */}
         <View style={styles.matrixViewWrapper}>
-          <View style={styles.matrixContainer}>
-            {/* Days column labels */}
-            <View style={styles.matrixDayLabels}>
-              <Text style={[styles.dayLabel, { color: theme.textMuted }]}>Mon</Text>
-              <Text style={[styles.dayLabel, { color: theme.textMuted }]}>Wed</Text>
-              <Text style={[styles.dayLabel, { color: theme.textMuted }]}>Fri</Text>
-              <Text style={[styles.dayLabel, { color: theme.textMuted }]}>Sun</Text>
-            </View>
-
-            {/* Matrix Columns */}
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.matrixScroll}>
-              <View style={styles.columnsWrapper}>
-                {Array.from({ length: demoWeeksCount }).map((_, weekIdx) => (
-                  <View key={`week-${weekIdx}`} style={styles.matrixColumn}>
-                    {Array.from({ length: daysPerWeek }).map((__, dayIdx) => {
-                      const cellKey = `w${weekIdx}-d${dayIdx}`;
-                      const seedIndex = (weekIdx * 7 + dayIdx) % activePreset.patternSeed.length;
-                      const baseLevel = activePreset.patternSeed[seedIndex];
-                      const currentLevel = clickedCells[cellKey] !== undefined ? clickedCells[cellKey] : baseLevel;
-                      const cellColor = activePreset.levelColors[currentLevel] || activePreset.levelColors[0];
-
-                      return (
-                        <TouchableOpacity
-                          key={cellKey}
-                          activeOpacity={0.6}
-                          onPress={() => toggleDemoCell(cellKey, currentLevel)}
-                          style={[
-                            styles.matrixCell,
-                            {
-                              backgroundColor: !isDark && currentLevel === 0 ? '#EAECEF' : cellColor,
-                              borderColor: isDark ? '#21262D' : '#D0D7DE',
-                            },
-                          ]}
-                        />
-                      );
-                    })}
-                  </View>
-                ))}
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.fullWidthMatrixScroll}
+          >
+            <View>
+              {/* Month Header Labels across the 52 weeks */}
+              <View style={styles.monthHeaderRow}>
+                <View style={{ width: 28 }} />
+                <View style={styles.monthLabelsContainer}>
+                  {MONTH_HEADERS.map((m) => (
+                    <Text
+                      key={m.label}
+                      style={[
+                        styles.monthHeaderText,
+                        {
+                          left: m.week * 16 + 28,
+                          color: theme.textMuted,
+                        },
+                      ]}
+                    >
+                      {m.label}
+                    </Text>
+                  ))}
+                </View>
               </View>
-            </ScrollView>
-          </View>
+
+              {/* Grid Body: Day labels + 52-week columns */}
+              <View style={styles.matrixBodyRow}>
+                {/* Day Labels column */}
+                <View style={styles.matrixDayLabels}>
+                  <Text style={[styles.dayLabel, { color: theme.textMuted }]}>Mon</Text>
+                  <Text style={[styles.dayLabel, { color: theme.textMuted }]}>Wed</Text>
+                  <Text style={[styles.dayLabel, { color: theme.textMuted }]}>Fri</Text>
+                  <Text style={[styles.dayLabel, { color: theme.textMuted }]}>Sun</Text>
+                </View>
+
+                {/* 52 Columns */}
+                <View style={styles.columnsWrapper}>
+                  {baseMatrix.map((week, weekIdx) => (
+                    <View key={`week-${weekIdx}`} style={styles.matrixColumn}>
+                      {week.map((baseLevel, dayIdx) => {
+                        const cellKey = `w${weekIdx}-d${dayIdx}`;
+                        const currentLevel =
+                          clickedCells[cellKey] !== undefined ? clickedCells[cellKey] : baseLevel;
+                        const cellColor =
+                          activePreset.levelColors[currentLevel] || activePreset.levelColors[0];
+
+                        return (
+                          <TouchableOpacity
+                            key={cellKey}
+                            activeOpacity={0.6}
+                            onPress={() => toggleDemoCell(cellKey, currentLevel)}
+                            style={[
+                              styles.matrixCell,
+                              {
+                                backgroundColor: !isDark && currentLevel === 0 ? '#EAECEF' : cellColor,
+                                borderColor: isDark ? '#21262D' : '#D0D7DE',
+                              },
+                            ]}
+                          />
+                        );
+                      })}
+                    </View>
+                  ))}
+                </View>
+              </View>
+            </View>
+          </ScrollView>
 
           {/* Matrix Footnote / Legend */}
           <View style={[styles.matrixFooterRow, { borderTopColor: theme.borderSubtle }]}>
             <View style={styles.interactiveHintRow}>
               <Sparkles size={12} color={activePreset.accentColor} />
               <Text style={[styles.interactiveHint, { color: theme.textSecondary }]}>
-                Interactive Demo: Click any tile to test streak intensity
+                Interactive Demo: 52-week annual matrix with real blanks. Click any cell to test intensity.
               </Text>
             </View>
 
             <View style={styles.legendGroup}>
-              <Text style={[styles.legendLabel, { color: theme.textMuted }]}>Less</Text>
+              <Text style={[styles.legendLabel, { color: theme.textMuted }]}>Blank</Text>
               <View style={styles.swatchesRow}>
                 {activePreset.levelColors.map((color, i) => (
                   <View
@@ -360,7 +524,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLogin, onDashboard }
                   />
                 ))}
               </View>
-              <Text style={[styles.legendLabel, { color: theme.textMuted }]}>More</Text>
+              <Text style={[styles.legendLabel, { color: theme.textMuted }]}>Max Streak</Text>
             </View>
           </View>
         </View>
@@ -380,7 +544,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLogin, onDashboard }
           <View style={[styles.metricDivider, { backgroundColor: theme.border }]} />
 
           <View style={styles.metricBlock}>
-            <Text style={[styles.metricLabel, { color: theme.textMuted }]}>90-DAY CONSISTENCY</Text>
+            <Text style={[styles.metricLabel, { color: theme.textMuted }]}>ANNUAL CONSISTENCY</Text>
             <Text style={[styles.metricValue, { color: theme.text }]}>
               {activePreset.completionRate}
             </Text>
@@ -397,7 +561,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLogin, onDashboard }
         </View>
       </View>
 
-      {/* ─── PHILOSOPHY SECTION (ENGINEERED CLARITY) ─────────────── */}
+      {/* ─── PHILOSOPHY SECTION (NO M-DASH) ──────────────────────── */}
       <View style={styles.sectionWrapper}>
         <View style={styles.sectionHeaderCol}>
           <Text style={[styles.sectionOverline, { color: isDark ? '#39D353' : '#1A7F37' }]}>
@@ -412,7 +576,12 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLogin, onDashboard }
           {/* Pillar 01 */}
           <View style={[styles.pillarCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
             <View style={styles.pillarHeaderRow}>
-              <View style={[styles.pillarBadge, { backgroundColor: 'rgba(245, 158, 11, 0.1)', borderColor: 'rgba(245, 158, 11, 0.3)' }]}>
+              <View
+                style={[
+                  styles.pillarBadge,
+                  { backgroundColor: 'rgba(245, 158, 11, 0.1)', borderColor: 'rgba(245, 158, 11, 0.3)' },
+                ]}
+              >
                 <Text style={[styles.pillarBadgeText, { color: '#F59E0B' }]}>01 // ZERO FRICTION</Text>
               </View>
             </View>
@@ -422,7 +591,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLogin, onDashboard }
             </Text>
 
             <Text style={[styles.pillarBody, { color: theme.textSecondary }]}>
-              Apps that demand inputs like "8,450 / 10,000 steps" or "47 / 60 minutes" turn personal growth into exhausting bookkeeping. HeatMap reduces everything to a pure boolean: <Text style={{ color: theme.text, fontWeight: '700' }}>Did you execute today? Yes or No.</Text>
+              Apps that demand inputs like "8,450 / 10,000 steps" turn personal growth into exhausting bookkeeping. HeatMap reduces everything to a pure boolean: <Text style={{ color: theme.text, fontWeight: '700' }}>Did you execute today? Yes or No.</Text>
             </Text>
 
             {/* Comparison Visual Block */}
@@ -449,7 +618,12 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLogin, onDashboard }
           {/* Pillar 02 */}
           <View style={[styles.pillarCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
             <View style={styles.pillarHeaderRow}>
-              <View style={[styles.pillarBadge, { backgroundColor: 'rgba(56, 189, 248, 0.1)', borderColor: 'rgba(56, 189, 248, 0.3)' }]}>
+              <View
+                style={[
+                  styles.pillarBadge,
+                  { backgroundColor: 'rgba(56, 189, 248, 0.1)', borderColor: 'rgba(56, 189, 248, 0.3)' },
+                ]}
+              >
                 <Text style={[styles.pillarBadgeText, { color: '#38BDF8' }]}>02 // MODULARITY</Text>
               </View>
             </View>
@@ -482,7 +656,12 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLogin, onDashboard }
           {/* Pillar 03 */}
           <View style={[styles.pillarCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
             <View style={styles.pillarHeaderRow}>
-              <View style={[styles.pillarBadge, { backgroundColor: 'rgba(57, 211, 83, 0.1)', borderColor: 'rgba(57, 211, 83, 0.3)' }]}>
+              <View
+                style={[
+                  styles.pillarBadge,
+                  { backgroundColor: 'rgba(57, 211, 83, 0.1)', borderColor: 'rgba(57, 211, 83, 0.3)' },
+                ]}
+              >
                 <Text style={[styles.pillarBadgeText, { color: isDark ? '#39D353' : '#1A7F37' }]}>03 // PSYCHOLOGY</Text>
               </View>
             </View>
@@ -492,7 +671,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLogin, onDashboard }
             </Text>
 
             <Text style={[styles.pillarBody, { color: theme.textSecondary }]}>
-              Software engineers write code every single day just to keep their GitHub commit graph filled with bright green tiles. HeatMap leverages this exact proven behavioral psychology to rewire your daily discipline.
+              Software engineers write code every single day just to keep their GitHub commit graph filled with bright green tiles. HeatMap leverages this exact behavioral psychology to rewire your daily discipline.
             </Text>
 
             {/* Intensity Scale Preview */}
@@ -563,31 +742,55 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLogin, onDashboard }
           {/* Web App */}
           <View style={[styles.platformCard, { backgroundColor: theme.surface, borderColor: isDark ? '#39D353' : '#1A7F37' }]}>
             <View style={styles.platformTop}>
-              <View style={[styles.platformIconFrame, { borderColor: isDark ? '#39D353' : '#1A7F37', backgroundColor: isDark ? 'rgba(57, 211, 83, 0.1)' : 'rgba(26, 127, 55, 0.08)' }]}>
+              <View
+                style={[
+                  styles.platformIconFrame,
+                  {
+                    borderColor: isDark ? '#39D353' : '#1A7F37',
+                    backgroundColor: isDark ? 'rgba(57, 211, 83, 0.1)' : 'rgba(26, 127, 55, 0.08)',
+                  },
+                ]}
+              >
                 <Globe size={22} color={isDark ? '#39D353' : '#1A7F37'} />
               </View>
-              <View style={[styles.osTag, { backgroundColor: isDark ? 'rgba(57, 211, 83, 0.15)' : 'rgba(26, 127, 55, 0.12)', borderColor: isDark ? 'rgba(57, 211, 83, 0.4)' : 'rgba(26, 127, 55, 0.3)' }]}>
-                <Text style={[styles.osTagText, { color: isDark ? '#39D353' : '#1A7F37' }]}>ZERO INSTALL</Text>
+              <View
+                style={[
+                  styles.osTag,
+                  {
+                    backgroundColor: isDark ? 'rgba(57, 211, 83, 0.15)' : 'rgba(26, 127, 55, 0.12)',
+                    borderColor: isDark ? 'rgba(57, 211, 83, 0.4)' : 'rgba(26, 127, 55, 0.3)',
+                  },
+                ]}
+              >
+                <Text style={[styles.osTagText, { color: isDark ? '#39D353' : '#1A7F37' }]}>SECURE CLOUD</Text>
               </View>
             </View>
 
             <Text style={[styles.platformName, { color: theme.text }]}>Browser Cloud Client</Text>
             <Text style={[styles.platformDesc, { color: theme.textSecondary }]}>
-              Immediate zero-friction access on any workstation. Instant Supabase cloud synchronization across all devices.
+              Zero-friction access on any workstation with authenticated Supabase cloud synchronization across all your devices.
             </Text>
 
             <View style={styles.specList}>
               <Text style={[styles.specItem, { color: theme.textMuted }]}>• Works on Safari, Chrome, Arc, Firefox</Text>
-              <Text style={[styles.specItem, { color: theme.textMuted }]}>• Keyboard-first shortcuts & instant load</Text>
+              <Text style={[styles.specItem, { color: theme.textMuted }]}>• Requires verified user account</Text>
             </View>
 
             <TouchableOpacity
-              style={[styles.platformDownloadBtn, { backgroundColor: isDark ? '#39D353' : '#1A7F37', borderColor: isDark ? '#39D353' : '#1A7F37' }]}
-              onPress={onDashboard}
+              style={[
+                styles.platformDownloadBtn,
+                {
+                  backgroundColor: isDark ? '#39D353' : '#1A7F37',
+                  borderColor: isDark ? '#39D353' : '#1A7F37',
+                },
+              ]}
+              onPress={handlePrimaryAuthAction}
               activeOpacity={0.8}
             >
               <ArrowRight size={14} color="#FFFFFF" strokeWidth={2.5} />
-              <Text style={[styles.platformDownloadText, { color: '#FFFFFF' }]}>LAUNCH IN BROWSER</Text>
+              <Text style={[styles.platformDownloadText, { color: '#FFFFFF' }]}>
+                {isLoggedIn ? 'OPEN WEB DASHBOARD' : 'SIGN IN TO WEB CLIENT'}
+              </Text>
             </TouchableOpacity>
           </View>
 
@@ -634,16 +837,18 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLogin, onDashboard }
             Start Your First Grid In 10 Seconds.
           </Text>
           <Text style={[styles.bottomCtaSub, { color: theme.textSecondary }]}>
-            No credit cards, no bloated subscriptions, and zero paywalled habit limits.
+            Free and open-source habit tracking with zero paywalled limits.
           </Text>
 
           <View style={styles.bottomCtaButtons}>
             <TouchableOpacity
               style={[styles.primaryActionBtn, { backgroundColor: isDark ? '#39D353' : '#1A7F37' }]}
-              onPress={onDashboard}
+              onPress={handlePrimaryAuthAction}
               activeOpacity={0.85}
             >
-              <Text style={styles.primaryActionText}>OPEN WEB APP NOW</Text>
+              <Text style={styles.primaryActionText}>
+                {isLoggedIn ? 'OPEN YOUR DASHBOARD' : 'CREATE ACCOUNT & START'}
+              </Text>
               <ArrowRight size={16} color="#FFFFFF" strokeWidth={2.5} />
             </TouchableOpacity>
 
@@ -979,43 +1184,60 @@ const styles = StyleSheet.create({
   matrixViewWrapper: {
     padding: 20,
   },
-  matrixContainer: {
+  fullWidthMatrixScroll: {
+    paddingBottom: 8,
+    minWidth: '100%',
+  },
+  monthHeaderRow: {
+    flexDirection: 'row',
+    height: 18,
+    marginBottom: 6,
+    position: 'relative',
+  },
+  monthLabelsContainer: {
+    position: 'relative',
+    height: 18,
+    flex: 1,
+  },
+  monthHeaderText: {
+    position: 'absolute',
+    fontSize: 10,
+    fontWeight: '600',
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
+  },
+  matrixBodyRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: 8,
   },
   matrixDayLabels: {
-    paddingTop: 3,
-    gap: 12,
-    width: 26,
+    paddingTop: 2,
+    width: 28,
+    gap: 10,
   },
   dayLabel: {
     fontSize: 9,
     fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
   },
-  matrixScroll: {
-    paddingBottom: 8,
-  },
   columnsWrapper: {
     flexDirection: 'row',
-    gap: 4,
+    gap: 3,
   },
   matrixColumn: {
     flexDirection: 'column',
-    gap: 4,
+    gap: 3,
   },
   matrixCell: {
-    width: 14,
-    height: 14,
-    borderRadius: 3,
+    width: 13,
+    height: 13,
+    borderRadius: 2.5,
     borderWidth: 1,
   },
   matrixFooterRow: {
-    flexDirection: width > 600 ? 'row' : 'column',
+    flexDirection: width > 650 ? 'row' : 'column',
     justifyContent: 'space-between',
-    alignItems: width > 600 ? 'center' : 'flex-start',
+    alignItems: width > 650 ? 'center' : 'flex-start',
     paddingTop: 16,
-    marginTop: 12,
+    marginTop: 14,
     borderTopWidth: 1,
     gap: 10,
   },

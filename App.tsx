@@ -174,7 +174,14 @@ function AppContent() {
         <ExpoStatusBar style={isDark ? "light" : "dark"} />
         <LandingPage 
           onLogin={() => setCurrentScreen('login')} 
-          onDashboard={() => setCurrentScreen('dashboard')} 
+          onDashboard={() => {
+            if (userEmail) {
+              setCurrentScreen('dashboard');
+            } else {
+              setCurrentScreen('login');
+            }
+          }}
+          isLoggedIn={!!userEmail}
         />
       </SafeAreaView>
     );
