@@ -14,6 +14,17 @@ interface YearlyViewProps {
   onSelectDate: (dateKey: string) => void;
 }
 
+const CELL_SIZE = 14;
+const CELL_GAP = 4;
+const COLUMN_STEP = CELL_SIZE + CELL_GAP; // 18px per week
+const DAY_LABELS_WIDTH = 32;
+
+const fontStack = Platform.select({
+  web: '"SF Pro Rounded", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+  ios: 'System',
+  default: 'sans-serif',
+});
+
 export const YearlyView: React.FC<YearlyViewProps> = ({ heatmap, streakMap, onSelectDate }) => {
   const currentYear = new Date().getFullYear();
   const [selectedYear, setSelectedYear] = useState<number>(currentYear);
@@ -31,50 +42,63 @@ export const YearlyView: React.FC<YearlyViewProps> = ({ heatmap, streakMap, onSe
 
   return (
     <View style={styles.container}>
+      {/* Year Selector & Hover Info Header */}
       <View style={styles.headerRow}>
-        <View style={[styles.yearSelector, { backgroundColor: theme.surfaceHighlight, borderColor: theme.border }]}>
-          <TouchableOpacity style={styles.navButton} onPress={() => setSelectedYear((y) => y - 1)}>
+        <View style={[styles.yearSelector, { backgroundColor: theme.surfaceHighlight, borderColor: theme.borderSubtle }]}>
+          <TouchableOpacity style={styles.navButton} onPress={() => setSelectedYear((y) => y - 1)} activeOpacity={0.7} accessibilityLabel="Previous year">
             <ChevronLeft size={16} color={theme.textSecondary} />
           </TouchableOpacity>
           <Text style={[styles.yearText, { color: theme.text }]}>{selectedYear}</Text>
-          <TouchableOpacity style={styles.navButton} onPress={() => setSelectedYear((y) => y + 1)}>
+          <TouchableOpacity style={styles.navButton} onPress={() => setSelectedYear((y) => y + 1)} activeOpacity={0.7} accessibilityLabel="Next year">
             <ChevronRight size={16} color={theme.textSecondary} />
           </TouchableOpacity>
         </View>
 
-        {hoveredDate && (
-          <View style={[styles.hoverInfo, { backgroundColor: theme.surfaceHighlight, borderColor: theme.border }]}>
+        {hoveredDate ? (
+          <View style={[styles.hoverInfo, { backgroundColor: theme.surfaceHighlight, borderColor: theme.borderSubtle }]}>
             <Text style={[styles.hoverText, { color: theme.textSecondary }]}>
               {hoveredDate.date}: {hoveredDate.streak > 0 ? `${hoveredDate.streak}d streak` : 'Not done'}
             </Text>
           </View>
-        )}
+        ) : null}
       </View>
 
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-        <View>
+      {/* Horizontally scrollable on small screens, centered on large screens */}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
+      >
+        <View style={styles.centeredMatrixBlock}>
+          {/* Month Headers */}
           <View style={styles.monthsRow}>
-            <View style={{ width: 24 }} />
             {monthHeaders.map((m, idx) => (
-              <Text key={`${m.name}-${idx}`} style={[styles.monthText, { left: m.weekIndex * 15 + 24, color: theme.textMuted }]}>
+              <Text
+                key={`${m.name}-${idx}`}
+                style={[
+                  styles.monthText,
+                  {
+                    left: m.weekIndex * COLUMN_STEP + DAY_LABELS_WIDTH,
+                    color: theme.textMuted,
+                  },
+                ]}
+              >
                 {m.name}
               </Text>
             ))}
           </View>
 
+          {/* Matrix Body: Day labels + 53 week columns */}
           <View style={styles.matrixWrapper}>
-            <View style={styles.dayLabelsCol}>
-              <Text style={[styles.dayLabelText, { color: theme.textMuted }]}>Mon</Text>
-              <View style={{ height: 13 }} />
-              <Text style={[styles.dayLabelText, { color: theme.textMuted }]}>Wed</Text>
-              <View style={{ height: 13 }} />
-              <Text style={[styles.dayLabelText, { color: theme.textMuted }]}>Fri</Text>
-              <View style={{ height: 13 }} />
+            <View style={[styles.dayLabelsCol, { width: DAY_LABELS_WIDTH }]}>
+              <Text style={[styles.dayLabelText, { color: theme.textMuted, top: 0 }]}>Mon</Text>
+              <Text style={[styles.dayLabelText, { color: theme.textMuted, top: COLUMN_STEP * 2 }]}>Wed</Text>
+              <Text style={[styles.dayLabelText, { color: theme.textMuted, top: COLUMN_STEP * 4 }]}>Fri</Text>
             </View>
 
-            <View style={styles.weeksContainer}>
+            <View style={[styles.weeksContainer, { gap: CELL_GAP }]}>
               {weeks.map((week, weekIdx) => (
-                <View key={`w-${weekIdx}`} style={styles.weekColumn}>
+                <View key={`w-${weekIdx}`} style={[styles.weekColumn, { gap: CELL_GAP }]}>
                   {week.map((day) => {
                     const entry = heatmap.entries[day.dateKey];
                     const level = entry?.completed ? getStreakIntensityLevel(streakMap[day.dateKey] || 1) : 0;
@@ -84,7 +108,7 @@ export const YearlyView: React.FC<YearlyViewProps> = ({ heatmap, streakMap, onSe
                         dateKey={day.dateKey}
                         level={level}
                         paletteId={heatmap.paletteId}
-                        size={12}
+                        size={CELL_SIZE}
                         dimmed={!day.inYear}
                         disabled={!day.inYear}
                         onPress={handleCellPress}
@@ -95,52 +119,128 @@ export const YearlyView: React.FC<YearlyViewProps> = ({ heatmap, streakMap, onSe
               ))}
             </View>
           </View>
+
+          {/* Legend aligned with matrix */}
+          <View style={styles.legendRow}>
+            <Text style={[styles.legendLabel, { color: theme.textMuted }]}>Less</Text>
+            <View style={styles.legendSwatches}>
+              {palette.levels.map((color, idx) => (
+                <View
+                  key={`legend-${idx}`}
+                  style={[
+                    styles.legendSwatch,
+                    {
+                      backgroundColor: !isDark && idx === 0 ? theme.surfaceHighlight : color,
+                      borderColor: isDark ? '#22272E' : theme.borderSubtle,
+                    },
+                  ]}
+                />
+              ))}
+            </View>
+            <Text style={[styles.legendLabel, { color: theme.textMuted }]}>More</Text>
+          </View>
         </View>
       </ScrollView>
-
-      <View style={styles.legendRow}>
-        <Text style={[styles.legendLabel, { color: theme.textMuted }]}>Less</Text>
-        <View style={styles.legendSwatches}>
-          {palette.levels.map((color, idx) => (
-            <View
-              key={`legend-${idx}`}
-              style={[
-                styles.legendSwatch,
-                { backgroundColor: (!isDark && idx === 0) ? theme.surfaceHighlight : color, borderColor: isDark ? '#22272E' : theme.borderSubtle }
-              ]}
-            />
-          ))}
-        </View>
-        <Text style={[styles.legendLabel, { color: theme.textMuted }]}>More</Text>
-      </View>
     </View>
   );
 };
 
-const fontStack = Platform.select({
-  web: '"SF Pro Rounded", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-  ios: 'System',
-  default: 'sans-serif',
-});
-
 const styles = StyleSheet.create({
-  container: { paddingVertical: 10 },
-  headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
-  yearSelector: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4 },
-  navButton: { padding: 3 },
-  yearText: { fontSize: 13, fontWeight: '700', fontFamily: fontStack, marginHorizontal: 8 },
-  hoverInfo: { paddingHorizontal: 10, paddingVertical: 4, borderWidth: 1, borderRadius: 8 },
-  hoverText: { fontSize: 11, fontFamily: fontStack },
-  scrollContent: { paddingRight: 16 },
-  monthsRow: { height: 16, marginBottom: 6, position: 'relative' },
-  monthText: { position: 'absolute', fontSize: 10, fontWeight: '600', fontFamily: fontStack },
-  matrixWrapper: { flexDirection: 'row' },
-  dayLabelsCol: { width: 24, justifyContent: 'space-between', paddingVertical: 2, marginRight: 4 },
-  dayLabelText: { fontSize: 9, fontFamily: fontStack, lineHeight: 12 },
-  weeksContainer: { flexDirection: 'row', gap: 3 },
-  weekColumn: { flexDirection: 'column', gap: 3 },
-  legendRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', marginTop: 10, gap: 6 },
-  legendLabel: { fontSize: 10, fontFamily: fontStack },
-  legendSwatches: { flexDirection: 'row', gap: 3 },
-  legendSwatch: { width: 10, height: 10, borderRadius: 2.5, borderWidth: 1 },
+  container: {
+    paddingVertical: 6,
+    width: '100%',
+  },
+  headerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 14,
+  },
+  yearSelector: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  navButton: {
+    padding: 3,
+  },
+  yearText: {
+    fontSize: 13,
+    fontWeight: '700',
+    fontFamily: fontStack,
+    marginHorizontal: 8,
+  },
+  hoverInfo: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderWidth: 1,
+    borderRadius: 8,
+  },
+  hoverText: {
+    fontSize: 11,
+    fontFamily: fontStack,
+  },
+  scrollContent: {
+    minWidth: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 4,
+  },
+  centeredMatrixBlock: {
+    alignSelf: 'center',
+  },
+  monthsRow: {
+    height: 18,
+    marginBottom: 6,
+    position: 'relative',
+  },
+  monthText: {
+    position: 'absolute',
+    fontSize: 10,
+    fontWeight: '600',
+    fontFamily: fontStack,
+  },
+  matrixWrapper: {
+    flexDirection: 'row',
+  },
+  dayLabelsCol: {
+    position: 'relative',
+    height: COLUMN_STEP * 7,
+  },
+  dayLabelText: {
+    position: 'absolute',
+    fontSize: 9,
+    fontFamily: fontStack,
+    lineHeight: CELL_SIZE,
+  },
+  weeksContainer: {
+    flexDirection: 'row',
+  },
+  weekColumn: {
+    flexDirection: 'column',
+  },
+  legendRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    marginTop: 12,
+    gap: 6,
+  },
+  legendLabel: {
+    fontSize: 10,
+    fontFamily: fontStack,
+  },
+  legendSwatches: {
+    flexDirection: 'row',
+    gap: 3,
+  },
+  legendSwatch: {
+    width: 11,
+    height: 11,
+    borderRadius: 2.5,
+    borderWidth: 1,
+  },
 });
