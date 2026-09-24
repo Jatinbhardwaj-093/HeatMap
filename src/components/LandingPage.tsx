@@ -255,7 +255,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 ]}
               >
                 <View style={[styles.statusDot, { backgroundColor: theme.success }]} />
-                <Text style={[styles.statusText, { color: theme.success }]}>V1.2 // LIVE</Text>
+                <Text style={[styles.statusText, { color: theme.success }]}>V1.2 · LIVE</Text>
               </View>
             </View>
             <Text style={[styles.brandSub, { color: theme.textSecondary }]}>Binary Habit Matrix</Text>
@@ -314,7 +314,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         >
           <Flame size={13} color={isDark ? '#39D353' : '#1A7F37'} strokeWidth={2.5} />
           <Text style={[styles.heroPillText, { color: isDark ? '#39D353' : '#1A7F37' }]}>
-            GITHUB-STYLE DISCIPLINE // ZERO NUMERIC FATIGUE
+            GITHUB-STYLE DISCIPLINE · ZERO NUMERIC FATIGUE
           </Text>
         </View>
 
@@ -390,7 +390,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 {activePreset.name.toUpperCase()}
               </Text>
               <Text style={[styles.interactiveSub, { color: theme.textMuted }]}>
-                Annual Matrix Grid // Palette: <Text style={{ color: activePreset.accentColor, fontWeight: '600' }}>{activePreset.colorName}</Text>
+                Annual Matrix Grid · Palette: <Text style={{ color: activePreset.accentColor, fontWeight: '600' }}>{activePreset.colorName}</Text>
               </Text>
             </View>
           </View>
@@ -582,7 +582,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   { backgroundColor: 'rgba(245, 158, 11, 0.1)', borderColor: 'rgba(245, 158, 11, 0.3)' },
                 ]}
               >
-                <Text style={[styles.pillarBadgeText, { color: '#F59E0B' }]}>01 // ZERO FRICTION</Text>
+                <Text style={[styles.pillarBadgeText, { color: '#F59E0B' }]}>01 · ZERO FRICTION</Text>
               </View>
             </View>
 
@@ -624,7 +624,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   { backgroundColor: 'rgba(56, 189, 248, 0.1)', borderColor: 'rgba(56, 189, 248, 0.3)' },
                 ]}
               >
-                <Text style={[styles.pillarBadgeText, { color: '#38BDF8' }]}>02 // MODULARITY</Text>
+                <Text style={[styles.pillarBadgeText, { color: '#38BDF8' }]}>02 · MODULARITY</Text>
               </View>
             </View>
 
@@ -662,7 +662,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   { backgroundColor: 'rgba(57, 211, 83, 0.1)', borderColor: 'rgba(57, 211, 83, 0.3)' },
                 ]}
               >
-                <Text style={[styles.pillarBadgeText, { color: isDark ? '#39D353' : '#1A7F37' }]}>03 // PSYCHOLOGY</Text>
+                <Text style={[styles.pillarBadgeText, { color: isDark ? '#39D353' : '#1A7F37' }]}>03 · PSYCHOLOGY</Text>
               </View>
             </View>
 
