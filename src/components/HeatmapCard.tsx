@@ -4,11 +4,9 @@ import { HeatMapModel, ViewMode } from '../types/heatmap';
 import { PALETTES } from '../constants/palettes';
 import { calculateStats } from '../utils/streakUtils';
 import { getTodayKey } from '../utils/dateUtils';
-import { StatsOverview } from './StatsOverview';
 import { YearlyView } from './YearlyView';
 import { MonthlyView } from './MonthlyView';
-import { WeeklyView } from './WeeklyView';
-import { Check, Plus, Trash2 } from 'lucide-react-native';
+import { Check, Plus, Trash2, Flame } from 'lucide-react-native';
 import { useAppTheme } from '../theme/theme';
 
 interface HeatmapCardProps {
@@ -18,6 +16,12 @@ interface HeatmapCardProps {
   onQuickLogToday: (mapId: string) => void;
   onDeleteMap: (mapId: string) => void;
 }
+
+const fontStack = Platform.select({
+  web: '"SF Pro Rounded", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+  ios: 'System',
+  default: 'sans-serif',
+});
 
 export const HeatmapCard: React.FC<HeatmapCardProps> = ({
   heatmap,
@@ -44,32 +48,41 @@ export const HeatmapCard: React.FC<HeatmapCardProps> = ({
   };
 
   return (
-    <View style={[styles.card, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+    <View style={[styles.card, { backgroundColor: theme.surface, borderColor: theme.borderSubtle }]}>
+      {/* Streamlined Single Top Bar */}
       <View style={styles.cardHeader}>
-        <View style={styles.titleInfo}>
-          <View style={styles.badgeRow}>
-            <View style={[styles.categoryBadge, { borderColor: palette.accent }]}>
-              <Text style={[styles.categoryText, { color: palette.accent }]}>
-                {heatmap.category.toUpperCase()}
+        <View style={styles.titleGroup}>
+          <Text style={[styles.titleText, { color: theme.text }]} numberOfLines={1}>
+            {heatmap.title}
+          </Text>
+
+          {stats.currentStreak > 0 && (
+            <View
+              style={[
+                styles.streakPill,
+                {
+                  backgroundColor: palette.levels[1] || theme.surfaceHighlight,
+                  borderColor: palette.accent,
+                },
+              ]}
+            >
+              <Flame size={12} color={palette.accent} strokeWidth={2.5} />
+              <Text style={[styles.streakText, { color: palette.accent }]}>
+                {stats.currentStreak}d
               </Text>
             </View>
-            <Text style={[styles.targetHint, { color: theme.textMuted }]}>Daily Check-in</Text>
-          </View>
-          <Text style={[styles.titleText, { color: theme.text }]}>{heatmap.title}</Text>
-          {heatmap.description ? (
-            <Text style={[styles.descriptionText, { color: theme.textSecondary }]}>{heatmap.description}</Text>
-          ) : null}
+          )}
         </View>
 
         <View style={styles.actionsGroup}>
           <TouchableOpacity
-            activeOpacity={0.7}
+            activeOpacity={0.75}
             onPress={() => onQuickLogToday(heatmap.id)}
             style={[
               styles.quickLogButton,
               isTodayLogged
                 ? { backgroundColor: palette.levels[2], borderColor: palette.accent }
-                : { backgroundColor: theme.surfaceHighlight, borderColor: theme.border },
+                : { backgroundColor: theme.surfaceHighlight, borderColor: theme.borderSubtle },
             ]}
           >
             {isTodayLogged ? (
@@ -91,30 +104,24 @@ export const HeatmapCard: React.FC<HeatmapCardProps> = ({
               setDeleteInput('');
               setShowDeleteModal(true);
             }}
-            style={[styles.deleteButton, { backgroundColor: theme.surfaceHighlight, borderColor: theme.border }]}
+            style={[styles.deleteButton, { backgroundColor: theme.surfaceHighlight, borderColor: theme.borderSubtle }]}
+            accessibilityLabel="Delete habit"
           >
             <Trash2 size={13} color={theme.textMuted} />
           </TouchableOpacity>
         </View>
       </View>
 
+      {/* Grid Matrix Body */}
       <View style={styles.viewBody}>
-        {viewMode === 'yearly' && (
-          <YearlyView
-            heatmap={heatmap}
-            streakMap={streakMap}
-            onSelectDate={(dKey) => onSelectDate(heatmap.id, dKey)}
-          />
-        )}
-        {viewMode === 'monthly' && (
+        {viewMode === 'monthly' ? (
           <MonthlyView
             heatmap={heatmap}
             streakMap={streakMap}
             onSelectDate={(dKey) => onSelectDate(heatmap.id, dKey)}
           />
-        )}
-        {viewMode === 'weekly' && (
-          <WeeklyView
+        ) : (
+          <YearlyView
             heatmap={heatmap}
             streakMap={streakMap}
             onSelectDate={(dKey) => onSelectDate(heatmap.id, dKey)}
@@ -122,14 +129,36 @@ export const HeatmapCard: React.FC<HeatmapCardProps> = ({
         )}
       </View>
 
-      <StatsOverview stats={stats} accentColor={palette.accent} />
+      {/* Compact Integrated Bottom Stats Line */}
+      <View style={[styles.statsLine, { borderTopColor: theme.borderSubtle }]}>
+        <View style={styles.statItem}>
+          <Text style={[styles.statKey, { color: theme.textMuted }]}>Streak</Text>
+          <Text style={[styles.statVal, { color: palette.accent }]}>{stats.currentStreak}d</Text>
+        </View>
+        <Text style={[styles.statDot, { color: theme.border }]}>·</Text>
+        <View style={styles.statItem}>
+          <Text style={[styles.statKey, { color: theme.textMuted }]}>Best</Text>
+          <Text style={[styles.statVal, { color: theme.text }]}>{stats.longestStreak}d</Text>
+        </View>
+        <Text style={[styles.statDot, { color: theme.border }]}>·</Text>
+        <View style={styles.statItem}>
+          <Text style={[styles.statKey, { color: theme.textMuted }]}>90d</Text>
+          <Text style={[styles.statVal, { color: theme.text }]}>{stats.completionRate}%</Text>
+        </View>
+        <Text style={[styles.statDot, { color: theme.border }]}>·</Text>
+        <View style={styles.statItem}>
+          <Text style={[styles.statKey, { color: theme.textMuted }]}>Total</Text>
+          <Text style={[styles.statVal, { color: theme.text }]}>{stats.totalActiveDays}d</Text>
+        </View>
+      </View>
 
+      {/* GitHub-style Delete Modal */}
       <Modal visible={showDeleteModal} transparent animationType="fade">
         <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { backgroundColor: theme.background, borderColor: theme.border }]}>
-            <Text style={[styles.modalTitle, { color: theme.text }]}>Delete Tracker</Text>
+          <View style={[styles.modalContent, { backgroundColor: theme.surface, borderColor: theme.borderSubtle }]}>
+            <Text style={[styles.modalTitle, { color: theme.text }]}>Delete Habit Tracker</Text>
             <Text style={[styles.modalWarning, { color: theme.textSecondary }]}>
-              This action cannot be undone. This will permanently delete the tracker.
+              This action cannot be undone. All logged history for this habit will be permanently deleted.
             </Text>
             
             <Text style={[styles.modalLabel, { color: theme.text }]}>
@@ -140,8 +169,8 @@ export const HeatmapCard: React.FC<HeatmapCardProps> = ({
               style={[
                 styles.deleteInput,
                 { 
-                  backgroundColor: theme.surface, 
-                  borderColor: theme.border, 
+                  backgroundColor: theme.surfaceHighlight, 
+                  borderColor: theme.borderSubtle, 
                   color: theme.text 
                 }
               ]}
@@ -149,11 +178,12 @@ export const HeatmapCard: React.FC<HeatmapCardProps> = ({
               onChangeText={setDeleteInput}
               placeholder={heatmap.title}
               placeholderTextColor={theme.textMuted}
+              autoFocus
             />
 
             <View style={styles.modalActions}>
               <TouchableOpacity
-                style={[styles.cancelBtn, { borderColor: theme.border }]}
+                style={[styles.cancelBtn, { borderColor: theme.borderSubtle, backgroundColor: theme.surfaceHighlight }]}
                 onPress={() => setShowDeleteModal(false)}
               >
                 <Text style={[styles.cancelBtnText, { color: theme.text }]}>Cancel</Text>
@@ -178,31 +208,177 @@ export const HeatmapCard: React.FC<HeatmapCardProps> = ({
 };
 
 const styles = StyleSheet.create({
-  card: { borderWidth: 1, borderRadius: 4, padding: 16, marginBottom: 16 },
-  cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 },
-  titleInfo: { flex: 1, marginRight: 12 },
-  badgeRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 },
-  categoryBadge: { borderWidth: 1, borderRadius: 2, paddingHorizontal: 6, paddingVertical: 1 },
-  categoryText: { fontSize: 9, fontWeight: '700', fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif', letterSpacing: 0.5 },
-  targetHint: { fontSize: 10, fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif' },
-  titleText: { fontSize: 17, fontWeight: '600', letterSpacing: -0.2 },
-  descriptionText: { fontSize: 12, marginTop: 2, lineHeight: 16 },
-  actionsGroup: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  quickLogButton: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 3, borderWidth: 1 },
-  quickLogText: { fontSize: 11, fontWeight: '700', fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif' },
-  quickLogTextActive: { color: '#FFFFFF', fontSize: 11, fontWeight: '700', fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif' },
-  deleteButton: { padding: 6, borderWidth: 1, borderRadius: 3 },
-  viewBody: { marginBottom: 10 },
+  card: {
+    borderWidth: 1,
+    borderRadius: 14,
+    padding: 18,
+    marginBottom: 16,
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  titleGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    flex: 1,
+    marginRight: 12,
+  },
+  titleText: {
+    fontSize: 16,
+    fontWeight: '700',
+    fontFamily: fontStack,
+    letterSpacing: -0.2,
+  },
+  streakPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 10,
+    borderWidth: 1,
+  },
+  streakText: {
+    fontSize: 11,
+    fontWeight: '700',
+    fontFamily: fontStack,
+  },
+  actionsGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  quickLogButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  quickLogText: {
+    fontSize: 11,
+    fontWeight: '700',
+    fontFamily: fontStack,
+    letterSpacing: 0.5,
+  },
+  quickLogTextActive: {
+    color: '#FFFFFF',
+    fontSize: 11,
+    fontWeight: '700',
+    fontFamily: fontStack,
+    letterSpacing: 0.5,
+  },
+  deleteButton: {
+    padding: 7,
+    borderRadius: 8,
+    borderWidth: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  viewBody: {
+    marginBottom: 8,
+  },
+  statsLine: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingTop: 12,
+    marginTop: 4,
+    borderTopWidth: 1,
+    gap: 12,
+    flexWrap: 'wrap',
+  },
+  statItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  statKey: {
+    fontSize: 11,
+    fontWeight: '500',
+    fontFamily: fontStack,
+  },
+  statVal: {
+    fontSize: 12,
+    fontWeight: '700',
+    fontFamily: fontStack,
+  },
+  statDot: {
+    fontSize: 14,
+  },
 
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center', padding: 20 },
-  modalContent: { width: '100%', maxWidth: 400, borderWidth: 1, borderRadius: 6, padding: 24 },
-  modalTitle: { fontSize: 18, fontWeight: '700', marginBottom: 8, fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif' },
-  modalWarning: { fontSize: 13, lineHeight: 20, marginBottom: 16, fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif' },
-  modalLabel: { fontSize: 13, marginBottom: 8, fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif' },
-  deleteInput: { borderWidth: 1, borderRadius: 4, paddingHorizontal: 12, paddingVertical: 10, fontSize: 14, marginBottom: 24, fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif' },
-  modalActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: 12 },
-  cancelBtn: { paddingHorizontal: 16, paddingVertical: 8, borderWidth: 1, borderRadius: 4 },
-  cancelBtnText: { fontSize: 13, fontWeight: '600', fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif' },
-  confirmBtn: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 4, justifyContent: 'center' },
-  confirmBtnText: { color: '#FFFFFF', fontSize: 13, fontWeight: '600', fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif' },
+  // Modal
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.65)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContent: {
+    width: '100%',
+    maxWidth: 420,
+    borderWidth: 1,
+    borderRadius: 14,
+    padding: 24,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    marginBottom: 8,
+    fontFamily: fontStack,
+  },
+  modalWarning: {
+    fontSize: 13,
+    lineHeight: 20,
+    marginBottom: 16,
+    fontFamily: fontStack,
+  },
+  modalLabel: {
+    fontSize: 13,
+    marginBottom: 10,
+    fontFamily: fontStack,
+  },
+  deleteInput: {
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 14,
+    marginBottom: 20,
+    fontFamily: fontStack,
+  },
+  modalActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 10,
+  },
+  cancelBtn: {
+    paddingHorizontal: 16,
+    paddingVertical: 9,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  cancelBtnText: {
+    fontSize: 13,
+    fontWeight: '600',
+    fontFamily: fontStack,
+  },
+  confirmBtn: {
+    paddingHorizontal: 18,
+    paddingVertical: 9,
+    borderRadius: 8,
+    justifyContent: 'center',
+  },
+  confirmBtnText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '700',
+    fontFamily: fontStack,
+  },
 });

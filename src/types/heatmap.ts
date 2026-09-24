@@ -1,4 +1,4 @@
-export type ViewMode = 'weekly' | 'monthly' | 'yearly';
+export type ViewMode = 'monthly' | 'yearly';
 export type ThemeMode = 'light' | 'dark' | 'system';
 export type PaletteId = 'emerald' | 'amber' | 'obsidian' | 'cyan' | 'crimson';
 

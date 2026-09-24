@@ -99,17 +99,23 @@ export const MonthlyView: React.FC<MonthlyViewProps> = ({ heatmap, streakMap, on
   );
 };
 
+const fontStack = Platform.select({
+  web: '"SF Pro Rounded", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+  ios: 'System',
+  default: 'sans-serif',
+});
+
 const styles = StyleSheet.create({
-  container: { paddingVertical: 12 },
+  container: { paddingVertical: 10 },
   headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 },
-  navGroup: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderRadius: 4, paddingHorizontal: 6, paddingVertical: 3 },
+  navGroup: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4 },
   navButton: { padding: 3 },
-  monthTitle: { fontSize: 13, fontWeight: '600', fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif', marginHorizontal: 8 },
-  todayButton: { borderWidth: 1, borderRadius: 4, paddingHorizontal: 10, paddingVertical: 4 },
-  todayButtonText: { fontSize: 11, fontWeight: '500', fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif' },
-  weekdaysRow: { flexDirection: 'row', marginBottom: 6 },
+  monthTitle: { fontSize: 13, fontWeight: '700', fontFamily: fontStack, marginHorizontal: 8 },
+  todayButton: { borderWidth: 1, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 5 },
+  todayButtonText: { fontSize: 11, fontWeight: '600', fontFamily: fontStack },
+  weekdaysRow: { flexDirection: 'row', marginBottom: 8 },
   weekdayCol: { flex: 1, alignItems: 'center' },
-  weekdayText: { fontSize: 10, fontWeight: '500', fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif' },
+  weekdayText: { fontSize: 10, fontWeight: '600', fontFamily: fontStack },
   gridContainer: { flexDirection: 'row', flexWrap: 'wrap' },
   cellWrapper: { width: `${100 / 7}%`, alignItems: 'center', paddingVertical: 3 },
 });

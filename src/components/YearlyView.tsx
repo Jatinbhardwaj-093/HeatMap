@@ -117,24 +117,30 @@ export const YearlyView: React.FC<YearlyViewProps> = ({ heatmap, streakMap, onSe
   );
 };
 
+const fontStack = Platform.select({
+  web: '"SF Pro Rounded", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+  ios: 'System',
+  default: 'sans-serif',
+});
+
 const styles = StyleSheet.create({
-  container: { paddingVertical: 12 },
+  container: { paddingVertical: 10 },
   headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
-  yearSelector: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderRadius: 4, paddingHorizontal: 6, paddingVertical: 3 },
+  yearSelector: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4 },
   navButton: { padding: 3 },
-  yearText: { fontSize: 13, fontWeight: '600', fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif', marginHorizontal: 8 },
-  hoverInfo: { paddingHorizontal: 8, paddingVertical: 4, borderWidth: 1, borderRadius: 4 },
-  hoverText: { fontSize: 11, fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif' },
+  yearText: { fontSize: 13, fontWeight: '700', fontFamily: fontStack, marginHorizontal: 8 },
+  hoverInfo: { paddingHorizontal: 10, paddingVertical: 4, borderWidth: 1, borderRadius: 8 },
+  hoverText: { fontSize: 11, fontFamily: fontStack },
   scrollContent: { paddingRight: 16 },
   monthsRow: { height: 16, marginBottom: 6, position: 'relative' },
-  monthText: { position: 'absolute', fontSize: 10, fontWeight: '500', fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif' },
+  monthText: { position: 'absolute', fontSize: 10, fontWeight: '600', fontFamily: fontStack },
   matrixWrapper: { flexDirection: 'row' },
   dayLabelsCol: { width: 24, justifyContent: 'space-between', paddingVertical: 2, marginRight: 4 },
-  dayLabelText: { fontSize: 9, fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif', lineHeight: 12 },
+  dayLabelText: { fontSize: 9, fontFamily: fontStack, lineHeight: 12 },
   weeksContainer: { flexDirection: 'row', gap: 3 },
   weekColumn: { flexDirection: 'column', gap: 3 },
   legendRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', marginTop: 10, gap: 6 },
-  legendLabel: { fontSize: 10, fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif' },
+  legendLabel: { fontSize: 10, fontFamily: fontStack },
   legendSwatches: { flexDirection: 'row', gap: 3 },
-  legendSwatch: { width: 10, height: 10, borderRadius: 2, borderWidth: 1 },
+  legendSwatch: { width: 10, height: 10, borderRadius: 2.5, borderWidth: 1 },
 });

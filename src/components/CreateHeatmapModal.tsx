@@ -4,89 +4,95 @@ import {
   View,
   Text,
   Modal,
-  TouchableOpacity,
   TextInput,
-  TouchableWithoutFeedback,
+  TouchableOpacity,
   ScrollView,
+  TouchableWithoutFeedback,
   Platform,
 } from 'react-native';
 import { HeatMapModel, PaletteId } from '../types/heatmap';
-import { PALETTES } from '../constants/palettes';
+import { PALETTES, DEFAULT_PALETTE_ID } from '../constants/palettes';
 import { X, Check } from 'lucide-react-native';
+import { useAppTheme } from '../theme/theme';
 
 interface CreateHeatmapModalProps {
   visible: boolean;
   onClose: () => void;
-  onCreate: (newMap: Omit<HeatMapModel, 'id' | 'createdAt' | 'entries'>) => void;
+  onCreate: (heatmap: Omit<HeatMapModel, 'id' | 'createdAt' | 'entries'>) => void;
 }
 
-const CATEGORY_PRESETS = ['Fitness', 'Dieting', 'Productivity', 'Health', 'Habit'];
+const fontStack = Platform.select({
+  web: '"SF Pro Rounded", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+  ios: 'System',
+  default: 'sans-serif',
+});
 
 export const CreateHeatmapModal: React.FC<CreateHeatmapModalProps> = ({
   visible,
   onClose,
   onCreate,
 }) => {
+  const theme = useAppTheme();
   const [title, setTitle] = useState('');
-  const [category, setCategory] = useState('Fitness');
-  const [customCategory, setCustomCategory] = useState('');
-  const [description, setDescription] = useState('');
-  const [paletteId, setPaletteId] = useState<PaletteId>('emerald');
+  const [paletteId, setPaletteId] = useState<PaletteId>(DEFAULT_PALETTE_ID);
   const [errorMsg, setErrorMsg] = useState('');
 
-  if (!visible) return null;
+  const resetForm = () => {
+    setTitle('');
+    setPaletteId(DEFAULT_PALETTE_ID);
+    setErrorMsg('');
+  };
 
   const handleCreate = () => {
     if (!title.trim()) {
-      setErrorMsg('Map name is required.');
+      setErrorMsg('Please enter a habit name.');
       return;
     }
 
-    const finalCategory = customCategory.trim() || category;
-
     onCreate({
       title: title.trim(),
-      category: finalCategory,
-      description: description.trim() || undefined,
+      category: 'HABIT',
       paletteId,
     });
 
-    setTitle('');
-    setDescription('');
-    setPaletteId('emerald');
-    setErrorMsg('');
+    resetForm();
     onClose();
   };
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      onRequestClose={onClose}
+    >
       <TouchableWithoutFeedback onPress={onClose}>
         <View style={styles.overlay}>
           <TouchableWithoutFeedback>
-            <View style={styles.modalBox}>
-              <View style={styles.modalHeader}>
+            <View style={[styles.modalBox, { backgroundColor: theme.surface, borderColor: theme.borderSubtle }]}>
+              <View style={[styles.modalHeader, { borderBottomColor: theme.borderSubtle }]}>
                 <View>
-                  <Text style={styles.modalSubtitle}>NEW TRACKER</Text>
-                  <Text style={styles.modalTitle}>Create Habit Tracker</Text>
+                  <Text style={[styles.modalSubtitle, { color: theme.textMuted }]}>NEW TRACKER</Text>
+                  <Text style={[styles.modalTitle, { color: theme.text }]}>Create Habit</Text>
                 </View>
-                <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
-                  <X size={16} color="#8B949E" />
+                <TouchableOpacity onPress={onClose} style={[styles.closeBtn, { backgroundColor: theme.surfaceHighlight }]} accessibilityLabel="Close modal">
+                  <X size={16} color={theme.textSecondary} />
                 </TouchableOpacity>
               </View>
 
               <ScrollView style={styles.scrollBody} showsVerticalScrollIndicator={false}>
                 {errorMsg ? (
-                  <View style={styles.errorBox}>
-                    <Text style={styles.errorText}>{errorMsg}</Text>
+                  <View style={[styles.errorBox, { backgroundColor: 'rgba(248, 81, 73, 0.1)', borderColor: theme.error }]}>
+                    <Text style={[styles.errorText, { color: theme.error }]}>{errorMsg}</Text>
                   </View>
                 ) : null}
 
                 <View style={styles.formGroup}>
-                  <Text style={styles.label}>HABIT NAME *</Text>
+                  <Text style={[styles.label, { color: theme.text }]}>HABIT NAME *</Text>
                   <TextInput
-                    style={styles.input}
-                    placeholder="e.g. Strength Training, Intermittent Fasting..."
-                    placeholderTextColor="#484F58"
+                    style={[styles.input, { backgroundColor: theme.surfaceHighlight, borderColor: theme.borderSubtle, color: theme.text }]}
+                    placeholder="e.g. Deep Work, Workout, Morning Run..."
+                    placeholderTextColor={theme.textMuted}
                     value={title}
                     onChangeText={(t) => {
                       setTitle(t);
@@ -97,35 +103,7 @@ export const CreateHeatmapModal: React.FC<CreateHeatmapModalProps> = ({
                 </View>
 
                 <View style={styles.formGroup}>
-                  <Text style={styles.label}>CATEGORY</Text>
-                  <View style={styles.presetRow}>
-                    {CATEGORY_PRESETS.map((cat) => (
-                      <TouchableOpacity
-                        key={cat}
-                        style={[
-                          styles.presetBtn,
-                          category === cat && !customCategory && styles.presetBtnActive,
-                        ]}
-                        onPress={() => {
-                          setCategory(cat);
-                          setCustomCategory('');
-                        }}
-                      >
-                        <Text
-                          style={[
-                            styles.presetText,
-                            category === cat && !customCategory && styles.presetTextActive,
-                          ]}
-                        >
-                          {cat}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                </View>
-
-                <View style={styles.formGroup}>
-                  <Text style={styles.label}>COLOR THEME</Text>
+                  <Text style={[styles.label, { color: theme.text }]}>COLOR THEME</Text>
                   <View style={styles.palettesList}>
                     {(Object.keys(PALETTES) as PaletteId[]).map((pId) => {
                       const pal = PALETTES[pId];
@@ -135,26 +113,35 @@ export const CreateHeatmapModal: React.FC<CreateHeatmapModalProps> = ({
                           key={pId}
                           style={[
                             styles.paletteItem,
-                            isSelected && { borderColor: pal.accent },
+                            { backgroundColor: theme.surfaceHighlight, borderColor: theme.borderSubtle },
+                            isSelected && { borderColor: pal.accent, backgroundColor: theme.surface },
                           ]}
                           onPress={() => setPaletteId(pId)}
+                          activeOpacity={0.7}
                         >
                           <View style={styles.paletteHeader}>
                             <Text
                               style={[
                                 styles.paletteName,
-                                isSelected && { color: pal.accent },
+                                { color: theme.text },
+                                isSelected && { color: pal.accent, fontWeight: '700' },
                               ]}
                             >
                               {pal.name}
                             </Text>
-                            {isSelected && <Check size={13} color={pal.accent} />}
+                            {isSelected && (
+                              <Check size={14} color={pal.accent} strokeWidth={2.5} />
+                            )}
                           </View>
-                          <View style={styles.paletteSwatches}>
-                            {pal.levels.map((c, i) => (
+
+                          <View style={styles.swatchRow}>
+                            {pal.levels.map((color, idx) => (
                               <View
-                                key={`${pId}-${i}`}
-                                style={[styles.swatch, { backgroundColor: c }]}
+                                key={idx}
+                                style={[
+                                  styles.swatch,
+                                  { backgroundColor: color },
+                                ]}
                               />
                             ))}
                           </View>
@@ -163,26 +150,15 @@ export const CreateHeatmapModal: React.FC<CreateHeatmapModalProps> = ({
                     })}
                   </View>
                 </View>
-
-                <View style={styles.formGroup}>
-                  <Text style={styles.label}>NOTES / MOTIVATION (OPTIONAL)</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={description}
-                    onChangeText={setDescription}
-                    placeholder="Brief description or rules for this map..."
-                    placeholderTextColor="#484F58"
-                  />
-                </View>
               </ScrollView>
 
-              <View style={styles.modalFooter}>
+              <View style={[styles.modalFooter, { borderTopColor: theme.borderSubtle }]}>
                 <TouchableOpacity
                   onPress={onClose}
-                  style={styles.cancelBtn}
+                  style={[styles.cancelBtn, { borderColor: theme.borderSubtle, backgroundColor: theme.surfaceHighlight }]}
                   activeOpacity={0.7}
                 >
-                  <Text style={styles.cancelText}>Cancel</Text>
+                  <Text style={[styles.cancelText, { color: theme.text }]}>Cancel</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   onPress={handleCreate}
@@ -190,9 +166,9 @@ export const CreateHeatmapModal: React.FC<CreateHeatmapModalProps> = ({
                     styles.createBtn,
                     { backgroundColor: PALETTES[paletteId].accent },
                   ]}
-                  activeOpacity={0.7}
+                  activeOpacity={0.8}
                 >
-                  <Text style={styles.createText}>Create Map</Text>
+                  <Text style={styles.createText}>Create Tracker</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -206,172 +182,132 @@ export const CreateHeatmapModal: React.FC<CreateHeatmapModalProps> = ({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.8)',
+    backgroundColor: 'rgba(0,0,0,0.7)',
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
   },
   modalBox: {
     width: '100%',
-    maxWidth: 520,
-    maxHeight: '90%',
-    backgroundColor: '#0D1117',
-    borderColor: '#30363D',
+    maxWidth: 440,
+    borderRadius: 16,
     borderWidth: 1,
-    borderRadius: 4,
-    padding: 20,
+    overflow: 'hidden',
+    maxHeight: '85%',
   },
   modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 16,
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#21262D',
-    paddingBottom: 12,
   },
   modalSubtitle: {
-    color: '#8B949E',
     fontSize: 10,
-    fontWeight: '700',
-    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
-    letterSpacing: 0.5,
+    fontWeight: '800',
+    fontFamily: fontStack,
+    letterSpacing: 1,
+    marginBottom: 2,
   },
   modalTitle: {
-    color: '#F0F6FC',
     fontSize: 18,
-    fontWeight: '600',
-    marginTop: 2,
+    fontWeight: '800',
+    fontFamily: fontStack,
   },
   closeBtn: {
-    padding: 4,
+    padding: 6,
+    borderRadius: 8,
   },
   scrollBody: {
-    marginBottom: 16,
+    padding: 20,
   },
   errorBox: {
-    backgroundColor: '#381014',
-    borderColor: '#7F1D1D',
+    padding: 10,
+    borderRadius: 8,
     borderWidth: 1,
-    borderRadius: 3,
-    padding: 8,
-    marginBottom: 12,
+    marginBottom: 16,
   },
   errorText: {
-    color: '#F85149',
-    fontSize: 11,
-    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
+    fontSize: 12,
+    fontFamily: fontStack,
+    fontWeight: '500',
   },
   formGroup: {
-    marginBottom: 14,
-    gap: 6,
+    marginBottom: 20,
   },
   label: {
-    color: '#8B949E',
-    fontSize: 10,
-    fontWeight: '600',
-    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
+    fontSize: 11,
+    fontWeight: '700',
+    fontFamily: fontStack,
     letterSpacing: 0.5,
+    marginBottom: 8,
   },
   input: {
-    backgroundColor: '#161B22',
-    borderColor: '#30363D',
     borderWidth: 1,
-    borderRadius: 3,
-    color: '#F0F6FC',
-    fontSize: 13,
-    paddingHorizontal: 12,
-    paddingVertical: 9,
-    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
-  },
-  presetRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 6,
-  },
-  presetBtn: {
-    backgroundColor: '#161B22',
-    borderColor: '#30363D',
-    borderWidth: 1,
-    borderRadius: 3,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-  },
-  presetBtnActive: {
-    backgroundColor: '#21262D',
-    borderColor: '#58A6FF',
-  },
-  presetText: {
-    color: '#8B949E',
-    fontSize: 11,
-    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
-  },
-  presetTextActive: {
-    color: '#F0F6FC',
-    fontWeight: '600',
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 11,
+    fontSize: 14,
+    fontFamily: fontStack,
   },
   palettesList: {
-    gap: 6,
+    gap: 8,
   },
   paletteItem: {
-    backgroundColor: '#161B22',
-    borderColor: '#30363D',
+    padding: 12,
+    borderRadius: 10,
     borderWidth: 1,
-    borderRadius: 3,
-    padding: 8,
   },
   paletteHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 6,
+    marginBottom: 8,
   },
   paletteName: {
-    color: '#8B949E',
-    fontSize: 11,
-    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
+    fontSize: 13,
     fontWeight: '600',
+    fontFamily: fontStack,
   },
-  paletteSwatches: {
+  swatchRow: {
     flexDirection: 'row',
-    gap: 4,
+    gap: 6,
   },
   swatch: {
     flex: 1,
-    height: 12,
-    borderRadius: 2,
+    height: 14,
+    borderRadius: 3,
   },
   modalFooter: {
     flexDirection: 'row',
     justifyContent: 'flex-end',
     gap: 10,
+    padding: 16,
     borderTopWidth: 1,
-    borderTopColor: '#21262D',
-    paddingTop: 12,
   },
   cancelBtn: {
-    paddingVertical: 8,
-    paddingHorizontal: 14,
-    backgroundColor: '#161B22',
-    borderColor: '#30363D',
+    paddingHorizontal: 16,
+    paddingVertical: 9,
+    borderRadius: 8,
     borderWidth: 1,
-    borderRadius: 3,
   },
   cancelText: {
-    color: '#8B949E',
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '600',
-    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
+    fontFamily: fontStack,
   },
   createBtn: {
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 3,
+    paddingHorizontal: 18,
+    paddingVertical: 9,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   createText: {
     color: '#FFFFFF',
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '700',
-    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
+    fontFamily: fontStack,
   },
 });

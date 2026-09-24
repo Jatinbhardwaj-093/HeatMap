@@ -11,10 +11,10 @@ interface ViewSwitcherProps {
 export const ViewSwitcher: React.FC<ViewSwitcherProps> = ({ currentView, onViewChange }) => {
   const theme = useAppTheme();
   
-  const modes: ViewMode[] = ['weekly', 'monthly', 'yearly'];
+  const modes: ViewMode[] = ['monthly', 'yearly'];
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.surfaceHighlight, borderColor: theme.border }]}>
+    <View style={[styles.container, { backgroundColor: theme.surfaceHighlight, borderColor: theme.borderSubtle }]}>
       {modes.map((mode) => {
         const isActive = currentView === mode;
         return (
@@ -31,10 +31,11 @@ export const ViewSwitcher: React.FC<ViewSwitcherProps> = ({ currentView, onViewC
             <Text
               style={[
                 styles.segmentText,
-                { color: isActive ? theme.text : theme.textSecondary }
+                { color: isActive ? theme.text : theme.textSecondary },
+                isActive && { fontWeight: '700' },
               ]}
             >
-              {mode.toUpperCase()}
+              {mode === 'monthly' ? 'Monthly' : 'Yearly'}
             </Text>
           </TouchableOpacity>
         );
@@ -47,20 +48,24 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     borderWidth: 1,
-    borderRadius: 6,
-    padding: 2,
+    borderRadius: 8,
+    padding: 3,
     alignSelf: 'flex-start',
   },
   segment: {
-    paddingHorizontal: 12,
+    paddingHorizontal: 14,
     paddingVertical: 6,
-    borderRadius: 4,
+    borderRadius: 6,
     borderWidth: 1,
   },
   segmentText: {
-    fontSize: 10,
-    fontWeight: '600',
-    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
-    letterSpacing: 0.5,
+    fontSize: 12,
+    fontWeight: '500',
+    fontFamily: Platform.select({
+      web: '"SF Pro Rounded", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+      ios: 'System',
+      default: 'sans-serif',
+    }),
+    letterSpacing: 0.2,
   },
 });

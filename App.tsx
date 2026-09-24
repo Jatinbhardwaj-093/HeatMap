@@ -9,6 +9,7 @@ import {
   TextInput,
   TouchableOpacity,
   Platform,
+  Image,
 } from 'react-native';
 import { StatusBar as ExpoStatusBar } from 'expo-status-bar';
 import { HeatMapModel, ViewMode } from './src/types/heatmap';
@@ -21,20 +22,26 @@ import { CreateHeatmapModal } from './src/components/CreateHeatmapModal';
 import { WidgetStudioModal } from './src/components/WidgetStudioModal';
 import { LandingPage } from './src/components/LandingPage';
 import { LoginScreen } from './src/components/LoginScreen';
-import { Search, Plus } from 'lucide-react-native';
+import { Search, Plus, Sparkles } from 'lucide-react-native';
 import { supabase } from './src/utils/supabase';
-import { useAppTheme, useIsDark } from './src/theme/theme';
+import { useAppTheme, useIsDark, ThemeProvider } from './src/theme/theme';
 
 type ScreenState = 'landing' | 'login' | 'dashboard';
+
+const fontStack = Platform.select({
+  web: '"SF Pro Rounded", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+  ios: 'System',
+  default: 'sans-serif',
+});
 
 function AppContent() {
   const [currentScreen, setCurrentScreen] = useState<ScreenState>('landing');
   const [userEmail, setUserEmail] = useState<string | undefined>(undefined);
+  const [userId, setUserId] = useState<string | undefined>(undefined);
   
   const [heatmaps, setHeatmaps] = useState<HeatMapModel[]>([]);
   const [loading, setLoading] = useState(true);
-  const [viewMode, setViewMode] = useState<ViewMode>('monthly');
-  const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
+  const [viewMode, setViewMode] = useState<ViewMode>('yearly');
   const [searchQuery, setSearchQuery] = useState<string>('');
 
   const [selectedDayInfo, setSelectedDayInfo] = useState<{ mapId: string; dateKey: string } | null>(null);
@@ -47,24 +54,32 @@ function AppContent() {
   useEffect(() => {
     async function initAuthAndData() {
       const { data: { session } } = await supabase.auth.getSession();
+      const uid = session?.user?.id;
       if (session?.user) {
         setUserEmail(session.user.email);
+        setUserId(uid);
         setCurrentScreen('dashboard');
       }
-      const data = await loadHeatMaps();
+      const data = await loadHeatMaps(uid);
       setHeatmaps(data);
       setLoading(false);
     }
 
     initAuthAndData();
 
-    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: authListener } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      const uid = session?.user?.id;
       if (session?.user) {
         setUserEmail(session.user.email);
+        setUserId(uid);
         setCurrentScreen('dashboard');
+        const data = await loadHeatMaps(uid);
+        setHeatmaps(data);
       } else {
         setUserEmail(undefined);
+        setUserId(undefined);
         setCurrentScreen('landing');
+        setHeatmaps([]);
       }
     });
 
@@ -79,7 +94,7 @@ function AppContent() {
 
   const updateHeatmaps = (updated: HeatMapModel[]) => {
     setHeatmaps(updated);
-    saveHeatMaps(updated);
+    saveHeatMaps(updated, userId);
   };
 
   const handleQuickLogToday = (mapId: string) => {
@@ -141,27 +156,16 @@ function AppContent() {
     updateHeatmaps([...heatmaps, mapToSave]);
   };
 
-  const categories = useMemo(() => {
-    const cats = new Set(heatmaps.map((m) => m.category.toUpperCase()));
-    return ['ALL', ...Array.from(cats)];
-  }, [heatmaps]);
-
   const filteredHeatmaps = useMemo(() => {
-    let filtered = heatmaps;
-    if (selectedCategory !== 'ALL') {
-      filtered = filtered.filter((m) => m.category.toUpperCase() === selectedCategory);
-    }
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase();
-      filtered = filtered.filter((m) => m.title.toLowerCase().includes(q));
-    }
-    return filtered;
-  }, [heatmaps, selectedCategory, searchQuery]);
+    if (!searchQuery.trim()) return heatmaps;
+    const q = searchQuery.toLowerCase();
+    return heatmaps.filter((m) => m.title.toLowerCase().includes(q));
+  }, [heatmaps, searchQuery]);
 
   if (loading) {
     return (
       <View style={[{ flex: 1, backgroundColor: theme.background, justifyContent: 'center', alignItems: 'center' }]}>
-        <Text style={{ color: theme.textSecondary, fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif' }}>
+        <Text style={{ color: theme.textSecondary, fontFamily: fontStack }}>
           Loading HabitHeat...
         </Text>
       </View>
@@ -212,9 +216,10 @@ function AppContent() {
       />
 
       <View style={styles.mainContent}>
+        {/* Controls: Clean search and new button */}
         <View style={styles.controlsRow}>
-          <View style={[styles.searchBar, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-            <Search size={14} color={theme.textSecondary} style={styles.searchIcon} />
+          <View style={[styles.searchBar, { backgroundColor: theme.surface, borderColor: theme.borderSubtle }]}>
+            <Search size={15} color={theme.textSecondary} style={styles.searchIcon} />
             <TextInput
               style={[styles.searchInput, { color: theme.text }]}
               placeholder="Search habits..."
@@ -223,49 +228,36 @@ function AppContent() {
               onChangeText={setSearchQuery}
             />
           </View>
+
           <TouchableOpacity
-            style={[styles.createButton, { backgroundColor: theme.success }]}
+            style={[styles.createButton, { backgroundColor: isDark ? '#39D353' : '#1A7F37' }]}
             onPress={() => setShowCreateModal(true)}
-            activeOpacity={0.7}
+            activeOpacity={0.85}
           >
-            <Plus size={14} color="#FFFFFF" strokeWidth={3} />
-            <Text style={styles.createButtonText}>New</Text>
+            <Plus size={15} color="#FFFFFF" strokeWidth={2.5} />
+            <Text style={styles.createButtonText}>New Map</Text>
           </TouchableOpacity>
         </View>
 
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoryScroll}>
-          <View style={styles.categoryContainer}>
-            {categories.map((cat) => (
-              <TouchableOpacity
-                key={cat}
-                activeOpacity={0.7}
-                style={[
-                  styles.categoryPill,
-                  { backgroundColor: theme.surfaceHighlight, borderColor: theme.borderSubtle },
-                  selectedCategory === cat && { borderColor: '#58A6FF', backgroundColor: theme.surface },
-                ]}
-                onPress={() => setSelectedCategory(cat)}
-              >
-                <Text
-                  style={[
-                    styles.categoryText,
-                    { color: theme.textSecondary },
-                    selectedCategory === cat && { color: theme.text, fontWeight: '600' },
-                  ]}
-                >
-                  {cat}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </ScrollView>
-
+        {/* Dashboard Content */}
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.cardsScroll}>
           {filteredHeatmaps.length === 0 ? (
-            <View style={styles.emptyState}>
-              <Text style={{ color: theme.textMuted, fontSize: 14, fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif' }}>
-                No habits found. Tap "New" to start your first matrix.
+            <View style={[styles.emptyContainer, { backgroundColor: theme.surface, borderColor: theme.borderSubtle }]}>
+              <View style={[styles.emptyIconCircle, { backgroundColor: theme.surfaceHighlight, borderColor: theme.borderSubtle }]}>
+                <Image source={require('./assets/icon.png')} style={styles.emptyIcon} resizeMode="contain" />
+              </View>
+              <Text style={[styles.emptyTitle, { color: theme.text }]}>Start tracking. Create new map.</Text>
+              <Text style={[styles.emptySub, { color: theme.textSecondary }]}>
+                Your dashboard is fresh. Create your first habit matrix to start compounding your daily streak.
               </Text>
+              <TouchableOpacity
+                style={[styles.emptyCreateBtn, { backgroundColor: isDark ? '#39D353' : '#1A7F37' }]}
+                onPress={() => setShowCreateModal(true)}
+                activeOpacity={0.85}
+              >
+                <Plus size={16} color="#FFFFFF" strokeWidth={2.5} />
+                <Text style={styles.emptyCreateBtnText}>Create New Map</Text>
+              </TouchableOpacity>
             </View>
           ) : (
             filteredHeatmaps.map((hm) => (
@@ -306,83 +298,6 @@ function AppContent() {
   );
 }
 
-const styles = StyleSheet.create({
-  mainContent: {
-    flex: 1,
-    paddingHorizontal: 20,
-    width: '100%',
-    maxWidth: 1000,
-    alignSelf: 'center',
-  },
-  controlsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    marginBottom: 16,
-    marginTop: 20,
-  },
-  searchBar: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderRadius: 6,
-    paddingHorizontal: 12,
-    height: 40,
-  },
-  searchIcon: {
-    marginRight: 8,
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: 14,
-    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
-  },
-  createButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    height: 40,
-    borderRadius: 6,
-    gap: 8,
-  },
-  createButtonText: {
-    color: '#FFFFFF',
-    fontWeight: '600',
-    fontSize: 14,
-    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
-  },
-  categoryScroll: {
-    maxHeight: 44,
-    minHeight: 44,
-    marginBottom: 16,
-  },
-  categoryContainer: {
-    flexDirection: 'row',
-    gap: 10,
-    alignItems: 'center',
-  },
-  categoryPill: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 20,
-    borderWidth: 1,
-  },
-  categoryText: {
-    fontSize: 12,
-    fontWeight: '500',
-    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
-  },
-  cardsScroll: {
-    paddingBottom: 40,
-  },
-  emptyState: {
-    marginTop: 60,
-    alignItems: 'center',
-  },
-});
-
-import { ThemeProvider } from './src/theme/theme';
 export default function App() {
   return (
     <ThemeProvider>
@@ -390,3 +305,109 @@ export default function App() {
     </ThemeProvider>
   );
 }
+
+const styles = StyleSheet.create({
+  mainContent: {
+    flex: 1,
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    maxWidth: 1080,
+    width: '100%',
+    alignSelf: 'center',
+  },
+  controlsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 20,
+    gap: 12,
+  },
+  searchBar: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    height: 42,
+  },
+  searchIcon: {
+    marginRight: 8,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 14,
+    fontFamily: fontStack,
+  },
+  createButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    height: 42,
+    borderRadius: 10,
+    gap: 6,
+  },
+  createButtonText: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+    fontSize: 13,
+    fontFamily: fontStack,
+  },
+  cardsScroll: {
+    paddingBottom: 40,
+  },
+
+  // Empty state right in the middle
+  emptyContainer: {
+    borderWidth: 1,
+    borderRadius: 16,
+    padding: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
+    textAlign: 'center',
+    marginTop: 36,
+  },
+  emptyIconCircle: {
+    width: 60,
+    height: 60,
+    borderRadius: 18,
+    borderWidth: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 20,
+    overflow: 'hidden',
+  },
+  emptyIcon: {
+    width: 36,
+    height: 36,
+  },
+  emptyTitle: {
+    fontSize: 20,
+    fontWeight: '800',
+    fontFamily: fontStack,
+    marginBottom: 8,
+    textAlign: 'center',
+    letterSpacing: -0.3,
+  },
+  emptySub: {
+    fontSize: 13,
+    lineHeight: 20,
+    fontFamily: fontStack,
+    textAlign: 'center',
+    maxWidth: 380,
+    marginBottom: 24,
+  },
+  emptyCreateBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 22,
+    height: 44,
+    borderRadius: 10,
+  },
+  emptyCreateBtnText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '700',
+    fontFamily: fontStack,
+  },
+});

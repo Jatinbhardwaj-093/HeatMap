@@ -1,121 +1,183 @@
 import React, { useState } from 'react';
-import { StyleSheet, View, Text, TextInput, TouchableOpacity, Platform, ActivityIndicator } from 'react-native';
-import { Activity, ArrowLeft } from 'lucide-react-native';
+import {
+  StyleSheet,
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  Platform,
+  ActivityIndicator,
+  Image,
+} from 'react-native';
+import { ArrowLeft, Lock, Mail } from 'lucide-react-native';
 import { supabase } from '../utils/supabase';
+import { useAppTheme, useIsDark } from '../theme/theme';
 
 interface LoginScreenProps {
   onBack: () => void;
   onLoginSuccess: () => void;
 }
 
+const fontStack = Platform.select({
+  web: '"SF Pro Rounded", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+  ios: 'System',
+  default: 'sans-serif',
+});
+
 export const LoginScreen: React.FC<LoginScreenProps> = ({ onBack, onLoginSuccess }) => {
+  const theme = useAppTheme();
+  const isDark = useIsDark();
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+  const [infoMsg, setInfoMsg] = useState('');
   const [isSignUp, setIsSignUp] = useState(false);
 
   const handleAuth = async () => {
     if (!email || !password) {
-      setErrorMsg('Email and password required.');
+      setErrorMsg('Please enter both email and password.');
       return;
     }
     setLoading(true);
     setErrorMsg('');
+    setInfoMsg('');
     
     try {
       if (isSignUp) {
-        const { error } = await supabase.auth.signUp({ email, password });
+        const { data, error } = await supabase.auth.signUp({ email, password });
         if (error) throw error;
-        // Depending on confirm email settings, they might be logged in instantly or need to check email.
-        onLoginSuccess();
+        
+        if (data.session) {
+          onLoginSuccess();
+        } else {
+          setInfoMsg('Account created. Check your inbox for confirmation link, or log in.');
+        }
       } else {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
-        onLoginSuccess();
+        if (data.session) {
+          onLoginSuccess();
+        }
       }
     } catch (err: any) {
-      setErrorMsg(err.message || 'Authentication failed');
+      setErrorMsg(err.message || 'Authentication failed. Please check credentials.');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <View style={styles.container}>
-      <TouchableOpacity style={styles.backBtn} onPress={onBack} activeOpacity={0.7}>
-        <ArrowLeft color="#8B949E" size={20} />
+    <View style={[styles.container, { backgroundColor: theme.background }]}>
+      <TouchableOpacity
+        style={[styles.backBtn, { backgroundColor: theme.surface, borderColor: theme.borderSubtle }]}
+        onPress={onBack}
+        activeOpacity={0.7}
+        accessibilityLabel="Go back"
+      >
+        <ArrowLeft color={theme.textSecondary} size={18} />
       </TouchableOpacity>
 
-      <View style={styles.box}>
+      <View style={styles.cardWrapper}>
         <View style={styles.header}>
-          <Activity color="#58A6FF" size={32} style={{ marginBottom: 16 }} />
-          <Text style={styles.title}>{isSignUp ? 'Create an account' : 'Sign in to HeatMap'}</Text>
-          <Text style={styles.subtitle}>
-            {isSignUp ? 'Start tracking your habits.' : 'Welcome back. Continue building your streak.'}
+          {/* Flame Icon */}
+          <View style={[styles.logoBadge, { backgroundColor: theme.surface, borderColor: theme.borderSubtle }]}>
+            <Image
+              source={require('../../assets/icon.png')}
+              style={styles.logoImage}
+              resizeMode="contain"
+            />
+          </View>
+
+          <Text style={[styles.title, { color: theme.text }]}>
+            {isSignUp ? 'Create your account' : 'Welcome back'}
+          </Text>
+          <Text style={[styles.subtitle, { color: theme.textSecondary }]}>
+            {isSignUp
+              ? 'Start building unbreakable habits with HabitHeat.'
+              : 'Sign in to continue your daily momentum.'}
           </Text>
         </View>
 
-        <View style={styles.form}>
+        <View style={[styles.card, { backgroundColor: theme.surface, borderColor: theme.borderSubtle }]}>
           {errorMsg ? (
-            <View style={styles.errorBox}>
-              <Text style={styles.errorText}>{errorMsg}</Text>
+            <View style={[styles.alertBox, { backgroundColor: 'rgba(248, 81, 73, 0.1)', borderColor: theme.error }]}>
+              <Text style={[styles.alertText, { color: theme.error }]}>{errorMsg}</Text>
+            </View>
+          ) : null}
+
+          {infoMsg ? (
+            <View style={[styles.alertBox, { backgroundColor: 'rgba(57, 211, 83, 0.1)', borderColor: theme.success }]}>
+              <Text style={[styles.alertText, { color: theme.success }]}>{infoMsg}</Text>
             </View>
           ) : null}
 
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Email address</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="you@example.com"
-              placeholderTextColor="#484F58"
-              keyboardType="email-address"
-              autoCapitalize="none"
-              value={email}
-              onChangeText={(t) => {
-                setEmail(t);
-                setErrorMsg('');
-              }}
-            />
+            <Text style={[styles.label, { color: theme.text }]}>Email</Text>
+            <View style={[styles.inputWrapper, { backgroundColor: theme.surfaceHighlight, borderColor: theme.borderSubtle }]}>
+              <Mail size={16} color={theme.textMuted} style={styles.inputIcon} />
+              <TextInput
+                style={[styles.input, { color: theme.text }]}
+                placeholder="you@example.com"
+                placeholderTextColor={theme.textMuted}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                value={email}
+                onChangeText={(t) => {
+                  setEmail(t);
+                  setErrorMsg('');
+                }}
+              />
+            </View>
           </View>
 
           <View style={styles.inputGroup}>
-            <View style={styles.labelRow}>
-              <Text style={styles.label}>Password</Text>
-              {!isSignUp && <Text style={styles.forgot}>Forgot password?</Text>}
+            <Text style={[styles.label, { color: theme.text }]}>Password</Text>
+            <View style={[styles.inputWrapper, { backgroundColor: theme.surfaceHighlight, borderColor: theme.borderSubtle }]}>
+              <Lock size={16} color={theme.textMuted} style={styles.inputIcon} />
+              <TextInput
+                style={[styles.input, { color: theme.text }]}
+                placeholder="••••••••"
+                placeholderTextColor={theme.textMuted}
+                secureTextEntry
+                value={password}
+                onChangeText={(t) => {
+                  setPassword(t);
+                  setErrorMsg('');
+                }}
+              />
             </View>
-            <TextInput
-              style={styles.input}
-              placeholder="••••••••"
-              placeholderTextColor="#484F58"
-              secureTextEntry
-              value={password}
-              onChangeText={(t) => {
-                setPassword(t);
-                setErrorMsg('');
-              }}
-            />
           </View>
 
           <TouchableOpacity
-            style={styles.loginBtn}
+            style={[styles.submitBtn, { backgroundColor: isDark ? '#39D353' : '#1A7F37' }]}
             onPress={handleAuth}
-            activeOpacity={0.8}
+            activeOpacity={0.85}
             disabled={loading}
           >
             {loading ? (
-              <ActivityIndicator color="#090A0C" />
+              <ActivityIndicator color="#FFFFFF" />
             ) : (
-              <Text style={styles.loginBtnText}>{isSignUp ? 'Sign up' : 'Sign in'}</Text>
+              <Text style={styles.submitBtnText}>
+                {isSignUp ? 'Create Free Account' : 'Sign In'}
+              </Text>
             )}
           </TouchableOpacity>
         </View>
 
-        <View style={styles.footer}>
-          <Text style={styles.footerText}>
-            {isSignUp ? 'Already have an account? ' : 'New to HeatMap? '}
-            <Text style={styles.link} onPress={() => setIsSignUp(!isSignUp)}>
-              {isSignUp ? 'Sign in.' : 'Create an account.'}
+        <View style={styles.toggleFooter}>
+          <Text style={[styles.footerText, { color: theme.textSecondary }]}>
+            {isSignUp ? 'Already have an account? ' : "Don't have an account? "}
+            <Text
+              style={[styles.toggleLink, { color: isDark ? '#39D353' : '#1A7F37' }]}
+              onPress={() => {
+                setIsSignUp(!isSignUp);
+                setErrorMsg('');
+                setInfoMsg('');
+              }}
+            >
+              {isSignUp ? 'Sign in' : 'Create account'}
             </Text>
           </Text>
         </View>
@@ -127,114 +189,120 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onBack, onLoginSuccess
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#090A0C',
     justifyContent: 'center',
     alignItems: 'center',
     padding: 24,
   },
   backBtn: {
     position: 'absolute',
-    top: 40,
-    left: 40,
-    padding: 8,
+    top: 32,
+    left: 32,
+    width: 38,
+    height: 38,
+    borderRadius: 10,
+    borderWidth: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  box: {
+  cardWrapper: {
     width: '100%',
-    maxWidth: 360,
+    maxWidth: 380,
   },
   header: {
     alignItems: 'center',
-    marginBottom: 32,
+    marginBottom: 28,
+  },
+  logoBadge: {
+    width: 52,
+    height: 52,
+    borderRadius: 14,
+    borderWidth: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
+    overflow: 'hidden',
+  },
+  logoImage: {
+    width: 34,
+    height: 34,
   },
   title: {
-    color: '#F0F6FC',
-    fontSize: 24,
-    fontWeight: '600',
-    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
-    marginBottom: 8,
+    fontSize: 22,
+    fontWeight: '800',
+    fontFamily: fontStack,
+    marginBottom: 6,
+    letterSpacing: -0.3,
   },
   subtitle: {
-    color: '#8B949E',
-    fontSize: 14,
-    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
+    fontSize: 13,
+    textAlign: 'center',
+    lineHeight: 18,
+    fontFamily: fontStack,
+    maxWidth: 300,
   },
-  form: {
-    backgroundColor: '#0D1117',
+  card: {
     borderWidth: 1,
-    borderColor: '#21262D',
-    borderRadius: 6,
-    padding: 20,
+    borderRadius: 16,
+    padding: 24,
     gap: 16,
   },
-  errorBox: {
-    backgroundColor: '#381014',
-    borderColor: '#7F1D1D',
+  alertBox: {
     borderWidth: 1,
-    borderRadius: 4,
+    borderRadius: 8,
     padding: 10,
   },
-  errorText: {
-    color: '#F85149',
+  alertText: {
     fontSize: 12,
-    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
+    lineHeight: 16,
+    fontFamily: fontStack,
+    fontWeight: '500',
   },
   inputGroup: {
-    gap: 8,
-  },
-  labelRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    gap: 7,
   },
   label: {
-    color: '#F0F6FC',
-    fontSize: 13,
-    fontWeight: '500',
-    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
-  },
-  forgot: {
-    color: '#58A6FF',
     fontSize: 12,
-    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
+    fontWeight: '600',
+    fontFamily: fontStack,
+  },
+  inputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    height: 44,
+  },
+  inputIcon: {
+    marginRight: 10,
   },
   input: {
-    backgroundColor: '#090A0C',
-    borderWidth: 1,
-    borderColor: '#30363D',
-    borderRadius: 4,
-    color: '#F0F6FC',
-    paddingHorizontal: 12,
-    paddingVertical: 10,
+    flex: 1,
     fontSize: 14,
-    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
+    fontFamily: fontStack,
   },
-  loginBtn: {
-    backgroundColor: '#238636',
-    paddingVertical: 10,
-    borderRadius: 4,
+  submitBtn: {
+    height: 44,
+    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 8,
+    marginTop: 6,
   },
-  loginBtnText: {
+  submitBtnText: {
     color: '#FFFFFF',
     fontSize: 14,
-    fontWeight: '600',
-    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
+    fontWeight: '700',
+    fontFamily: fontStack,
   },
-  footer: {
-    marginTop: 32,
+  toggleFooter: {
+    marginTop: 20,
     alignItems: 'center',
-    padding: 16,
-    borderWidth: 1,
-    borderColor: '#21262D',
-    borderRadius: 6,
   },
   footerText: {
-    color: '#8B949E',
     fontSize: 13,
-    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
+    fontFamily: fontStack,
   },
-  link: {
-    color: '#58A6FF',
+  toggleLink: {
+    fontWeight: '700',
   },
 });

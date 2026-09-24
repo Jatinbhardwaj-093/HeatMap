@@ -1,11 +1,17 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { HeatMapModel } from '../types/heatmap';
 
-const STORAGE_KEY = '@trace_heatmaps_v1';
+function getStorageKey(userId?: string): string {
+  if (userId) {
+    return `@habitheat_maps_${userId}`;
+  }
+  return '@habitheat_maps_guest';
+}
 
-export async function loadHeatMaps(): Promise<HeatMapModel[]> {
+export async function loadHeatMaps(userId?: string): Promise<HeatMapModel[]> {
   try {
-    const raw = await AsyncStorage.getItem(STORAGE_KEY);
+    const key = getStorageKey(userId);
+    const raw = await AsyncStorage.getItem(key);
     if (!raw) {
       return [];
     }
@@ -20,25 +26,26 @@ export async function loadHeatMaps(): Promise<HeatMapModel[]> {
   }
 }
 
-export async function saveHeatMaps(maps: HeatMapModel[]): Promise<void> {
+export async function saveHeatMaps(maps: HeatMapModel[], userId?: string): Promise<void> {
   try {
+    const key = getStorageKey(userId);
     const payload = JSON.stringify(maps);
-    await AsyncStorage.setItem(STORAGE_KEY, payload);
+    await AsyncStorage.setItem(key, payload);
   } catch (err) {
     console.error('Storage write error:', err);
   }
 }
 
-export async function exportDataJSON(): Promise<string> {
-  const maps = await loadHeatMaps();
+export async function exportDataJSON(userId?: string): Promise<string> {
+  const maps = await loadHeatMaps(userId);
   return JSON.stringify(maps, null, 2);
 }
 
-export async function importDataJSON(jsonStr: string): Promise<HeatMapModel[]> {
+export async function importDataJSON(jsonStr: string, userId?: string): Promise<HeatMapModel[]> {
   const parsed = JSON.parse(jsonStr);
   if (!Array.isArray(parsed)) {
     throw new Error('Invalid format: root must be an array of HeatMaps');
   }
-  await saveHeatMaps(parsed);
+  await saveHeatMaps(parsed, userId);
   return parsed;
 }
