@@ -1,5 +1,5 @@
 {
-  "name": "heatmap-app",
+  "name": "habitheat",
   "version": "1.0.0",
   "license": "MIT",
   "main": "index.ts",
@@ -39,8 +39,8 @@
     "wait-on": "^8.0.2"
   },
   "build": {
-    "appId": "com.heatmap.app",
-    "productName": "HeatMap",
+    "appId": "com.habitheat.app",
+    "productName": "HabitHeat",
     "directories": {
       "output": "release"
     },

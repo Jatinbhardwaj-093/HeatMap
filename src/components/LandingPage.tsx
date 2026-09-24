@@ -244,7 +244,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           </View>
           <View>
             <View style={styles.brandTitleRow}>
-              <Text style={[styles.brandText, { color: theme.text }]}>HEATMAP</Text>
+              <Text style={[styles.brandText, { color: theme.text }]}>HABITHEAT</Text>
               <View
                 style={[
                   styles.statusTag,
@@ -331,7 +331,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         {/* Subtitle with Clean Flow (No M-dash) */}
         <Text style={[styles.heroSubtitle, { color: theme.textSecondary }]}>
           Stop drowning in continuous numbers, target meters, and bookkeeping anxiety.
-          HeatMap strips routine tracking down to an elegant <Text style={{ color: theme.text, fontWeight: '700' }}>binary check-in</Text>.
+          HabitHeat strips routine tracking down to an elegant <Text style={{ color: theme.text, fontWeight: '700' }}>binary check-in</Text>.
           Log yes or no and let daily consistency compound into green contribution matrices.
         </Text>
 
@@ -591,7 +591,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             </Text>
 
             <Text style={[styles.pillarBody, { color: theme.textSecondary }]}>
-              Apps that demand inputs like "8,450 / 10,000 steps" turn personal growth into exhausting bookkeeping. HeatMap reduces everything to a pure boolean: <Text style={{ color: theme.text, fontWeight: '700' }}>Did you execute today? Yes or No.</Text>
+              Apps that demand inputs like "8,450 / 10,000 steps" turn personal growth into exhausting bookkeeping. HabitHeat reduces everything to a pure boolean: <Text style={{ color: theme.text, fontWeight: '700' }}>Did you execute today? Yes or No.</Text>
             </Text>
 
             {/* Comparison Visual Block */}
@@ -671,7 +671,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             </Text>
 
             <Text style={[styles.pillarBody, { color: theme.textSecondary }]}>
-              Software engineers write code every single day just to keep their GitHub commit graph filled with bright green tiles. HeatMap leverages this exact behavioral psychology to rewire your daily discipline.
+              Software engineers write code every single day just to keep their GitHub commit graph filled with bright green tiles. HabitHeat leverages this exact behavioral psychology to rewire your daily discipline.
             </Text>
 
             {/* Intensity Scale Preview */}
@@ -872,9 +872,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             style={styles.footerLogo}
             resizeMode="contain"
           />
-          <Text style={[styles.footerBrand, { color: theme.text }]}>HEATMAP</Text>
+          <Text style={[styles.footerBrand, { color: theme.text }]}>HABITHEAT</Text>
           <Text style={[styles.footerCopy, { color: theme.textMuted }]}>
-            © 2026 Open Source Project. Built for high-discipline builders.
+            © 2026 HabitHeat. Open Source Project. Built for high-discipline builders.
           </Text>
         </View>
 

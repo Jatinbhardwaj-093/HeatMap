@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "HeatMap",
-    "slug": "heatmap-tracker",
+    "name": "HabitHeat",
+    "slug": "habitheat",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -11,14 +11,14 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.heatmap.tracker"
+      "bundleIdentifier": "com.habitheat.tracker"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/icon.png",
         "backgroundColor": "#090A0C"
       },
-      "package": "com.heatmap.tracker"
+      "package": "com.habitheat.tracker"
     },
     "web": {
       "favicon": "./assets/icon.png",

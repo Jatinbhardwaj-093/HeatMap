@@ -44,7 +44,7 @@ export const Header: React.FC<HeaderProps> = ({
             <Grid3X3 size={15} color={theme.success} strokeWidth={2.5} />
           </View>
           <View>
-            <Text style={[styles.brandName, { color: theme.text }]}>HEATMAP</Text>
+            <Text style={[styles.brandName, { color: theme.text }]}>HABITHEAT</Text>
             {userEmail ? (
               <Text style={[styles.brandSub, { color: theme.textSecondary }]}>{userEmail}</Text>
             ) : null}

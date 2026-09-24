@@ -1,6 +1,6 @@
-# HeatMap
+# HabitHeat
 
-A cross-platform HeatMap habit, fitness, and diet tracking application built with React Native and Expo.
+A cross-platform binary habit, fitness, and deep work tracking matrix application built with React Native and Expo. Inspired by GitHub contribution graphs.
 
 ## Features
 - **Cross-Platform**: Runs on iOS, Android, and macOS Desktop (via Expo Web / Electron).

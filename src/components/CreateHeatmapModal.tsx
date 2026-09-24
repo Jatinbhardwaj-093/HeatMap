@@ -67,7 +67,7 @@ export const CreateHeatmapModal: React.FC<CreateHeatmapModalProps> = ({
               <View style={styles.modalHeader}>
                 <View>
                   <Text style={styles.modalSubtitle}>NEW TRACKER</Text>
-                  <Text style={styles.modalTitle}>Create HeatMap</Text>
+                  <Text style={styles.modalTitle}>Create Habit Tracker</Text>
                 </View>
                 <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
                   <X size={16} color="#8B949E" />
@@ -82,7 +82,7 @@ export const CreateHeatmapModal: React.FC<CreateHeatmapModalProps> = ({
                 ) : null}
 
                 <View style={styles.formGroup}>
-                  <Text style={styles.label}>NAME OF HEATMAP *</Text>
+                  <Text style={styles.label}>HABIT NAME *</Text>
                   <TextInput
                     style={styles.input}
                     placeholder="e.g. Strength Training, Intermittent Fasting..."

@@ -162,7 +162,7 @@ function AppContent() {
     return (
       <View style={[{ flex: 1, backgroundColor: theme.background, justifyContent: 'center', alignItems: 'center' }]}>
         <Text style={{ color: theme.textSecondary, fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif' }}>
-          Loading HeatMaps...
+          Loading HabitHeat...
         </Text>
       </View>
     );
@@ -217,7 +217,7 @@ function AppContent() {
             <Search size={14} color={theme.textSecondary} style={styles.searchIcon} />
             <TextInput
               style={[styles.searchInput, { color: theme.text }]}
-              placeholder="Search heatmaps..."
+              placeholder="Search habits..."
               placeholderTextColor={theme.textMuted}
               value={searchQuery}
               onChangeText={setSearchQuery}
@@ -264,7 +264,7 @@ function AppContent() {
           {filteredHeatmaps.length === 0 ? (
             <View style={styles.emptyState}>
               <Text style={{ color: theme.textMuted, fontSize: 14, fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif' }}>
-                No heatmaps found.
+                No habits found. Tap "New" to start your first matrix.
               </Text>
             </View>
           ) : (
