@@ -21,7 +21,7 @@
       "package": "com.habitheat.tracker"
     },
     "web": {
-      "favicon": "./assets/icon.png",
+      "favicon": "./assets/favicon.png",
       "bundler": "metro"
     },
     "plugins": [
