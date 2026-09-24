@@ -1,116 +1,689 @@
-import React from 'react';
-import { StyleSheet, View, Text, TouchableOpacity, ScrollView, Platform, Linking, Dimensions } from 'react-native';
-import { Activity, Monitor, Smartphone, Download, ArrowRight, Github, CheckSquare, Grid, Zap } from 'lucide-react-native';
+import React, { useState } from 'react';
+import {
+  StyleSheet,
+  View,
+  Text,
+  TouchableOpacity,
+  ScrollView,
+  Platform,
+  Linking,
+  Dimensions,
+  Image,
+} from 'react-native';
+import {
+  ArrowRight,
+  Github,
+  Monitor,
+  Smartphone,
+  Globe,
+  Download,
+  Flame,
+  Check,
+  X,
+  Sun,
+  Moon,
+  Terminal,
+  Shield,
+  Zap,
+  Sparkles,
+  ExternalLink,
+} from 'lucide-react-native';
+import { useAppTheme, useIsDark, useThemeMode } from '../theme/theme';
 
 interface LandingPageProps {
   onLogin: () => void;
   onDashboard: () => void;
 }
 
+// Preset demo matrix data for interactive showcase
+interface DemoPreset {
+  id: string;
+  name: string;
+  category: string;
+  colorName: string;
+  accentColor: string;
+  levelColors: [string, string, string, string, string];
+  streak: number;
+  completionRate: string;
+  totalDays: number;
+  patternSeed: number[];
+}
+
+const DEMO_PRESETS: DemoPreset[] = [
+  {
+    id: 'deep-work',
+    name: 'Deep Engineering',
+    category: 'FOCUS',
+    colorName: 'Emerald Matrix',
+    accentColor: '#39D353',
+    levelColors: ['#161B22', '#0E4429', '#006D32', '#26A641', '#39D353'],
+    streak: 42,
+    completionRate: '94.2%',
+    totalDays: 138,
+    patternSeed: [3, 4, 4, 4, 3, 0, 0, 4, 4, 3, 4, 4, 1, 0, 4, 4, 4, 3, 4, 2, 0, 4, 4, 4, 4, 4, 0, 0],
+  },
+  {
+    id: 'workout',
+    name: 'High-Intensity Training',
+    category: 'FITNESS',
+    colorName: 'Industrial Amber',
+    accentColor: '#F59E0B',
+    levelColors: ['#1A1713', '#43280B', '#78470E', '#B45309', '#F59E0B'],
+    streak: 18,
+    completionRate: '86.5%',
+    totalDays: 92,
+    patternSeed: [4, 0, 3, 4, 0, 4, 0, 3, 4, 0, 4, 4, 0, 4, 4, 0, 4, 4, 0, 3, 0, 4, 4, 0, 4, 4, 0, 4],
+  },
+  {
+    id: 'read-meditate',
+    name: 'Morning Reading & Solitude',
+    category: 'MIND',
+    colorName: 'Cold Cyan',
+    accentColor: '#38BDF8',
+    levelColors: ['#111923', '#0C384D', '#0E5D7F', '#0284C7', '#38BDF8'],
+    streak: 29,
+    completionRate: '91.8%',
+    totalDays: 114,
+    patternSeed: [2, 3, 4, 4, 4, 4, 4, 3, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 3, 4, 4, 4, 4, 4, 4],
+  },
+];
+
 export const LandingPage: React.FC<LandingPageProps> = ({ onLogin, onDashboard }) => {
-  const handleDownload = () => {
+  const theme = useAppTheme();
+  const isDark = useIsDark();
+  const { themeMode, setThemeMode } = useThemeMode();
+
+  const [activePresetIndex, setActivePresetIndex] = useState(0);
+  const activePreset = DEMO_PRESETS[activePresetIndex];
+
+  // Interactive cell overrides for the demo
+  const [clickedCells, setClickedCells] = useState<Record<string, number>>({});
+
+  const toggleDemoCell = (cellKey: string, currentLevel: number) => {
+    setClickedCells((prev) => ({
+      ...prev,
+      [cellKey]: prev[cellKey] !== undefined ? (prev[cellKey] === 0 ? 4 : 0) : (currentLevel > 0 ? 0 : 4),
+    }));
+  };
+
+  const handleDownloadRelease = () => {
     Linking.openURL('https://github.com/Jatinbhardwaj-093/HeatMap/releases');
   };
 
+  const handleGithubRepo = () => {
+    Linking.openURL('https://github.com/Jatinbhardwaj-093/HeatMap');
+  };
+
+  const toggleTheme = () => {
+    setThemeMode(isDark ? 'light' : 'dark');
+  };
+
+  // Generate 18 weeks x 7 days for the demo preview
+  const demoWeeksCount = 18;
+  const daysPerWeek = 7;
+
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-      {/* Navbar */}
-      <View style={styles.nav}>
-        <View style={styles.logoGroup}>
-          <Activity color="#F0F6FC" size={24} />
-          <Text style={styles.logoText}>HEATMAP</Text>
+    <ScrollView
+      style={[styles.container, { backgroundColor: theme.background }]}
+      contentContainerStyle={styles.contentContainer}
+      showsVerticalScrollIndicator={false}
+    >
+      {/* ─── NAVIGATION BAR ────────────────────────────────────── */}
+      <View style={[styles.navbar, { borderColor: theme.borderSubtle }]}>
+        <View style={styles.brandGroup}>
+          <View style={[styles.logoBadge, { borderColor: isDark ? '#30363D' : '#D0D7DE', backgroundColor: theme.surface }]}>
+            <Image
+              source={require('../../assets/icon.png')}
+              style={styles.logoImage}
+              resizeMode="contain"
+            />
+          </View>
+          <View>
+            <View style={styles.brandTitleRow}>
+              <Text style={[styles.brandText, { color: theme.text }]}>HEATMAP</Text>
+              <View style={[styles.statusTag, { backgroundColor: isDark ? 'rgba(57, 211, 83, 0.15)' : 'rgba(26, 127, 55, 0.12)', borderColor: isDark ? 'rgba(57, 211, 83, 0.4)' : 'rgba(26, 127, 55, 0.3)' }]}>
+                <View style={[styles.statusDot, { backgroundColor: theme.success }]} />
+                <Text style={[styles.statusText, { color: theme.success }]}>V1.2 // LIVE</Text>
+              </View>
+            </View>
+            <Text style={[styles.brandSub, { color: theme.textSecondary }]}>Binary Habit Matrix</Text>
+          </View>
         </View>
-        <TouchableOpacity style={styles.navLoginBtn} onPress={onLogin} activeOpacity={0.7}>
-          <Text style={styles.navLoginText}>Sign In</Text>
-        </TouchableOpacity>
+
+        <View style={styles.navActions}>
+          <TouchableOpacity
+            style={[styles.iconButton, { borderColor: theme.borderSubtle, backgroundColor: theme.surface }]}
+            onPress={toggleTheme}
+            activeOpacity={0.7}
+          >
+            {isDark ? <Sun size={15} color="#F59E0B" /> : <Moon size={15} color="#656D76" />}
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.navGithubBtn, { borderColor: theme.borderSubtle, backgroundColor: theme.surface }]}
+            onPress={handleGithubRepo}
+            activeOpacity={0.7}
+          >
+            <Github size={14} color={theme.textSecondary} />
+            <Text style={[styles.navGithubText, { color: theme.textSecondary }]}>GitHub</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.navSignInBtn, { borderColor: theme.border, backgroundColor: theme.surfaceHighlight }]}
+            onPress={onLogin}
+            activeOpacity={0.8}
+          >
+            <Text style={[styles.navSignInText, { color: theme.text }]}>SIGN IN</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
-      {/* Hero Section */}
-      <View style={styles.hero}>
-        <Text style={styles.heroTitle}>TRACK DAILY ACTION.</Text>
-        <Text style={styles.heroTitle}>BUILD UNBREAKABLE STREAKS.</Text>
-        <Text style={styles.heroSub}>
-          A minimalist, cross-platform heatmap tracker for fitness, deep work, and habits. 
-          Zero fluff. Zero friction. Just your data visualized.
+      {/* ─── HERO SECTION ──────────────────────────────────────── */}
+      <View style={styles.heroSection}>
+        {/* Editorial Pill */}
+        <View style={[styles.heroPill, { borderColor: isDark ? 'rgba(57, 211, 83, 0.35)' : 'rgba(26, 127, 55, 0.3)', backgroundColor: isDark ? 'rgba(14, 68, 41, 0.2)' : 'rgba(26, 127, 55, 0.08)' }]}>
+          <Flame size={13} color={isDark ? '#39D353' : '#1A7F37'} strokeWidth={2.5} />
+          <Text style={[styles.heroPillText, { color: isDark ? '#39D353' : '#1A7F37' }]}>
+            GITHUB-STYLE DISCIPLINE // ZERO NUMERIC FATIGUE
+          </Text>
+        </View>
+
+        {/* Dual-Tone Headline */}
+        <View style={styles.headlineWrapper}>
+          <Text style={[styles.heroTitleMain, { color: theme.text }]}>
+            DON'T BREAK THE CHAIN.
+          </Text>
+          <Text style={[styles.heroTitleAccent, { color: isDark ? '#39D353' : '#1A7F37' }]}>
+            COMPOUND EVERY DAY.
+          </Text>
+        </View>
+
+        {/* Subtitle with Clear Hierarchy */}
+        <Text style={[styles.heroSubtitle, { color: theme.textSecondary }]}>
+          Stop drowning in continuous numbers, target meters, and bookkeeping anxiety. 
+          HeatMap strips routine tracking to an elegant <Text style={{ color: theme.text, fontWeight: '700' }}>binary check-in</Text>—transforming daily human consistency into the visual momentum of green contribution matrixes.
         </Text>
-        
-        <View style={styles.heroActions}>
-          <TouchableOpacity style={styles.primaryBtn} onPress={onDashboard} activeOpacity={0.8}>
-            <Text style={styles.primaryBtnText}>OPEN WEB APP</Text>
-            <ArrowRight color="#090A0C" size={18} />
+
+        {/* Hero Actions */}
+        <View style={styles.heroButtonsRow}>
+          <TouchableOpacity
+            style={[styles.primaryActionBtn, { backgroundColor: isDark ? '#39D353' : '#1A7F37' }]}
+            onPress={onDashboard}
+            activeOpacity={0.85}
+          >
+            <Text style={styles.primaryActionText}>LAUNCH WEB DASHBOARD</Text>
+            <ArrowRight size={16} color="#FFFFFF" strokeWidth={2.5} />
           </TouchableOpacity>
-          <TouchableOpacity style={styles.secondaryBtn} onPress={onLogin} activeOpacity={0.8}>
-            <Text style={styles.secondaryBtnText}>CREATE ACCOUNT</Text>
+
+          <TouchableOpacity
+            style={[styles.secondaryActionBtn, { borderColor: theme.border, backgroundColor: theme.surface }]}
+            onPress={onLogin}
+            activeOpacity={0.85}
+          >
+            <Text style={[styles.secondaryActionText, { color: theme.text }]}>CREATE FREE ACCOUNT</Text>
           </TouchableOpacity>
         </View>
-      </View>
 
-      {/* Philosophy Section */}
-      <View style={styles.philosophySection}>
-        <Text style={styles.sectionHeader}>PHILOSOPHY</Text>
-        <View style={styles.philosophyGrid}>
-          <View style={styles.philosophyCard}>
-            <CheckSquare color="#8B949E" size={24} style={styles.philosophyIcon} />
-            <Text style={styles.philosophyTitle}>Binary Logging</Text>
-            <Text style={styles.philosophyDesc}>Manage day-to-day habits. Log yes or no instead of stressing over continuous numbers.</Text>
+        {/* Micro Tech Guarantee */}
+        <View style={styles.guaranteeRow}>
+          <View style={styles.guaranteeItem}>
+            <Check size={12} color={theme.success} strokeWidth={3} />
+            <Text style={[styles.guaranteeText, { color: theme.textMuted }]}>Local-First Offline</Text>
           </View>
-          <View style={styles.philosophyCard}>
-            <Grid color="#8B949E" size={24} style={styles.philosophyIcon} />
-            <Text style={styles.philosophyTitle}>Dedicated Views</Text>
-            <Text style={styles.philosophyDesc}>A dedicated heatmap for each habit you need to track. Keep your routines separated and clear.</Text>
+          <View style={styles.guaranteeDot} />
+          <View style={styles.guaranteeItem}>
+            <Check size={12} color={theme.success} strokeWidth={3} />
+            <Text style={[styles.guaranteeText, { color: theme.textMuted }]}>Zero Ads & Telemetry</Text>
           </View>
-          <View style={styles.philosophyCard}>
-            <Zap color="#8B949E" size={24} style={styles.philosophyIcon} />
-            <Text style={styles.philosophyTitle}>Visual Motivation</Text>
-            <Text style={styles.philosophyDesc}>Inspired by GitHub heatmaps to track your routines and give visual motivation to achieve things.</Text>
+          <View style={styles.guaranteeDot} />
+          <View style={styles.guaranteeItem}>
+            <Check size={12} color={theme.success} strokeWidth={3} />
+            <Text style={[styles.guaranteeText, { color: theme.textMuted }]}>100% Open Source</Text>
           </View>
         </View>
       </View>
 
-      {/* Features / Downloads */}
-      <View style={styles.downloadsSection}>
-        <Text style={styles.sectionHeader}>NATIVE APPLICATIONS</Text>
-        <View style={styles.grid}>
-          
-          <View style={styles.card}>
-            <Monitor color="#F0F6FC" size={28} style={styles.cardIcon} />
-            <Text style={styles.cardTitle}>macOS Desktop</Text>
-            <Text style={styles.cardDesc}>Native window wrapper, system tray support, and offline persistence.</Text>
-            <TouchableOpacity style={styles.downloadBtn} activeOpacity={0.7} onPress={handleDownload}>
-              <Download color="#090A0C" size={16} />
-              <Text style={styles.downloadText}>DOWNLOAD .DMG</Text>
-            </TouchableOpacity>
+      {/* ─── LIVE INTERACTIVE MATRIX SHOWCASE ───────────────────── */}
+      <View style={[styles.interactiveCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+        {/* Card Header */}
+        <View style={[styles.interactiveHeader, { borderBottomColor: theme.borderSubtle }]}>
+          <View style={styles.interactiveHeaderLeft}>
+            <View style={[styles.terminalIndicator, { backgroundColor: activePreset.accentColor }]} />
+            <View>
+              <Text style={[styles.interactiveTitle, { color: theme.text }]}>
+                {activePreset.name.toUpperCase()}
+              </Text>
+              <Text style={[styles.interactiveSub, { color: theme.textMuted }]}>
+                Matrix Engine // Palette: <Text style={{ color: activePreset.accentColor, fontWeight: '600' }}>{activePreset.colorName}</Text>
+              </Text>
+            </View>
           </View>
 
-          <View style={styles.card}>
-            <Smartphone color="#F0F6FC" size={28} style={styles.cardIcon} />
-            <Text style={styles.cardTitle}>Android</Text>
-            <Text style={styles.cardDesc}>Standalone APK. Includes live RemoteViews home screen widgets.</Text>
-            <TouchableOpacity style={styles.downloadBtn} activeOpacity={0.7} onPress={handleDownload}>
-              <Download color="#090A0C" size={16} />
-              <Text style={styles.downloadText}>DOWNLOAD .APK</Text>
-            </TouchableOpacity>
+          {/* Interactive Preset Switcher */}
+          <View style={[styles.presetTabs, { backgroundColor: theme.surfaceHighlight, borderColor: theme.borderSubtle }]}>
+            {DEMO_PRESETS.map((preset, idx) => {
+              const isSelected = activePresetIndex === idx;
+              return (
+                <TouchableOpacity
+                  key={preset.id}
+                  style={[
+                    styles.presetTab,
+                    isSelected && { backgroundColor: theme.surface, borderColor: preset.accentColor },
+                  ]}
+                  onPress={() => {
+                    setActivePresetIndex(idx);
+                    setClickedCells({});
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <Text
+                    style={[
+                      styles.presetTabText,
+                      { color: isSelected ? theme.text : theme.textMuted },
+                      isSelected && { fontWeight: '700' },
+                    ]}
+                  >
+                    {preset.category}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </View>
+
+        {/* Matrix Grid Visualization */}
+        <View style={styles.matrixViewWrapper}>
+          <View style={styles.matrixContainer}>
+            {/* Days column labels */}
+            <View style={styles.matrixDayLabels}>
+              <Text style={[styles.dayLabel, { color: theme.textMuted }]}>Mon</Text>
+              <Text style={[styles.dayLabel, { color: theme.textMuted }]}>Wed</Text>
+              <Text style={[styles.dayLabel, { color: theme.textMuted }]}>Fri</Text>
+              <Text style={[styles.dayLabel, { color: theme.textMuted }]}>Sun</Text>
+            </View>
+
+            {/* Matrix Columns */}
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.matrixScroll}>
+              <View style={styles.columnsWrapper}>
+                {Array.from({ length: demoWeeksCount }).map((_, weekIdx) => (
+                  <View key={`week-${weekIdx}`} style={styles.matrixColumn}>
+                    {Array.from({ length: daysPerWeek }).map((__, dayIdx) => {
+                      const cellKey = `w${weekIdx}-d${dayIdx}`;
+                      const seedIndex = (weekIdx * 7 + dayIdx) % activePreset.patternSeed.length;
+                      const baseLevel = activePreset.patternSeed[seedIndex];
+                      const currentLevel = clickedCells[cellKey] !== undefined ? clickedCells[cellKey] : baseLevel;
+                      const cellColor = activePreset.levelColors[currentLevel] || activePreset.levelColors[0];
+
+                      return (
+                        <TouchableOpacity
+                          key={cellKey}
+                          activeOpacity={0.6}
+                          onPress={() => toggleDemoCell(cellKey, currentLevel)}
+                          style={[
+                            styles.matrixCell,
+                            {
+                              backgroundColor: !isDark && currentLevel === 0 ? '#EAECEF' : cellColor,
+                              borderColor: isDark ? '#21262D' : '#D0D7DE',
+                            },
+                          ]}
+                        />
+                      );
+                    })}
+                  </View>
+                ))}
+              </View>
+            </ScrollView>
           </View>
 
-          <View style={styles.card}>
-            <Smartphone color="#F0F6FC" size={28} style={styles.cardIcon} />
-            <Text style={styles.cardTitle}>iOS</Text>
-            <Text style={styles.cardDesc}>TestFlight beta. Includes WidgetKit integrations for Lock Screen.</Text>
-            <TouchableOpacity style={styles.downloadBtn} activeOpacity={0.7} onPress={handleDownload}>
-              <Text style={styles.downloadText}>JOIN TESTFLIGHT</Text>
-            </TouchableOpacity>
+          {/* Matrix Footnote / Legend */}
+          <View style={[styles.matrixFooterRow, { borderTopColor: theme.borderSubtle }]}>
+            <View style={styles.interactiveHintRow}>
+              <Sparkles size={12} color={activePreset.accentColor} />
+              <Text style={[styles.interactiveHint, { color: theme.textSecondary }]}>
+                Interactive Demo: Click any tile to test streak intensity
+              </Text>
+            </View>
+
+            <View style={styles.legendGroup}>
+              <Text style={[styles.legendLabel, { color: theme.textMuted }]}>Less</Text>
+              <View style={styles.swatchesRow}>
+                {activePreset.levelColors.map((color, i) => (
+                  <View
+                    key={`swatch-${i}`}
+                    style={[
+                      styles.legendSwatch,
+                      {
+                        backgroundColor: !isDark && i === 0 ? '#EAECEF' : color,
+                        borderColor: isDark ? '#30363D' : '#D0D7DE',
+                      },
+                    ]}
+                  />
+                ))}
+              </View>
+              <Text style={[styles.legendLabel, { color: theme.textMuted }]}>More</Text>
+            </View>
+          </View>
+        </View>
+
+        {/* Live Matrix Metrics Strip */}
+        <View style={[styles.metricsStrip, { backgroundColor: theme.surfaceHighlight, borderColor: theme.borderSubtle }]}>
+          <View style={styles.metricBlock}>
+            <Text style={[styles.metricLabel, { color: theme.textMuted }]}>CURRENT STREAK</Text>
+            <View style={styles.metricValueRow}>
+              <Flame size={16} color={activePreset.accentColor} strokeWidth={2.5} />
+              <Text style={[styles.metricValue, { color: activePreset.accentColor }]}>
+                {activePreset.streak} <Text style={{ fontSize: 13, color: theme.textSecondary }}>DAYS</Text>
+              </Text>
+            </View>
           </View>
 
+          <View style={[styles.metricDivider, { backgroundColor: theme.border }]} />
+
+          <View style={styles.metricBlock}>
+            <Text style={[styles.metricLabel, { color: theme.textMuted }]}>90-DAY CONSISTENCY</Text>
+            <Text style={[styles.metricValue, { color: theme.text }]}>
+              {activePreset.completionRate}
+            </Text>
+          </View>
+
+          <View style={[styles.metricDivider, { backgroundColor: theme.border }]} />
+
+          <View style={styles.metricBlock}>
+            <Text style={[styles.metricLabel, { color: theme.textMuted }]}>TOTAL ACTIVE SESSIONS</Text>
+            <Text style={[styles.metricValue, { color: theme.text }]}>
+              {activePreset.totalDays} <Text style={{ fontSize: 13, color: theme.textSecondary }}>DAYS</Text>
+            </Text>
+          </View>
         </View>
       </View>
 
-      {/* Footer */}
-      <View style={styles.footer}>
-        <Text style={styles.footerText}>© 2026 HeatMap Open Source</Text>
-        <TouchableOpacity style={styles.githubLink} activeOpacity={0.7} onPress={handleDownload}>
-          <Github color="#8B949E" size={16} />
-          <Text style={styles.footerText}>Source Code</Text>
-        </TouchableOpacity>
+      {/* ─── PHILOSOPHY SECTION (ENGINEERED CLARITY) ─────────────── */}
+      <View style={styles.sectionWrapper}>
+        <View style={styles.sectionHeaderCol}>
+          <Text style={[styles.sectionOverline, { color: isDark ? '#39D353' : '#1A7F37' }]}>
+            ARCHITECTURE OF DISCIPLINE
+          </Text>
+          <Text style={[styles.sectionTitle, { color: theme.text }]}>
+            Why Binary Tracking Wins Where Numbers Fail
+          </Text>
+        </View>
+
+        <View style={styles.pillarsGrid}>
+          {/* Pillar 01 */}
+          <View style={[styles.pillarCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+            <View style={styles.pillarHeaderRow}>
+              <View style={[styles.pillarBadge, { backgroundColor: 'rgba(245, 158, 11, 0.1)', borderColor: 'rgba(245, 158, 11, 0.3)' }]}>
+                <Text style={[styles.pillarBadgeText, { color: '#F59E0B' }]}>01 // ZERO FRICTION</Text>
+              </View>
+            </View>
+
+            <Text style={[styles.pillarTitle, { color: theme.text }]}>
+              Binary Logging vs. Numeric Anxiety
+            </Text>
+
+            <Text style={[styles.pillarBody, { color: theme.textSecondary }]}>
+              Apps that demand inputs like "8,450 / 10,000 steps" or "47 / 60 minutes" turn personal growth into exhausting bookkeeping. HeatMap reduces everything to a pure boolean: <Text style={{ color: theme.text, fontWeight: '700' }}>Did you execute today? Yes or No.</Text>
+            </Text>
+
+            {/* Comparison Visual Block */}
+            <View style={[styles.comparisonBox, { backgroundColor: theme.surfaceHighlight, borderColor: theme.borderSubtle }]}>
+              <View style={styles.comparisonRow}>
+                <View style={[styles.compStatusTag, { backgroundColor: 'rgba(248, 81, 73, 0.15)' }]}>
+                  <X size={12} color="#F85149" strokeWidth={3} />
+                </View>
+                <Text style={[styles.compTextStriked, { color: theme.textMuted }]}>
+                  "Logged 42 of 60 mins (70% fail)"
+                </Text>
+              </View>
+              <View style={styles.comparisonRow}>
+                <View style={[styles.compStatusTag, { backgroundColor: 'rgba(57, 211, 83, 0.15)' }]}>
+                  <Check size={12} color={theme.success} strokeWidth={3} />
+                </View>
+                <Text style={[styles.compTextSuccess, { color: theme.text }]}>
+                  "Executed workout. Day marked complete."
+                </Text>
+              </View>
+            </View>
+          </View>
+
+          {/* Pillar 02 */}
+          <View style={[styles.pillarCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+            <View style={styles.pillarHeaderRow}>
+              <View style={[styles.pillarBadge, { backgroundColor: 'rgba(56, 189, 248, 0.1)', borderColor: 'rgba(56, 189, 248, 0.3)' }]}>
+                <Text style={[styles.pillarBadgeText, { color: '#38BDF8' }]}>02 // MODULARITY</Text>
+              </View>
+            </View>
+
+            <Text style={[styles.pillarTitle, { color: theme.text }]}>
+              Isolated Cellular Matrices
+            </Text>
+
+            <Text style={[styles.pillarBody, { color: theme.textSecondary }]}>
+              Never merge discordant habits into a generic checklist. Fitness, deep programming, hydration, and reading each command their own autonomous heat matrix, custom palette, and independent streak algorithm.
+            </Text>
+
+            {/* Palette Preview Swatches */}
+            <View style={[styles.paletteShowcase, { backgroundColor: theme.surfaceHighlight, borderColor: theme.borderSubtle }]}>
+              <View style={styles.palettePill}>
+                <View style={[styles.dotSmall, { backgroundColor: '#39D353' }]} />
+                <Text style={[styles.palettePillText, { color: theme.textSecondary }]}>Emerald Matrix</Text>
+              </View>
+              <View style={styles.palettePill}>
+                <View style={[styles.dotSmall, { backgroundColor: '#F59E0B' }]} />
+                <Text style={[styles.palettePillText, { color: theme.textSecondary }]}>Industrial Amber</Text>
+              </View>
+              <View style={styles.palettePill}>
+                <View style={[styles.dotSmall, { backgroundColor: '#38BDF8' }]} />
+                <Text style={[styles.palettePillText, { color: theme.textSecondary }]}>Cold Cyan</Text>
+              </View>
+            </View>
+          </View>
+
+          {/* Pillar 03 */}
+          <View style={[styles.pillarCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+            <View style={styles.pillarHeaderRow}>
+              <View style={[styles.pillarBadge, { backgroundColor: 'rgba(57, 211, 83, 0.1)', borderColor: 'rgba(57, 211, 83, 0.3)' }]}>
+                <Text style={[styles.pillarBadgeText, { color: isDark ? '#39D353' : '#1A7F37' }]}>03 // PSYCHOLOGY</Text>
+              </View>
+            </View>
+
+            <Text style={[styles.pillarTitle, { color: theme.text }]}>
+              The GitHub Contribution Feedback Loop
+            </Text>
+
+            <Text style={[styles.pillarBody, { color: theme.textSecondary }]}>
+              Software engineers write code every single day just to keep their GitHub commit graph filled with bright green tiles. HeatMap leverages this exact proven behavioral psychology to rewire your daily discipline.
+            </Text>
+
+            {/* Intensity Scale Preview */}
+            <View style={[styles.intensityBox, { backgroundColor: theme.surfaceHighlight, borderColor: theme.borderSubtle }]}>
+              <Text style={[styles.intensityBoxLabel, { color: theme.textMuted }]}>DYNAMIC STREAK INTENSITY</Text>
+              <View style={styles.intensityBar}>
+                <View style={[styles.intensitySegment, { backgroundColor: '#0E4429' }]}>
+                  <Text style={styles.segText}>1d</Text>
+                </View>
+                <View style={[styles.intensitySegment, { backgroundColor: '#006D32' }]}>
+                  <Text style={styles.segText}>3d</Text>
+                </View>
+                <View style={[styles.intensitySegment, { backgroundColor: '#26A641' }]}>
+                  <Text style={styles.segText}>7d</Text>
+                </View>
+                <View style={[styles.intensitySegment, { backgroundColor: '#39D353' }]}>
+                  <Text style={[styles.segText, { color: '#090A0C', fontWeight: '800' }]}>14d+</Text>
+                </View>
+              </View>
+            </View>
+          </View>
+        </View>
+      </View>
+
+      {/* ─── NATIVE APPLICATIONS & PLATFORMS ─────────────────────── */}
+      <View style={styles.sectionWrapper}>
+        <View style={styles.sectionHeaderCol}>
+          <Text style={[styles.sectionOverline, { color: isDark ? '#39D353' : '#1A7F37' }]}>
+            PLATFORM AVAILABILITY
+          </Text>
+          <Text style={[styles.sectionTitle, { color: theme.text }]}>
+            Engineered for Desktop, Web, and Pocket
+          </Text>
+        </View>
+
+        <View style={styles.platformsGrid}>
+          {/* macOS Desktop */}
+          <View style={[styles.platformCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+            <View style={styles.platformTop}>
+              <View style={[styles.platformIconFrame, { borderColor: theme.border, backgroundColor: theme.surfaceHighlight }]}>
+                <Monitor size={22} color={theme.text} />
+              </View>
+              <View style={[styles.osTag, { backgroundColor: 'rgba(57, 211, 83, 0.1)', borderColor: 'rgba(57, 211, 83, 0.3)' }]}>
+                <Text style={[styles.osTagText, { color: isDark ? '#39D353' : '#1A7F37' }]}>MACOS READY</Text>
+              </View>
+            </View>
+
+            <Text style={[styles.platformName, { color: theme.text }]}>macOS Universal</Text>
+            <Text style={[styles.platformDesc, { color: theme.textSecondary }]}>
+              Native Electron build with custom dock badges, menu bar tray shortcuts, and offline-first disk persistence.
+            </Text>
+
+            <View style={styles.specList}>
+              <Text style={[styles.specItem, { color: theme.textMuted }]}>• Apple Silicon (M1/M2/M3/M4) + Intel DMG</Text>
+              <Text style={[styles.specItem, { color: theme.textMuted }]}>• Global shortcut invocation</Text>
+            </View>
+
+            <TouchableOpacity
+              style={[styles.platformDownloadBtn, { backgroundColor: theme.surfaceHighlight, borderColor: theme.border }]}
+              onPress={handleDownloadRelease}
+              activeOpacity={0.7}
+            >
+              <Download size={14} color={theme.text} />
+              <Text style={[styles.platformDownloadText, { color: theme.text }]}>DOWNLOAD .DMG</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Web App */}
+          <View style={[styles.platformCard, { backgroundColor: theme.surface, borderColor: isDark ? '#39D353' : '#1A7F37' }]}>
+            <View style={styles.platformTop}>
+              <View style={[styles.platformIconFrame, { borderColor: isDark ? '#39D353' : '#1A7F37', backgroundColor: isDark ? 'rgba(57, 211, 83, 0.1)' : 'rgba(26, 127, 55, 0.08)' }]}>
+                <Globe size={22} color={isDark ? '#39D353' : '#1A7F37'} />
+              </View>
+              <View style={[styles.osTag, { backgroundColor: isDark ? 'rgba(57, 211, 83, 0.15)' : 'rgba(26, 127, 55, 0.12)', borderColor: isDark ? 'rgba(57, 211, 83, 0.4)' : 'rgba(26, 127, 55, 0.3)' }]}>
+                <Text style={[styles.osTagText, { color: isDark ? '#39D353' : '#1A7F37' }]}>ZERO INSTALL</Text>
+              </View>
+            </View>
+
+            <Text style={[styles.platformName, { color: theme.text }]}>Browser Cloud Client</Text>
+            <Text style={[styles.platformDesc, { color: theme.textSecondary }]}>
+              Immediate zero-friction access on any workstation. Instant Supabase cloud synchronization across all devices.
+            </Text>
+
+            <View style={styles.specList}>
+              <Text style={[styles.specItem, { color: theme.textMuted }]}>• Works on Safari, Chrome, Arc, Firefox</Text>
+              <Text style={[styles.specItem, { color: theme.textMuted }]}>• Keyboard-first shortcuts & instant load</Text>
+            </View>
+
+            <TouchableOpacity
+              style={[styles.platformDownloadBtn, { backgroundColor: isDark ? '#39D353' : '#1A7F37', borderColor: isDark ? '#39D353' : '#1A7F37' }]}
+              onPress={onDashboard}
+              activeOpacity={0.8}
+            >
+              <ArrowRight size={14} color="#FFFFFF" strokeWidth={2.5} />
+              <Text style={[styles.platformDownloadText, { color: '#FFFFFF' }]}>LAUNCH IN BROWSER</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Android & iOS Mobile */}
+          <View style={[styles.platformCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+            <View style={styles.platformTop}>
+              <View style={[styles.platformIconFrame, { borderColor: theme.border, backgroundColor: theme.surfaceHighlight }]}>
+                <Smartphone size={22} color={theme.text} />
+              </View>
+              <View style={[styles.osTag, { backgroundColor: 'rgba(56, 189, 248, 0.1)', borderColor: 'rgba(56, 189, 248, 0.3)' }]}>
+                <Text style={[styles.osTagText, { color: '#38BDF8' }]}>WIDGETS INCLUDED</Text>
+              </View>
+            </View>
+
+            <Text style={[styles.platformName, { color: theme.text }]}>Mobile & Lockscreen</Text>
+            <Text style={[styles.platformDesc, { color: theme.textSecondary }]}>
+              Standalone Android APK and iOS TestFlight client with live glanceable widgets for home screen and lockscreen.
+            </Text>
+
+            <View style={styles.specList}>
+              <Text style={[styles.specItem, { color: theme.textMuted }]}>• Android RemoteViews widget</Text>
+              <Text style={[styles.specItem, { color: theme.textMuted }]}>• Apple WidgetKit Glanceable tiles</Text>
+            </View>
+
+            <TouchableOpacity
+              style={[styles.platformDownloadBtn, { backgroundColor: theme.surfaceHighlight, borderColor: theme.border }]}
+              onPress={handleDownloadRelease}
+              activeOpacity={0.7}
+            >
+              <Download size={14} color={theme.text} />
+              <Text style={[styles.platformDownloadText, { color: theme.text }]}>GET MOBILE BUILD</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+
+      {/* ─── BOTTOM CALL TO ACTION ───────────────────────────────── */}
+      <View style={[styles.bottomCtaCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+        <View style={styles.bottomCtaContent}>
+          <Text style={[styles.bottomCtaOverline, { color: isDark ? '#39D353' : '#1A7F37' }]}>
+            READY TO BUILD PERMANENT MOMENTUM?
+          </Text>
+          <Text style={[styles.bottomCtaTitle, { color: theme.text }]}>
+            Start Your First Grid In 10 Seconds.
+          </Text>
+          <Text style={[styles.bottomCtaSub, { color: theme.textSecondary }]}>
+            No credit cards, no bloated subscriptions, and zero paywalled habit limits.
+          </Text>
+
+          <View style={styles.bottomCtaButtons}>
+            <TouchableOpacity
+              style={[styles.primaryActionBtn, { backgroundColor: isDark ? '#39D353' : '#1A7F37' }]}
+              onPress={onDashboard}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.primaryActionText}>OPEN WEB APP NOW</Text>
+              <ArrowRight size={16} color="#FFFFFF" strokeWidth={2.5} />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.secondaryActionBtn, { borderColor: theme.border, backgroundColor: theme.surfaceHighlight }]}
+              onPress={handleGithubRepo}
+              activeOpacity={0.85}
+            >
+              <Github size={16} color={theme.text} />
+              <Text style={[styles.secondaryActionText, { color: theme.text }]}>STAR ON GITHUB</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+
+      {/* ─── FOOTER ─────────────────────────────────────────────── */}
+      <View style={[styles.footer, { borderTopColor: theme.borderSubtle }]}>
+        <View style={styles.footerLeft}>
+          <Image
+            source={require('../../assets/icon.png')}
+            style={styles.footerLogo}
+            resizeMode="contain"
+          />
+          <Text style={[styles.footerBrand, { color: theme.text }]}>HEATMAP</Text>
+          <Text style={[styles.footerCopy, { color: theme.textMuted }]}>
+            © 2026 Open Source Project. Built for high-discipline builders.
+          </Text>
+        </View>
+
+        <View style={styles.footerLinks}>
+          <TouchableOpacity onPress={handleGithubRepo} style={styles.footerLinkItem}>
+            <Text style={[styles.footerLinkText, { color: theme.textSecondary }]}>Repository</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={handleDownloadRelease} style={styles.footerLinkItem}>
+            <Text style={[styles.footerLinkText, { color: theme.textSecondary }]}>Releases</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={onLogin} style={styles.footerLinkItem}>
+            <Text style={[styles.footerLinkText, { color: theme.textSecondary }]}>Account Login</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     </ScrollView>
   );
@@ -121,202 +694,688 @@ const { width } = Dimensions.get('window');
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#090A0C',
   },
-  content: {
-    padding: 32,
-    maxWidth: 1200,
+  contentContainer: {
+    paddingHorizontal: 24,
+    paddingTop: 20,
+    paddingBottom: 60,
+    maxWidth: 1140,
     width: '100%',
     alignSelf: 'center',
-    minHeight: '100%',
   },
-  nav: {
+
+  // Navbar
+  navbar: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 24,
+    paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#21262D',
-    marginBottom: 80,
+    marginBottom: 56,
   },
-  logoGroup: {
+  brandGroup: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
   },
-  logoText: {
-    color: '#F0F6FC',
-    fontSize: 20,
-    fontWeight: '800',
-    letterSpacing: 2,
-    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
-  },
-  navLoginBtn: {
-    paddingHorizontal: 20,
-    paddingVertical: 10,
+  logoBadge: {
+    width: 38,
+    height: 38,
+    borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#30363D',
-    backgroundColor: 'transparent',
-  },
-  navLoginText: {
-    color: '#F0F6FC',
-    fontSize: 14,
-    fontWeight: '700',
-    letterSpacing: 1,
-    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
-  },
-  hero: {
-    marginBottom: 100,
-  },
-  heroTitle: {
-    color: '#F0F6FC',
-    fontSize: width > 768 ? 64 : 40,
-    fontWeight: '900',
-    letterSpacing: -1,
-    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
-    lineHeight: width > 768 ? 72 : 48,
-  },
-  heroSub: {
-    color: '#8B949E',
-    fontSize: 20,
-    maxWidth: 650,
-    marginTop: 24,
-    lineHeight: 32,
-    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
-  },
-  heroActions: {
-    flexDirection: 'row',
-    gap: 20,
-    marginTop: 40,
-    flexWrap: 'wrap',
-  },
-  primaryBtn: {
-    backgroundColor: '#F0F6FC',
-    paddingHorizontal: 32,
-    paddingVertical: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  primaryBtnText: {
-    color: '#090A0C',
-    fontSize: 14,
-    fontWeight: '800',
-    letterSpacing: 1,
-    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
-  },
-  secondaryBtn: {
-    backgroundColor: 'transparent',
-    borderColor: '#30363D',
-    borderWidth: 1,
-    paddingHorizontal: 32,
-    paddingVertical: 16,
-  },
-  secondaryBtnText: {
-    color: '#F0F6FC',
-    fontSize: 14,
-    fontWeight: '800',
-    letterSpacing: 1,
-    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
-  },
-  philosophySection: {
-    marginBottom: 100,
-  },
-  philosophyGrid: {
-    flexDirection: width > 768 ? 'row' : 'column',
-    gap: 32,
-  },
-  philosophyCard: {
-    flex: 1,
-  },
-  philosophyIcon: {
-    marginBottom: 16,
-  },
-  philosophyTitle: {
-    color: '#F0F6FC',
-    fontSize: 20,
-    fontWeight: '700',
-    marginBottom: 12,
-    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
-  },
-  philosophyDesc: {
-    color: '#8B949E',
-    fontSize: 16,
-    lineHeight: 24,
-    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
-  },
-  downloadsSection: {
-    marginBottom: 100,
-  },
-  sectionHeader: {
-    color: '#6E7681',
-    fontSize: 14,
-    fontWeight: '800',
-    letterSpacing: 2,
-    marginBottom: 40,
-    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
-  },
-  grid: {
-    flexDirection: width > 768 ? 'row' : 'column',
-    gap: 32,
-  },
-  card: {
-    flex: 1,
-    backgroundColor: '#090A0C',
-    borderColor: '#30363D',
-    borderWidth: 1,
-    padding: 32,
-  },
-  cardIcon: {
-    marginBottom: 24,
-  },
-  cardTitle: {
-    color: '#F0F6FC',
-    fontSize: 24,
-    fontWeight: '800',
-    marginBottom: 12,
-    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
-  },
-  cardDesc: {
-    color: '#8B949E',
-    fontSize: 16,
-    lineHeight: 24,
-    marginBottom: 40,
-    minHeight: 48,
-    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
-  },
-  downloadBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'center',
-    gap: 12,
-    backgroundColor: '#F0F6FC',
-    paddingVertical: 16,
-  },
-  downloadText: {
-    color: '#090A0C',
-    fontSize: 14,
-    fontWeight: '800',
-    letterSpacing: 1,
-    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
-  },
-  footer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    borderTopWidth: 1,
-    borderTopColor: '#21262D',
-    paddingTop: 32,
-    paddingBottom: 32,
+    overflow: 'hidden',
   },
-  footerText: {
-    color: '#8B949E',
-    fontSize: 14,
-    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
+  logoImage: {
+    width: 26,
+    height: 26,
   },
-  githubLink: {
+  brandTitleRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+  },
+  brandText: {
+    fontSize: 16,
+    fontWeight: '800',
+    letterSpacing: 1.5,
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
+  },
+  statusTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    borderWidth: 1,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 3,
+  },
+  statusDot: {
+    width: 5,
+    height: 5,
+    borderRadius: 2.5,
+  },
+  statusText: {
+    fontSize: 9,
+    fontWeight: '800',
+    letterSpacing: 0.8,
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
+  },
+  brandSub: {
+    fontSize: 11,
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
+  },
+  navActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  iconButton: {
+    width: 34,
+    height: 34,
+    borderRadius: 5,
+    borderWidth: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  navGithubBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    height: 34,
+    borderRadius: 5,
+    borderWidth: 1,
+  },
+  navGithubText: {
+    fontSize: 12,
+    fontWeight: '600',
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
+  },
+  navSignInBtn: {
+    paddingHorizontal: 16,
+    height: 34,
+    borderRadius: 5,
+    borderWidth: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  navSignInText: {
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 0.8,
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
+  },
+
+  // Hero Section
+  heroSection: {
+    alignItems: 'center',
+    textAlign: 'center',
+    marginBottom: 56,
+  },
+  heroPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 20,
+    borderWidth: 1,
+    marginBottom: 24,
+  },
+  heroPillText: {
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 1,
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
+  },
+  headlineWrapper: {
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  heroTitleMain: {
+    fontSize: width > 768 ? 52 : 32,
+    fontWeight: '900',
+    letterSpacing: -1,
+    textAlign: 'center',
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
+    lineHeight: width > 768 ? 60 : 38,
+  },
+  heroTitleAccent: {
+    fontSize: width > 768 ? 52 : 32,
+    fontWeight: '900',
+    letterSpacing: -1,
+    textAlign: 'center',
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
+    lineHeight: width > 768 ? 60 : 38,
+  },
+  heroSubtitle: {
+    fontSize: 17,
+    lineHeight: 28,
+    textAlign: 'center',
+    maxWidth: 720,
+    marginBottom: 36,
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
+  },
+  heroButtonsRow: {
+    flexDirection: width > 600 ? 'row' : 'column',
+    gap: 14,
+    marginBottom: 28,
+    width: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  primaryActionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    paddingHorizontal: 26,
+    height: 48,
+    borderRadius: 6,
+  },
+  primaryActionText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '800',
+    letterSpacing: 0.8,
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
+  },
+  secondaryActionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingHorizontal: 24,
+    height: 48,
+    borderRadius: 6,
+    borderWidth: 1,
+  },
+  secondaryActionText: {
+    fontSize: 13,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
+  },
+  guaranteeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+  },
+  guaranteeItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  guaranteeText: {
+    fontSize: 11,
+    fontWeight: '500',
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
+  },
+  guaranteeDot: {
+    width: 3,
+    height: 3,
+    borderRadius: 1.5,
+    backgroundColor: '#6E7681',
+  },
+
+  // Interactive Matrix Showcase Card
+  interactiveCard: {
+    borderWidth: 1,
+    borderRadius: 8,
+    overflow: 'hidden',
+    marginBottom: 88,
+  },
+  interactiveHeader: {
+    flexDirection: width > 650 ? 'row' : 'column',
+    justifyContent: 'space-between',
+    alignItems: width > 650 ? 'center' : 'flex-start',
+    padding: 18,
+    borderBottomWidth: 1,
+    gap: 12,
+  },
+  interactiveHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  terminalIndicator: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+  },
+  interactiveTitle: {
+    fontSize: 14,
+    fontWeight: '800',
+    letterSpacing: 0.8,
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
+  },
+  interactiveSub: {
+    fontSize: 11,
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
+    marginTop: 2,
+  },
+  presetTabs: {
+    flexDirection: 'row',
+    borderWidth: 1,
+    borderRadius: 5,
+    padding: 3,
+    gap: 4,
+  },
+  presetTab: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: 'transparent',
+  },
+  presetTabText: {
+    fontSize: 11,
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
+  },
+  matrixViewWrapper: {
+    padding: 20,
+  },
+  matrixContainer: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+  },
+  matrixDayLabels: {
+    paddingTop: 3,
+    gap: 12,
+    width: 26,
+  },
+  dayLabel: {
+    fontSize: 9,
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
+  },
+  matrixScroll: {
+    paddingBottom: 8,
+  },
+  columnsWrapper: {
+    flexDirection: 'row',
+    gap: 4,
+  },
+  matrixColumn: {
+    flexDirection: 'column',
+    gap: 4,
+  },
+  matrixCell: {
+    width: 14,
+    height: 14,
+    borderRadius: 3,
+    borderWidth: 1,
+  },
+  matrixFooterRow: {
+    flexDirection: width > 600 ? 'row' : 'column',
+    justifyContent: 'space-between',
+    alignItems: width > 600 ? 'center' : 'flex-start',
+    paddingTop: 16,
+    marginTop: 12,
+    borderTopWidth: 1,
+    gap: 10,
+  },
+  interactiveHintRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  interactiveHint: {
+    fontSize: 11,
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
+  },
+  legendGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  legendLabel: {
+    fontSize: 10,
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
+  },
+  swatchesRow: {
+    flexDirection: 'row',
+    gap: 3,
+  },
+  legendSwatch: {
+    width: 11,
+    height: 11,
+    borderRadius: 2,
+    borderWidth: 1,
+  },
+  metricsStrip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-around',
+    borderTopWidth: 1,
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+  },
+  metricBlock: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  metricDivider: {
+    width: 1,
+    height: 28,
+  },
+  metricLabel: {
+    fontSize: 9,
+    fontWeight: '800',
+    letterSpacing: 0.8,
+    marginBottom: 4,
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
+  },
+  metricValueRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  metricValue: {
+    fontSize: 16,
+    fontWeight: '800',
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
+  },
+
+  // Philosophy Section
+  sectionWrapper: {
+    marginBottom: 88,
+  },
+  sectionHeaderCol: {
+    marginBottom: 36,
+  },
+  sectionOverline: {
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 1.5,
+    marginBottom: 8,
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
+  },
+  sectionTitle: {
+    fontSize: width > 768 ? 32 : 24,
+    fontWeight: '800',
+    letterSpacing: -0.5,
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
+  },
+  pillarsGrid: {
+    flexDirection: width > 800 ? 'row' : 'column',
+    gap: 20,
+  },
+  pillarCard: {
+    flex: 1,
+    borderWidth: 1,
+    borderRadius: 8,
+    padding: 24,
+    justifyContent: 'space-between',
+  },
+  pillarHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  pillarBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 3,
+    borderWidth: 1,
+  },
+  pillarBadgeText: {
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 0.8,
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
+  },
+  pillarTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    marginBottom: 12,
+    letterSpacing: -0.2,
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
+  },
+  pillarBody: {
+    fontSize: 13,
+    lineHeight: 22,
+    marginBottom: 20,
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
+  },
+  comparisonBox: {
+    borderWidth: 1,
+    borderRadius: 6,
+    padding: 12,
+    gap: 10,
+  },
+  comparisonRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  compStatusTag: {
+    width: 20,
+    height: 20,
+    borderRadius: 4,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  compTextStriked: {
+    fontSize: 11,
+    textDecorationLine: 'line-through',
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
+  },
+  compTextSuccess: {
+    fontSize: 11,
+    fontWeight: '600',
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
+  },
+  paletteShowcase: {
+    borderWidth: 1,
+    borderRadius: 6,
+    padding: 12,
+    gap: 8,
+  },
+  palettePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  dotSmall: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  palettePillText: {
+    fontSize: 11,
+    fontWeight: '600',
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
+  },
+  intensityBox: {
+    borderWidth: 1,
+    borderRadius: 6,
+    padding: 12,
+  },
+  intensityBoxLabel: {
+    fontSize: 9,
+    fontWeight: '800',
+    letterSpacing: 0.8,
+    marginBottom: 8,
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
+  },
+  intensityBar: {
+    flexDirection: 'row',
+    borderRadius: 4,
+    overflow: 'hidden',
+    height: 24,
+  },
+  intensitySegment: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  segText: {
+    color: '#FFFFFF',
+    fontSize: 9,
+    fontWeight: '700',
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
+  },
+
+  // Platforms Grid
+  platformsGrid: {
+    flexDirection: width > 800 ? 'row' : 'column',
+    gap: 20,
+  },
+  platformCard: {
+    flex: 1,
+    borderWidth: 1,
+    borderRadius: 8,
+    padding: 24,
+    justifyContent: 'space-between',
+  },
+  platformTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 18,
+  },
+  platformIconFrame: {
+    width: 44,
+    height: 44,
+    borderRadius: 8,
+    borderWidth: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  osTag: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 3,
+    borderWidth: 1,
+  },
+  osTagText: {
+    fontSize: 9,
+    fontWeight: '800',
+    letterSpacing: 0.8,
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
+  },
+  platformName: {
+    fontSize: 18,
+    fontWeight: '700',
+    marginBottom: 8,
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
+  },
+  platformDesc: {
+    fontSize: 13,
+    lineHeight: 20,
+    marginBottom: 16,
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
+  },
+  specList: {
+    gap: 6,
+    marginBottom: 24,
+  },
+  specItem: {
+    fontSize: 11,
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
+  },
+  platformDownloadBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    height: 42,
+    borderRadius: 5,
+    borderWidth: 1,
+  },
+  platformDownloadText: {
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 0.8,
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
+  },
+
+  // Bottom CTA
+  bottomCtaCard: {
+    borderWidth: 1,
+    borderRadius: 8,
+    padding: 40,
+    alignItems: 'center',
+    textAlign: 'center',
+    marginBottom: 72,
+  },
+  bottomCtaContent: {
+    alignItems: 'center',
+    maxWidth: 600,
+  },
+  bottomCtaOverline: {
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 1.5,
+    marginBottom: 12,
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
+  },
+  bottomCtaTitle: {
+    fontSize: width > 600 ? 30 : 22,
+    fontWeight: '800',
+    textAlign: 'center',
+    marginBottom: 12,
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
+  },
+  bottomCtaSub: {
+    fontSize: 14,
+    lineHeight: 22,
+    textAlign: 'center',
+    marginBottom: 28,
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
+  },
+  bottomCtaButtons: {
+    flexDirection: width > 500 ? 'row' : 'column',
+    gap: 12,
+    width: '100%',
+    justifyContent: 'center',
+  },
+
+  // Footer
+  footer: {
+    flexDirection: width > 700 ? 'row' : 'column',
+    justifyContent: 'space-between',
+    alignItems: width > 700 ? 'center' : 'flex-start',
+    paddingTop: 28,
+    borderTopWidth: 1,
+    gap: 16,
+  },
+  footerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    flexWrap: 'wrap',
+  },
+  footerLogo: {
+    width: 20,
+    height: 20,
+  },
+  footerBrand: {
+    fontSize: 13,
+    fontWeight: '800',
+    letterSpacing: 1,
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
+  },
+  footerCopy: {
+    fontSize: 11,
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
+  },
+  footerLinks: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+  },
+  footerLinkItem: {
+    paddingVertical: 4,
+  },
+  footerLinkText: {
+    fontSize: 12,
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
   },
 });
