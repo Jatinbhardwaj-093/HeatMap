@@ -33,53 +33,16 @@ interface LandingPageProps {
   isLoggedIn?: boolean;
 }
 
-interface DemoPreset {
-  id: string;
-  name: string;
-  category: string;
-  colorName: string;
-  accentColor: string;
-  levelColors: [string, string, string, string, string];
-  streak: number;
-  completionRate: string;
-  totalDays: number;
-}
-
-const DEMO_PRESETS: DemoPreset[] = [
-  {
-    id: 'deep-work',
-    name: 'Deep Engineering',
-    category: 'FOCUS',
-    colorName: 'Emerald Matrix',
-    accentColor: '#39D353',
-    levelColors: ['#161B22', '#0E4429', '#006D32', '#26A641', '#39D353'],
-    streak: 42,
-    completionRate: '94.2%',
-    totalDays: 198,
-  },
-  {
-    id: 'workout',
-    name: 'High-Intensity Training',
-    category: 'FITNESS',
-    colorName: 'Industrial Amber',
-    accentColor: '#F59E0B',
-    levelColors: ['#1A1713', '#43280B', '#78470E', '#B45309', '#F59E0B'],
-    streak: 18,
-    completionRate: '86.5%',
-    totalDays: 142,
-  },
-  {
-    id: 'read-meditate',
-    name: 'Morning Reading & Solitude',
-    category: 'MIND',
-    colorName: 'Cold Cyan',
-    accentColor: '#38BDF8',
-    levelColors: ['#111923', '#0C384D', '#0E5D7F', '#0284C7', '#38BDF8'],
-    streak: 29,
-    completionRate: '91.8%',
-    totalDays: 176,
-  },
-];
+const DEMO_DATA = {
+  id: 'deep-work',
+  name: 'Core Discipline & Deep Work',
+  colorName: 'Emerald Matrix',
+  accentColor: '#39D353',
+  levelColors: ['#161B22', '#0E4429', '#006D32', '#26A641', '#39D353'] as [string, string, string, string, string],
+  streak: 48,
+  completionRate: '94.8%',
+  totalDays: 286,
+};
 
 const MONTH_HEADERS = [
   { label: 'Jan', week: 0 },
@@ -97,74 +60,60 @@ const MONTH_HEADERS = [
 ];
 
 // Generate authentic full-year 52-week matrix patterns with realistic blanks and streaks
-function generateFullYearData(presetId: string): number[][] {
+function generateFullYearData(): number[][] {
   const weeks: number[][] = [];
   const TOTAL_WEEKS = 52;
-  const CURRENT_WEEK = 42; // today is around week 42; weeks 43-51 are future blanks
 
   for (let w = 0; w < TOTAL_WEEKS; w++) {
     const weekDays: number[] = [];
 
     for (let d = 0; d < 7; d++) {
-      if (w > CURRENT_WEEK) {
-        // Future days: unlogged blank place
+      const isWeekend = d >= 5;
+
+      // Weeks 44 to 51 (November & December): Strong momentum and consistency leading up to year end
+      if (w >= 44) {
+        if (isWeekend) {
+          // Weekend: occasional light session or rest
+          const r = (w * 13 + d * 7) % 10;
+          weekDays.push(r > 6 ? 2 : 0);
+        } else {
+          // Weekday: high consistency (levels 3 and 4 with unbroken habit momentum)
+          const r = (w * 17 + d * 11) % 10;
+          if (r === 0) weekDays.push(2);
+          else if (r < 5) weekDays.push(3);
+          else weekDays.push(4);
+        }
+        continue;
+      }
+
+      // Weeks 36 to 43 (September - October): Active compounding streak
+      if (w >= 36) {
+        if (isWeekend) {
+          const r = (w * 7 + d * 5) % 10;
+          weekDays.push(r > 6 ? 2 : 0);
+        } else {
+          const r = (w * 11 + d * 13) % 10;
+          weekDays.push(r === 0 ? 0 : r < 4 ? 3 : 4);
+        }
+        continue;
+      }
+
+      // Mid-year vacation (week 26 in July)
+      if (w === 26) {
         weekDays.push(0);
         continue;
       }
 
-      if (presetId === 'deep-work') {
-        // Engineering: focus on weekdays (d = 0 to 4), weekends mostly blank
-        if (d >= 5) {
-          // Weekend: mostly unlogged, occasional light session
-          const r = (w * 7 + d * 13) % 10;
-          weekDays.push(r > 7 ? 2 : 0);
-        } else if (w >= 36) {
-          // Current unbroken streak (weeks 36 to 42)
-          weekDays.push(4);
-        } else if (w === 18 || w === 19) {
-          // Two-week vacation: blank place
-          weekDays.push(0);
-        } else {
-          // Normal weekday consistency with realistic gaps
-          const r = (w * 11 + d * 17) % 10;
-          if (r === 0 || r === 5) weekDays.push(0); // Rest / blank
-          else if (r < 4) weekDays.push(2);
-          else if (r < 8) weekDays.push(3);
-          else weekDays.push(4);
-        }
-      } else if (presetId === 'workout') {
-        // Fitness: 4 sessions per week (Mon, Wed, Fri, Sat)
-        const isWorkoutDay = d === 0 || d === 2 || d === 4 || d === 5;
-        if (w >= 39 && isWorkoutDay) {
-          // Current streak in recent weeks
-          weekDays.push(4);
-        } else if (w === 12 || w === 28) {
-          // Deload / travel week: blank
-          weekDays.push(0);
-        } else if (isWorkoutDay) {
-          const r = (w * 13 + d * 7) % 10;
-          if (r === 1) weekDays.push(0); // Missed day
-          else if (r < 5) weekDays.push(3);
-          else weekDays.push(4);
-        } else {
-          // Rest day: clean blank place
-          weekDays.push(0);
-        }
+      // Rest of the year (January - August): realistic consistency with authentic human variation
+      if (isWeekend) {
+        const r = (w * 7 + d * 13) % 10;
+        weekDays.push(r > 7 ? 2 : 0);
       } else {
-        // Mind / Reading: daily habit with occasional missed days
-        if (w >= 38) {
-          // Current 29-day streak
-          weekDays.push(4);
-        } else if (w === 14 || w === 25) {
-          // Blank break
-          weekDays.push(0);
-        } else {
-          const r = (w * 7 + d * 5) % 10;
-          if (r <= 2) weekDays.push(0); // Blank day
-          else if (r <= 5) weekDays.push(2);
-          else if (r <= 8) weekDays.push(3);
-          else weekDays.push(4);
-        }
+        const r = (w * 11 + d * 17) % 10;
+        if (r === 0 || r === 5) weekDays.push(0); // Periodic rest days
+        else if (r < 4) weekDays.push(2);
+        else if (r < 7) weekDays.push(3);
+        else weekDays.push(4);
       }
     }
     weeks.push(weekDays);
@@ -182,16 +131,15 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   const isDark = useIsDark();
   const { themeMode, setThemeMode } = useThemeMode();
 
-  const [activePresetIndex, setActivePresetIndex] = useState(0);
-  const activePreset = DEMO_PRESETS[activePresetIndex];
+  const activePreset = DEMO_DATA;
 
   // Interactive user edits in the demo
   const [clickedCells, setClickedCells] = useState<Record<string, number>>({});
 
-  // 52-week full year data matrix for active preset
+  // 52-week full year data matrix
   const baseMatrix = useMemo(() => {
-    return generateFullYearData(activePreset.id);
-  }, [activePreset.id]);
+    return generateFullYearData();
+  }, []);
 
   const toggleDemoCell = (cellKey: string, currentLevel: number) => {
     setClickedCells((prev) => ({
@@ -395,35 +343,25 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             </View>
           </View>
 
-          {/* Preset Switcher */}
-          <View style={[styles.presetTabs, { backgroundColor: theme.surfaceHighlight, borderColor: theme.borderSubtle }]}>
-            {DEMO_PRESETS.map((preset, idx) => {
-              const isSelected = activePresetIndex === idx;
-              return (
-                <TouchableOpacity
-                  key={preset.id}
-                  style={[
-                    styles.presetTab,
-                    isSelected && { backgroundColor: theme.surface, borderColor: preset.accentColor },
-                  ]}
-                  onPress={() => {
-                    setActivePresetIndex(idx);
-                    setClickedCells({});
-                  }}
-                  activeOpacity={0.7}
-                >
-                  <Text
-                    style={[
-                      styles.presetTabText,
-                      { color: isSelected ? theme.text : theme.textMuted },
-                      isSelected && { fontWeight: '700' },
-                    ]}
-                  >
-                    {preset.category}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
+          {/* Clean Status Badge */}
+          <View
+            style={[
+              styles.showcaseBadge,
+              {
+                backgroundColor: isDark ? 'rgba(57, 211, 83, 0.1)' : 'rgba(26, 127, 55, 0.08)',
+                borderColor: isDark ? 'rgba(57, 211, 83, 0.28)' : 'rgba(26, 127, 55, 0.22)',
+              },
+            ]}
+          >
+            <View style={[styles.statusDot, { backgroundColor: activePreset.accentColor }]} />
+            <Text
+              style={[
+                styles.showcaseBadgeText,
+                { color: isDark ? '#39D353' : '#1A7F37' },
+              ]}
+            >
+              52-WEEK ANNUAL VIEW
+            </Text>
           </View>
         </View>
 
@@ -434,10 +372,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.fullWidthMatrixScroll}
           >
-            <View>
+            <View style={styles.matrixContainerInner}>
               {/* Month Header Labels across the 52 weeks */}
               <View style={styles.monthHeaderRow}>
-                <View style={{ width: 28 }} />
+                <View style={{ width: 40 }} />
                 <View style={styles.monthLabelsContainer}>
                   {MONTH_HEADERS.map((m) => (
                     <Text
@@ -445,7 +383,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                       style={[
                         styles.monthHeaderText,
                         {
-                          left: m.week * 16 + 28,
+                          left: m.week * 19,
                           color: theme.textMuted,
                         },
                       ]}
@@ -504,7 +442,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             <View style={styles.interactiveHintRow}>
               <Sparkles size={12} color={activePreset.accentColor} />
               <Text style={[styles.interactiveHint, { color: theme.textSecondary }]}>
-                Interactive Demo: 52-week annual matrix with real blanks. Click any cell to test intensity.
+                Interactive Demo: 52-week annual matrix. Tap any cell to test intensity.
               </Text>
             </View>
 
@@ -1163,41 +1101,47 @@ const styles = StyleSheet.create({
     fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
     marginTop: 2,
   },
-  presetTabs: {
+  showcaseBadge: {
     flexDirection: 'row',
-    borderWidth: 1,
-    borderRadius: 5,
-    padding: 3,
-    gap: 4,
-  },
-  presetTab: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
     borderRadius: 4,
     borderWidth: 1,
-    borderColor: 'transparent',
   },
-  presetTabText: {
-    fontSize: 11,
+  showcaseBadgeText: {
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 0.8,
     fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
   },
   matrixViewWrapper: {
-    padding: 20,
+    paddingVertical: 20,
+    paddingHorizontal: 16,
+    alignItems: 'center',
   },
   fullWidthMatrixScroll: {
     paddingBottom: 8,
     minWidth: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  matrixContainerInner: {
+    alignSelf: 'center',
+    width: 1024,
   },
   monthHeaderRow: {
     flexDirection: 'row',
     height: 18,
     marginBottom: 6,
     position: 'relative',
+    width: 1024,
   },
   monthLabelsContainer: {
     position: 'relative',
     height: 18,
-    flex: 1,
+    width: 984,
   },
   monthHeaderText: {
     position: 'absolute',
@@ -1208,11 +1152,14 @@ const styles = StyleSheet.create({
   matrixBodyRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
+    width: 1024,
   },
   matrixDayLabels: {
-    paddingTop: 2,
-    width: 28,
-    gap: 10,
+    width: 32,
+    height: 129,
+    justifyContent: 'space-between',
+    paddingTop: 1,
+    paddingBottom: 1,
   },
   dayLabel: {
     fontSize: 9,
@@ -1220,19 +1167,23 @@ const styles = StyleSheet.create({
   },
   columnsWrapper: {
     flexDirection: 'row',
-    gap: 3,
+    gap: 4,
+    width: 984,
+    marginLeft: 8,
   },
   matrixColumn: {
     flexDirection: 'column',
-    gap: 3,
+    gap: 4,
+    width: 15,
   },
   matrixCell: {
-    width: 13,
-    height: 13,
-    borderRadius: 2.5,
+    width: 15,
+    height: 15,
+    borderRadius: 3,
     borderWidth: 1,
   },
   matrixFooterRow: {
+    width: '100%',
     flexDirection: width > 650 ? 'row' : 'column',
     justifyContent: 'space-between',
     alignItems: width > 650 ? 'center' : 'flex-start',
