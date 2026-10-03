@@ -3,7 +3,6 @@ import {
   StyleSheet,
   View,
   Text,
-  SafeAreaView,
   ScrollView,
   StatusBar,
   TextInput,
@@ -11,6 +10,7 @@ import {
   Platform,
   Image,
 } from 'react-native';
+import { SafeAreaView, SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar as ExpoStatusBar } from 'expo-status-bar';
 import { HeatMapModel, ViewMode } from './src/types/heatmap';
 import { loadHeatMaps, saveHeatMaps } from './src/utils/storage';
@@ -204,7 +204,7 @@ function AppContent() {
   }
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: theme.background, paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0 }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: theme.background }}>
       <ExpoStatusBar style={isDark ? "light" : "dark"} />
 
       <Header
@@ -300,9 +300,11 @@ function AppContent() {
 
 export default function App() {
   return (
-    <ThemeProvider>
-      <AppContent />
-    </ThemeProvider>
+    <SafeAreaProvider>
+      <ThemeProvider>
+        <AppContent />
+      </ThemeProvider>
+    </SafeAreaProvider>
   );
 }
 
