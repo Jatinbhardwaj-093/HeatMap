@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import {
   StyleSheet,
   View,
@@ -7,8 +7,8 @@ import {
   ScrollView,
   Platform,
   Linking,
-  Dimensions,
   Image,
+  useWindowDimensions,
 } from 'react-native';
 import {
   ArrowRight,
@@ -73,11 +73,9 @@ function generateFullYearData(): number[][] {
       // Weeks 44 to 51 (November & December): Strong momentum and consistency leading up to year end
       if (w >= 44) {
         if (isWeekend) {
-          // Weekend: occasional light session or rest
           const r = (w * 13 + d * 7) % 10;
           weekDays.push(r > 6 ? 2 : 0);
         } else {
-          // Weekday: high consistency (levels 3 and 4 with unbroken habit momentum)
           const r = (w * 17 + d * 11) % 10;
           if (r === 0) weekDays.push(2);
           else if (r < 5) weekDays.push(3);
@@ -110,7 +108,7 @@ function generateFullYearData(): number[][] {
         weekDays.push(r > 7 ? 2 : 0);
       } else {
         const r = (w * 11 + d * 17) % 10;
-        if (r === 0 || r === 5) weekDays.push(0); // Periodic rest days
+        if (r === 0 || r === 5) weekDays.push(0);
         else if (r < 4) weekDays.push(2);
         else if (r < 7) weekDays.push(3);
         else weekDays.push(4);
@@ -127,6 +125,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   onDashboard,
   isLoggedIn = false,
 }) => {
+  const { width } = useWindowDimensions();
+  const isMobile = width < 768;
+  const matrixScrollRef = useRef<ScrollView>(null);
+
   const theme = useAppTheme();
   const isDark = useIsDark();
   const { themeMode, setThemeMode } = useThemeMode();
@@ -140,6 +142,16 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   const baseMatrix = useMemo(() => {
     return generateFullYearData();
   }, []);
+
+  // On mobile, scroll matrix to the active recent streak (Nov/Dec) so green compounding cells are front and center
+  useEffect(() => {
+    if (isMobile) {
+      const timer = setTimeout(() => {
+        matrixScrollRef.current?.scrollToEnd({ animated: false });
+      }, 120);
+      return () => clearTimeout(timer);
+    }
+  }, [isMobile]);
 
   const toggleDemoCell = (cellKey: string, currentLevel: number) => {
     setClickedCells((prev) => ({
@@ -160,7 +172,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({
     setThemeMode(isDark ? 'light' : 'dark');
   };
 
-  // Auth gate: If logged in, go to dashboard. If not logged in, must go to login/register
   const handlePrimaryAuthAction = () => {
     if (isLoggedIn) {
       onDashboard();
@@ -172,121 +183,156 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   return (
     <ScrollView
       style={[styles.container, { backgroundColor: theme.background }]}
-      contentContainerStyle={styles.contentContainer}
+      contentContainerStyle={[styles.contentContainer, isMobile && styles.contentContainerMobile]}
       showsVerticalScrollIndicator={false}
     >
       {/* ─── NAVIGATION BAR ────────────────────────────────────── */}
-      <View style={[styles.navbar, { borderColor: theme.borderSubtle }]}>
+      <View style={[styles.navbar, isMobile && styles.navbarMobile, { borderColor: theme.borderSubtle }]}>
         <View style={styles.brandGroup}>
           <View
             style={[
               styles.logoBadge,
+              isMobile && styles.logoBadgeMobile,
               { borderColor: isDark ? '#30363D' : '#D0D7DE', backgroundColor: theme.surface },
             ]}
           >
             <Image
               source={require('../../assets/icon.png')}
-              style={styles.logoImage}
+              style={[styles.logoImage, isMobile && styles.logoImageMobile]}
               resizeMode="contain"
             />
           </View>
           <View>
             <View style={styles.brandTitleRow}>
-              <Text style={[styles.brandText, { color: theme.text }]}>HABITHEAT</Text>
-              <View
-                style={[
-                  styles.statusTag,
-                  {
-                    backgroundColor: isDark ? 'rgba(57, 211, 83, 0.15)' : 'rgba(26, 127, 55, 0.12)',
-                    borderColor: isDark ? 'rgba(57, 211, 83, 0.4)' : 'rgba(26, 127, 55, 0.3)',
-                  },
-                ]}
-              >
-                <View style={[styles.statusDot, { backgroundColor: theme.success }]} />
-                <Text style={[styles.statusText, { color: theme.success }]}>V1.2 · LIVE</Text>
-              </View>
+              <Text style={[styles.brandText, isMobile && styles.brandTextMobile, { color: theme.text }]}>HABITHEAT</Text>
+              {!isMobile && (
+                <View
+                  style={[
+                    styles.statusTag,
+                    {
+                      backgroundColor: isDark ? 'rgba(57, 211, 83, 0.15)' : 'rgba(26, 127, 55, 0.12)',
+                      borderColor: isDark ? 'rgba(57, 211, 83, 0.4)' : 'rgba(26, 127, 55, 0.3)',
+                    },
+                  ]}
+                >
+                  <View style={[styles.statusDot, { backgroundColor: theme.success }]} />
+                  <Text style={[styles.statusText, { color: theme.success }]}>V1.2 · LIVE</Text>
+                </View>
+              )}
             </View>
-            <Text style={[styles.brandSub, { color: theme.textSecondary }]}>Binary Habit Matrix</Text>
+            {!isMobile && (
+              <Text style={[styles.brandSub, { color: theme.textSecondary }]}>Binary Habit Matrix</Text>
+            )}
           </View>
         </View>
 
-        <View style={styles.navActions}>
+        <View style={[styles.navActions, isMobile && styles.navActionsMobile]}>
           <TouchableOpacity
-            style={[styles.iconButton, { borderColor: theme.borderSubtle, backgroundColor: theme.surface }]}
+            style={[
+              styles.iconButton,
+              isMobile && styles.iconButtonMobile,
+              { borderColor: theme.borderSubtle, backgroundColor: theme.surface },
+            ]}
             onPress={toggleTheme}
             activeOpacity={0.7}
+            accessibilityLabel="Toggle Theme"
           >
             {isDark ? <Sun size={15} color="#F59E0B" /> : <Moon size={15} color="#656D76" />}
           </TouchableOpacity>
 
-          <TouchableOpacity
-            style={[styles.navGithubBtn, { borderColor: theme.borderSubtle, backgroundColor: theme.surface }]}
-            onPress={handleGithubRepo}
-            activeOpacity={0.7}
-          >
-            <Github size={14} color={theme.textSecondary} />
-            <Text style={[styles.navGithubText, { color: theme.textSecondary }]}>GitHub</Text>
-          </TouchableOpacity>
+          {!isMobile && (
+            <TouchableOpacity
+              style={[styles.navGithubBtn, { borderColor: theme.borderSubtle, backgroundColor: theme.surface }]}
+              onPress={handleGithubRepo}
+              activeOpacity={0.7}
+            >
+              <Github size={14} color={theme.textSecondary} />
+              <Text style={[styles.navGithubText, { color: theme.textSecondary }]}>GitHub</Text>
+            </TouchableOpacity>
+          )}
 
           {isLoggedIn ? (
             <TouchableOpacity
-              style={[styles.navSignInBtn, { borderColor: theme.success, backgroundColor: theme.surfaceHighlight }]}
+              style={[
+                styles.navSignInBtn,
+                isMobile && styles.navSignInBtnMobile,
+                {
+                  borderColor: theme.success,
+                  backgroundColor: isDark ? 'rgba(57, 211, 83, 0.12)' : 'rgba(26, 127, 55, 0.1)',
+                },
+              ]}
               onPress={onDashboard}
               activeOpacity={0.8}
             >
-              <Text style={[styles.navSignInText, { color: theme.success }]}>DASHBOARD</Text>
+              <Text style={[styles.navSignInText, isMobile && styles.navSignInTextMobile, { color: isDark ? '#39D353' : '#1A7F37' }]}>
+                DASHBOARD
+              </Text>
             </TouchableOpacity>
           ) : (
             <TouchableOpacity
-              style={[styles.navSignInBtn, { borderColor: theme.border, backgroundColor: theme.surfaceHighlight }]}
+              style={[
+                styles.navSignInBtn,
+                isMobile && styles.navSignInBtnMobile,
+                {
+                  borderColor: isDark ? '#39D353' : '#1A7F37',
+                  backgroundColor: isDark ? '#39D353' : '#1A7F37',
+                },
+              ]}
               onPress={onLogin}
               activeOpacity={0.8}
             >
-              <Text style={[styles.navSignInText, { color: theme.text }]}>SIGN IN</Text>
+              <Text style={[styles.navSignInText, isMobile && styles.navSignInTextMobile, { color: '#FFFFFF' }]}>
+                SIGN IN
+              </Text>
             </TouchableOpacity>
           )}
         </View>
       </View>
 
       {/* ─── HERO SECTION ──────────────────────────────────────── */}
-      <View style={styles.heroSection}>
+      <View style={[styles.heroSection, isMobile && styles.heroSectionMobile]}>
         {/* Editorial Pill */}
         <View
           style={[
             styles.heroPill,
+            isMobile && styles.heroPillMobile,
             {
               borderColor: isDark ? 'rgba(57, 211, 83, 0.35)' : 'rgba(26, 127, 55, 0.3)',
               backgroundColor: isDark ? 'rgba(14, 68, 41, 0.2)' : 'rgba(26, 127, 55, 0.08)',
             },
           ]}
         >
-          <Flame size={13} color={isDark ? '#39D353' : '#1A7F37'} strokeWidth={2.5} />
+          <Flame size={12} color={isDark ? '#39D353' : '#1A7F37'} strokeWidth={2.5} />
           <Text style={[styles.heroPillText, { color: isDark ? '#39D353' : '#1A7F37' }]}>
-            GITHUB-STYLE DISCIPLINE · ZERO NUMERIC FATIGUE
+            BINARY HABIT MATRIX
           </Text>
         </View>
 
         {/* Dual-Tone Headline */}
         <View style={styles.headlineWrapper}>
-          <Text style={[styles.heroTitleMain, { color: theme.text }]}>
+          <Text style={[styles.heroTitleMain, isMobile && styles.heroTitleMainMobile, { color: theme.text }]}>
             DON'T BREAK THE CHAIN.
           </Text>
-          <Text style={[styles.heroTitleAccent, { color: isDark ? '#39D353' : '#1A7F37' }]}>
+          <Text style={[styles.heroTitleAccent, isMobile && styles.heroTitleAccentMobile, { color: isDark ? '#39D353' : '#1A7F37' }]}>
             COMPOUND EVERY DAY.
           </Text>
         </View>
 
-        {/* Subtitle with Clean Flow (No M-dash) */}
-        <Text style={[styles.heroSubtitle, { color: theme.textSecondary }]}>
-          Stop drowning in continuous numbers, target meters, and bookkeeping anxiety.
-          HabitHeat strips routine tracking down to an elegant <Text style={{ color: theme.text, fontWeight: '700' }}>binary check-in</Text>.
-          Log yes or no and let daily consistency compound into green contribution matrices.
+        {/* Subtitle with Clean Flow */}
+        <Text style={[styles.heroSubtitle, isMobile && styles.heroSubtitleMobile, { color: theme.textSecondary }]}>
+          {isMobile
+            ? 'No continuous numbers. No target anxiety. Log a pure yes or no and let daily discipline compound into green contribution heatmaps.'
+            : 'Stop drowning in continuous numbers, target meters, and bookkeeping anxiety. HabitHeat strips routine tracking down to an elegant binary check-in. Log yes or no and let daily consistency compound into green contribution matrices.'}
         </Text>
 
         {/* Hero Actions (Strict Auth Protection) */}
-        <View style={styles.heroButtonsRow}>
+        <View style={[styles.heroButtonsRow, isMobile && styles.heroButtonsRowMobile]}>
           <TouchableOpacity
-            style={[styles.primaryActionBtn, { backgroundColor: isDark ? '#39D353' : '#1A7F37' }]}
+            style={[
+              styles.primaryActionBtn,
+              isMobile && styles.primaryActionBtnMobile,
+              { backgroundColor: isDark ? '#39D353' : '#1A7F37' },
+            ]}
             onPress={handlePrimaryAuthAction}
             activeOpacity={0.85}
           >
@@ -298,7 +344,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
           {!isLoggedIn && (
             <TouchableOpacity
-              style={[styles.secondaryActionBtn, { borderColor: theme.border, backgroundColor: theme.surface }]}
+              style={[
+                styles.secondaryActionBtn,
+                isMobile && styles.secondaryActionBtnMobile,
+                { borderColor: theme.border, backgroundColor: theme.surface },
+              ]}
               onPress={onLogin}
               activeOpacity={0.85}
             >
@@ -309,7 +359,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         </View>
 
         {/* Micro Tech Guarantee */}
-        <View style={styles.guaranteeRow}>
+        <View style={[styles.guaranteeRow, isMobile && styles.guaranteeRowMobile]}>
           <View style={styles.guaranteeItem}>
             <Check size={12} color={theme.success} strokeWidth={3} />
             <Text style={[styles.guaranteeText, { color: theme.textMuted }]}>Local-First Offline</Text>
@@ -327,18 +377,18 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         </View>
       </View>
 
-      {/* ─── LIVE FULL-WIDTH 52-WEEK MATRIX SHOWCASE ───────────── */}
-      <View style={[styles.interactiveCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+      {/* ─── LIVE 52-WEEK MATRIX SHOWCASE ──────────────────────── */}
+      <View style={[styles.interactiveCard, isMobile && styles.interactiveCardMobile, { backgroundColor: theme.surface, borderColor: theme.border }]}>
         {/* Card Header */}
-        <View style={[styles.interactiveHeader, { borderBottomColor: theme.borderSubtle }]}>
+        <View style={[styles.interactiveHeader, isMobile && styles.interactiveHeaderMobile, { borderBottomColor: theme.borderSubtle }]}>
           <View style={styles.interactiveHeaderLeft}>
             <View style={[styles.terminalIndicator, { backgroundColor: activePreset.accentColor }]} />
             <View>
-              <Text style={[styles.interactiveTitle, { color: theme.text }]}>
-                {activePreset.name.toUpperCase()}
+              <Text style={[styles.interactiveTitle, isMobile && { fontSize: 13 }, { color: theme.text }]}>
+                {isMobile ? 'CORE DISCIPLINE' : activePreset.name.toUpperCase()}
               </Text>
               <Text style={[styles.interactiveSub, { color: theme.textMuted }]}>
-                Annual Matrix Grid · Palette: <Text style={{ color: activePreset.accentColor, fontWeight: '600' }}>{activePreset.colorName}</Text>
+                Palette: <Text style={{ color: activePreset.accentColor, fontWeight: '600' }}>{activePreset.colorName}</Text>
               </Text>
             </View>
           </View>
@@ -347,6 +397,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           <View
             style={[
               styles.showcaseBadge,
+              isMobile && styles.showcaseBadgeMobile,
               {
                 backgroundColor: isDark ? 'rgba(57, 211, 83, 0.1)' : 'rgba(26, 127, 55, 0.08)',
                 borderColor: isDark ? 'rgba(57, 211, 83, 0.28)' : 'rgba(26, 127, 55, 0.22)',
@@ -357,20 +408,25 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             <Text
               style={[
                 styles.showcaseBadgeText,
+                isMobile && { fontSize: 9 },
                 { color: isDark ? '#39D353' : '#1A7F37' },
               ]}
             >
-              52-WEEK ANNUAL VIEW
+              {isMobile ? '48D STREAK' : '52-WEEK ANNUAL VIEW'}
             </Text>
           </View>
         </View>
 
-        {/* Full-Width Matrix Grid Visualization */}
-        <View style={styles.matrixViewWrapper}>
+        {/* Matrix Grid Visualization */}
+        <View style={[styles.matrixViewWrapper, isMobile && styles.matrixViewWrapperMobile]}>
           <ScrollView
+            ref={matrixScrollRef}
             horizontal
             showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.fullWidthMatrixScroll}
+            contentContainerStyle={[
+              styles.fullWidthMatrixScroll,
+              isMobile && { minWidth: undefined, paddingHorizontal: 4 },
+            ]}
           >
             <View style={styles.matrixContainerInner}>
               {/* Month Header Labels across the 52 weeks */}
@@ -437,12 +493,23 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             </View>
           </ScrollView>
 
+          {/* Mobile Swipe Cue */}
+          {isMobile && (
+            <View style={styles.mobileScrollCue}>
+              <Text style={[styles.mobileScrollCueText, { color: theme.textMuted }]}>
+                ← Swipe horizontally to explore full year
+              </Text>
+            </View>
+          )}
+
           {/* Matrix Footnote / Legend */}
-          <View style={[styles.matrixFooterRow, { borderTopColor: theme.borderSubtle }]}>
+          <View style={[styles.matrixFooterRow, isMobile && styles.matrixFooterRowMobile, { borderTopColor: theme.borderSubtle }]}>
             <View style={styles.interactiveHintRow}>
               <Sparkles size={12} color={activePreset.accentColor} />
-              <Text style={[styles.interactiveHint, { color: theme.textSecondary }]}>
-                Interactive Demo: 52-week annual matrix. Tap any cell to test intensity.
+              <Text style={[styles.interactiveHint, isMobile && { fontSize: 10 }, { color: theme.textSecondary }]}>
+                {isMobile
+                  ? 'Tap any cell to test streak intensity.'
+                  : 'Interactive Demo: 52-week annual matrix. Tap any cell to test intensity.'}
               </Text>
             </View>
 
@@ -462,19 +529,19 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   />
                 ))}
               </View>
-              <Text style={[styles.legendLabel, { color: theme.textMuted }]}>Max Streak</Text>
+              <Text style={[styles.legendLabel, { color: theme.textMuted }]}>Max</Text>
             </View>
           </View>
         </View>
 
         {/* Live Matrix Metrics Strip */}
-        <View style={[styles.metricsStrip, { backgroundColor: theme.surfaceHighlight, borderColor: theme.borderSubtle }]}>
+        <View style={[styles.metricsStrip, isMobile && styles.metricsStripMobile, { backgroundColor: theme.surfaceHighlight, borderColor: theme.borderSubtle }]}>
           <View style={styles.metricBlock}>
-            <Text style={[styles.metricLabel, { color: theme.textMuted }]}>CURRENT STREAK</Text>
+            <Text style={[styles.metricLabel, isMobile && { fontSize: 8 }, { color: theme.textMuted }]}>STREAK</Text>
             <View style={styles.metricValueRow}>
-              <Flame size={16} color={activePreset.accentColor} strokeWidth={2.5} />
-              <Text style={[styles.metricValue, { color: activePreset.accentColor }]}>
-                {activePreset.streak} <Text style={{ fontSize: 13, color: theme.textSecondary }}>DAYS</Text>
+              <Flame size={14} color={activePreset.accentColor} strokeWidth={2.5} />
+              <Text style={[styles.metricValue, isMobile && { fontSize: 14 }, { color: activePreset.accentColor }]}>
+                {activePreset.streak} <Text style={{ fontSize: 11, color: theme.textSecondary }}>DAYS</Text>
               </Text>
             </View>
           </View>
@@ -482,8 +549,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           <View style={[styles.metricDivider, { backgroundColor: theme.border }]} />
 
           <View style={styles.metricBlock}>
-            <Text style={[styles.metricLabel, { color: theme.textMuted }]}>ANNUAL CONSISTENCY</Text>
-            <Text style={[styles.metricValue, { color: theme.text }]}>
+            <Text style={[styles.metricLabel, isMobile && { fontSize: 8 }, { color: theme.textMuted }]}>CONSISTENCY</Text>
+            <Text style={[styles.metricValue, isMobile && { fontSize: 14 }, { color: theme.text }]}>
               {activePreset.completionRate}
             </Text>
           </View>
@@ -491,28 +558,28 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           <View style={[styles.metricDivider, { backgroundColor: theme.border }]} />
 
           <View style={styles.metricBlock}>
-            <Text style={[styles.metricLabel, { color: theme.textMuted }]}>TOTAL ACTIVE SESSIONS</Text>
-            <Text style={[styles.metricValue, { color: theme.text }]}>
-              {activePreset.totalDays} <Text style={{ fontSize: 13, color: theme.textSecondary }}>DAYS</Text>
+            <Text style={[styles.metricLabel, isMobile && { fontSize: 8 }, { color: theme.textMuted }]}>TOTAL SESSIONS</Text>
+            <Text style={[styles.metricValue, isMobile && { fontSize: 14 }, { color: theme.text }]}>
+              {activePreset.totalDays} <Text style={{ fontSize: 11, color: theme.textSecondary }}>DAYS</Text>
             </Text>
           </View>
         </View>
       </View>
 
-      {/* ─── PHILOSOPHY SECTION (NO M-DASH) ──────────────────────── */}
-      <View style={styles.sectionWrapper}>
+      {/* ─── PHILOSOPHY SECTION (BRIEF & PUNCHY) ────────────────── */}
+      <View style={[styles.sectionWrapper, isMobile && styles.sectionWrapperMobile]}>
         <View style={styles.sectionHeaderCol}>
           <Text style={[styles.sectionOverline, { color: isDark ? '#39D353' : '#1A7F37' }]}>
-            ARCHITECTURE OF DISCIPLINE
+            WHY HABITHEAT
           </Text>
-          <Text style={[styles.sectionTitle, { color: theme.text }]}>
-            Why Binary Tracking Wins Where Numbers Fail
+          <Text style={[styles.sectionTitle, isMobile && styles.sectionTitleMobile, { color: theme.text }]}>
+            Architecture of Pure Discipline
           </Text>
         </View>
 
-        <View style={styles.pillarsGrid}>
+        <View style={[styles.pillarsGrid, isMobile && styles.pillarsGridMobile]}>
           {/* Pillar 01 */}
-          <View style={[styles.pillarCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+          <View style={[styles.pillarCard, isMobile && styles.pillarCardMobile, { backgroundColor: theme.surface, borderColor: theme.border }]}>
             <View style={styles.pillarHeaderRow}>
               <View
                 style={[
@@ -524,22 +591,21 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               </View>
             </View>
 
-            <Text style={[styles.pillarTitle, { color: theme.text }]}>
-              Binary Logging vs. Numeric Anxiety
+            <Text style={[styles.pillarTitle, isMobile && { fontSize: 16 }, { color: theme.text }]}>
+              Binary Simplicity
             </Text>
 
-            <Text style={[styles.pillarBody, { color: theme.textSecondary }]}>
-              Apps that demand inputs like "8,450 / 10,000 steps" turn personal growth into exhausting bookkeeping. HabitHeat reduces everything to a pure boolean: <Text style={{ color: theme.text, fontWeight: '700' }}>Did you execute today? Yes or No.</Text>
+            <Text style={[styles.pillarBody, isMobile && { fontSize: 12, lineHeight: 18, marginBottom: 14 }, { color: theme.textSecondary }]}>
+              Did you execute today? Yes or no. No counting calories, timer logging, or metric fatigue. One tap and complete.
             </Text>
 
-            {/* Comparison Visual Block */}
             <View style={[styles.comparisonBox, { backgroundColor: theme.surfaceHighlight, borderColor: theme.borderSubtle }]}>
               <View style={styles.comparisonRow}>
                 <View style={[styles.compStatusTag, { backgroundColor: 'rgba(248, 81, 73, 0.15)' }]}>
                   <X size={12} color="#F85149" strokeWidth={3} />
                 </View>
                 <Text style={[styles.compTextStriked, { color: theme.textMuted }]}>
-                  "Logged 42 of 60 mins (70% fail)"
+                  Logged 42/60 mins (fail)
                 </Text>
               </View>
               <View style={styles.comparisonRow}>
@@ -547,14 +613,14 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   <Check size={12} color={theme.success} strokeWidth={3} />
                 </View>
                 <Text style={[styles.compTextSuccess, { color: theme.text }]}>
-                  "Executed workout. Day marked complete."
+                  Executed workout (complete)
                 </Text>
               </View>
             </View>
           </View>
 
           {/* Pillar 02 */}
-          <View style={[styles.pillarCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+          <View style={[styles.pillarCard, isMobile && styles.pillarCardMobile, { backgroundColor: theme.surface, borderColor: theme.border }]}>
             <View style={styles.pillarHeaderRow}>
               <View
                 style={[
@@ -562,37 +628,36 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   { backgroundColor: 'rgba(56, 189, 248, 0.1)', borderColor: 'rgba(56, 189, 248, 0.3)' },
                 ]}
               >
-                <Text style={[styles.pillarBadgeText, { color: '#38BDF8' }]}>02 · MODULARITY</Text>
+                <Text style={[styles.pillarBadgeText, { color: '#38BDF8' }]}>02 · ISOLATION</Text>
               </View>
             </View>
 
-            <Text style={[styles.pillarTitle, { color: theme.text }]}>
-              Isolated Cellular Matrices
+            <Text style={[styles.pillarTitle, isMobile && { fontSize: 16 }, { color: theme.text }]}>
+              Dedicated Matrices
             </Text>
 
-            <Text style={[styles.pillarBody, { color: theme.textSecondary }]}>
-              Never merge discordant habits into a generic checklist. Fitness, deep programming, hydration, and reading each command their own autonomous heat matrix, custom palette, and independent streak algorithm.
+            <Text style={[styles.pillarBody, isMobile && { fontSize: 12, lineHeight: 18, marginBottom: 14 }, { color: theme.textSecondary }]}>
+              Never blend discordant habits into a generic checklist. Running, deep coding, and reading each get their own autonomous heatmap.
             </Text>
 
-            {/* Palette Preview Swatches */}
             <View style={[styles.paletteShowcase, { backgroundColor: theme.surfaceHighlight, borderColor: theme.borderSubtle }]}>
               <View style={styles.palettePill}>
                 <View style={[styles.dotSmall, { backgroundColor: '#39D353' }]} />
-                <Text style={[styles.palettePillText, { color: theme.textSecondary }]}>Emerald Matrix</Text>
+                <Text style={[styles.palettePillText, { color: theme.textSecondary }]}>Emerald</Text>
               </View>
               <View style={styles.palettePill}>
                 <View style={[styles.dotSmall, { backgroundColor: '#F59E0B' }]} />
-                <Text style={[styles.palettePillText, { color: theme.textSecondary }]}>Industrial Amber</Text>
+                <Text style={[styles.palettePillText, { color: theme.textSecondary }]}>Amber</Text>
               </View>
               <View style={styles.palettePill}>
                 <View style={[styles.dotSmall, { backgroundColor: '#38BDF8' }]} />
-                <Text style={[styles.palettePillText, { color: theme.textSecondary }]}>Cold Cyan</Text>
+                <Text style={[styles.palettePillText, { color: theme.textSecondary }]}>Cyan</Text>
               </View>
             </View>
           </View>
 
           {/* Pillar 03 */}
-          <View style={[styles.pillarCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+          <View style={[styles.pillarCard, isMobile && styles.pillarCardMobile, { backgroundColor: theme.surface, borderColor: theme.border }]}>
             <View style={styles.pillarHeaderRow}>
               <View
                 style={[
@@ -604,15 +669,14 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               </View>
             </View>
 
-            <Text style={[styles.pillarTitle, { color: theme.text }]}>
-              The GitHub Contribution Feedback Loop
+            <Text style={[styles.pillarTitle, isMobile && { fontSize: 16 }, { color: theme.text }]}>
+              GitHub Momentum
             </Text>
 
-            <Text style={[styles.pillarBody, { color: theme.textSecondary }]}>
-              Software engineers write code every single day just to keep their GitHub commit graph filled with bright green tiles. HabitHeat leverages this exact behavioral psychology to rewire your daily discipline.
+            <Text style={[styles.pillarBody, isMobile && { fontSize: 12, lineHeight: 18, marginBottom: 14 }, { color: theme.textSecondary }]}>
+              Inspired by GitHub contribution graphs. Watch your daily discipline compound into vibrant green matrix tiles.
             </Text>
 
-            {/* Intensity Scale Preview */}
             <View style={[styles.intensityBox, { backgroundColor: theme.surfaceHighlight, borderColor: theme.borderSubtle }]}>
               <Text style={[styles.intensityBoxLabel, { color: theme.textMuted }]}>DYNAMIC STREAK INTENSITY</Text>
               <View style={styles.intensityBar}>
@@ -635,37 +699,32 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       </View>
 
       {/* ─── NATIVE APPLICATIONS & PLATFORMS ─────────────────────── */}
-      <View style={styles.sectionWrapper}>
+      <View style={[styles.sectionWrapper, isMobile && styles.sectionWrapperMobile]}>
         <View style={styles.sectionHeaderCol}>
           <Text style={[styles.sectionOverline, { color: isDark ? '#39D353' : '#1A7F37' }]}>
-            PLATFORM AVAILABILITY
+            MULTI-PLATFORM
           </Text>
-          <Text style={[styles.sectionTitle, { color: theme.text }]}>
-            Engineered for Desktop, Web, and Pocket
+          <Text style={[styles.sectionTitle, isMobile && styles.sectionTitleMobile, { color: theme.text }]}>
+            Engineered for Desktop, Web, and Mobile
           </Text>
         </View>
 
-        <View style={styles.platformsGrid}>
+        <View style={[styles.platformsGrid, isMobile && styles.platformsGridMobile]}>
           {/* macOS Desktop */}
-          <View style={[styles.platformCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+          <View style={[styles.platformCard, isMobile && styles.platformCardMobile, { backgroundColor: theme.surface, borderColor: theme.border }]}>
             <View style={styles.platformTop}>
               <View style={[styles.platformIconFrame, { borderColor: theme.border, backgroundColor: theme.surfaceHighlight }]}>
-                <Monitor size={22} color={theme.text} />
+                <Monitor size={20} color={theme.text} />
               </View>
               <View style={[styles.osTag, { backgroundColor: 'rgba(57, 211, 83, 0.1)', borderColor: 'rgba(57, 211, 83, 0.3)' }]}>
-                <Text style={[styles.osTagText, { color: isDark ? '#39D353' : '#1A7F37' }]}>MACOS READY</Text>
+                <Text style={[styles.osTagText, { color: isDark ? '#39D353' : '#1A7F37' }]}>MACOS</Text>
               </View>
             </View>
 
-            <Text style={[styles.platformName, { color: theme.text }]}>macOS Universal</Text>
-            <Text style={[styles.platformDesc, { color: theme.textSecondary }]}>
-              Native Electron build with custom dock badges, menu bar tray shortcuts, and offline-first disk persistence.
+            <Text style={[styles.platformName, isMobile && { fontSize: 16 }, { color: theme.text }]}>macOS Universal</Text>
+            <Text style={[styles.platformDesc, isMobile && { fontSize: 12, lineHeight: 18 }, { color: theme.textSecondary }]}>
+              Native Electron build with custom dock badges, menu bar shortcuts, and offline-first disk persistence.
             </Text>
-
-            <View style={styles.specList}>
-              <Text style={[styles.specItem, { color: theme.textMuted }]}>• Apple Silicon (M1/M2/M3/M4) + Intel DMG</Text>
-              <Text style={[styles.specItem, { color: theme.textMuted }]}>• Global shortcut invocation</Text>
-            </View>
 
             <TouchableOpacity
               style={[styles.platformDownloadBtn, { backgroundColor: theme.surfaceHighlight, borderColor: theme.border }]}
@@ -678,7 +737,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           </View>
 
           {/* Web App */}
-          <View style={[styles.platformCard, { backgroundColor: theme.surface, borderColor: isDark ? '#39D353' : '#1A7F37' }]}>
+          <View style={[styles.platformCard, isMobile && styles.platformCardMobile, { backgroundColor: theme.surface, borderColor: isDark ? '#39D353' : '#1A7F37' }]}>
             <View style={styles.platformTop}>
               <View
                 style={[
@@ -689,7 +748,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   },
                 ]}
               >
-                <Globe size={22} color={isDark ? '#39D353' : '#1A7F37'} />
+                <Globe size={20} color={isDark ? '#39D353' : '#1A7F37'} />
               </View>
               <View
                 style={[
@@ -700,19 +759,14 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   },
                 ]}
               >
-                <Text style={[styles.osTagText, { color: isDark ? '#39D353' : '#1A7F37' }]}>SECURE CLOUD</Text>
+                <Text style={[styles.osTagText, { color: isDark ? '#39D353' : '#1A7F37' }]}>CLOUD SYNC</Text>
               </View>
             </View>
 
-            <Text style={[styles.platformName, { color: theme.text }]}>Browser Cloud Client</Text>
-            <Text style={[styles.platformDesc, { color: theme.textSecondary }]}>
-              Zero-friction access on any workstation with authenticated Supabase cloud synchronization across all your devices.
+            <Text style={[styles.platformName, isMobile && { fontSize: 16 }, { color: theme.text }]}>Browser Web App</Text>
+            <Text style={[styles.platformDesc, isMobile && { fontSize: 12, lineHeight: 18 }, { color: theme.textSecondary }]}>
+              Instant zero-install access with Supabase cloud backup across all your workstations.
             </Text>
-
-            <View style={styles.specList}>
-              <Text style={[styles.specItem, { color: theme.textMuted }]}>• Works on Safari, Chrome, Arc, Firefox</Text>
-              <Text style={[styles.specItem, { color: theme.textMuted }]}>• Requires verified user account</Text>
-            </View>
 
             <TouchableOpacity
               style={[
@@ -727,31 +781,26 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             >
               <ArrowRight size={14} color="#FFFFFF" strokeWidth={2.5} />
               <Text style={[styles.platformDownloadText, { color: '#FFFFFF' }]}>
-                {isLoggedIn ? 'OPEN WEB DASHBOARD' : 'SIGN IN TO WEB CLIENT'}
+                {isLoggedIn ? 'OPEN DASHBOARD' : 'SIGN IN TO WEB'}
               </Text>
             </TouchableOpacity>
           </View>
 
           {/* Android & iOS Mobile */}
-          <View style={[styles.platformCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+          <View style={[styles.platformCard, isMobile && styles.platformCardMobile, { backgroundColor: theme.surface, borderColor: theme.border }]}>
             <View style={styles.platformTop}>
               <View style={[styles.platformIconFrame, { borderColor: theme.border, backgroundColor: theme.surfaceHighlight }]}>
-                <Smartphone size={22} color={theme.text} />
+                <Smartphone size={20} color={theme.text} />
               </View>
               <View style={[styles.osTag, { backgroundColor: 'rgba(56, 189, 248, 0.1)', borderColor: 'rgba(56, 189, 248, 0.3)' }]}>
-                <Text style={[styles.osTagText, { color: '#38BDF8' }]}>WIDGETS INCLUDED</Text>
+                <Text style={[styles.osTagText, { color: '#38BDF8' }]}>WIDGETS</Text>
               </View>
             </View>
 
-            <Text style={[styles.platformName, { color: theme.text }]}>Mobile & Lockscreen</Text>
-            <Text style={[styles.platformDesc, { color: theme.textSecondary }]}>
-              Standalone Android APK and iOS TestFlight client with live glanceable widgets for home screen and lockscreen.
+            <Text style={[styles.platformName, isMobile && { fontSize: 16 }, { color: theme.text }]}>iOS & Android</Text>
+            <Text style={[styles.platformDesc, isMobile && { fontSize: 12, lineHeight: 18 }, { color: theme.textSecondary }]}>
+              Pocket habit tracking with live home screen and lockscreen glanceable widgets.
             </Text>
-
-            <View style={styles.specList}>
-              <Text style={[styles.specItem, { color: theme.textMuted }]}>• Android RemoteViews widget</Text>
-              <Text style={[styles.specItem, { color: theme.textMuted }]}>• Apple WidgetKit Glanceable tiles</Text>
-            </View>
 
             <TouchableOpacity
               style={[styles.platformDownloadBtn, { backgroundColor: theme.surfaceHighlight, borderColor: theme.border }]}
@@ -766,21 +815,25 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       </View>
 
       {/* ─── BOTTOM CALL TO ACTION ───────────────────────────────── */}
-      <View style={[styles.bottomCtaCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+      <View style={[styles.bottomCtaCard, isMobile && styles.bottomCtaCardMobile, { backgroundColor: theme.surface, borderColor: theme.border }]}>
         <View style={styles.bottomCtaContent}>
           <Text style={[styles.bottomCtaOverline, { color: isDark ? '#39D353' : '#1A7F37' }]}>
-            READY TO BUILD PERMANENT MOMENTUM?
+            START COMPOUNDING TODAY
           </Text>
-          <Text style={[styles.bottomCtaTitle, { color: theme.text }]}>
-            Start Your First Grid In 10 Seconds.
+          <Text style={[styles.bottomCtaTitle, isMobile && styles.bottomCtaTitleMobile, { color: theme.text }]}>
+            Build Your Chain In 10 Seconds.
           </Text>
-          <Text style={[styles.bottomCtaSub, { color: theme.textSecondary }]}>
-            Free and open-source habit tracking with zero paywalled limits.
+          <Text style={[styles.bottomCtaSub, isMobile && styles.bottomCtaSubMobile, { color: theme.textSecondary }]}>
+            Free and open-source habit tracking with zero paywalls or ads.
           </Text>
 
-          <View style={styles.bottomCtaButtons}>
+          <View style={[styles.bottomCtaButtons, isMobile && styles.bottomCtaButtonsMobile]}>
             <TouchableOpacity
-              style={[styles.primaryActionBtn, { backgroundColor: isDark ? '#39D353' : '#1A7F37' }]}
+              style={[
+                styles.primaryActionBtn,
+                isMobile && styles.primaryActionBtnMobile,
+                { backgroundColor: isDark ? '#39D353' : '#1A7F37' },
+              ]}
               onPress={handlePrimaryAuthAction}
               activeOpacity={0.85}
             >
@@ -791,7 +844,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={[styles.secondaryActionBtn, { borderColor: theme.border, backgroundColor: theme.surfaceHighlight }]}
+              style={[
+                styles.secondaryActionBtn,
+                isMobile && styles.secondaryActionBtnMobile,
+                { borderColor: theme.border, backgroundColor: theme.surfaceHighlight },
+              ]}
               onPress={handleGithubRepo}
               activeOpacity={0.85}
             >
@@ -803,22 +860,22 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       </View>
 
       {/* ─── FOOTER ─────────────────────────────────────────────── */}
-      <View style={[styles.footer, { borderTopColor: theme.borderSubtle }]}>
-        <View style={styles.footerLeft}>
+      <View style={[styles.footer, isMobile && styles.footerMobile, { borderTopColor: theme.borderSubtle }]}>
+        <View style={[styles.footerLeft, isMobile && styles.footerLeftMobile]}>
           <Image
             source={require('../../assets/icon.png')}
             style={styles.footerLogo}
             resizeMode="contain"
           />
           <Text style={[styles.footerBrand, { color: theme.text }]}>HABITHEAT</Text>
-          <Text style={[styles.footerCopy, { color: theme.textMuted }]}>
-            © 2026 HabitHeat. Open Source Project. Built for high-discipline builders.
+          <Text style={[styles.footerCopy, isMobile && { textAlign: 'center' }, { color: theme.textMuted }]}>
+            © 2026 HabitHeat. Open Source. Built for high-discipline builders.
           </Text>
         </View>
 
-        <View style={styles.footerLinks}>
+        <View style={[styles.footerLinks, isMobile && styles.footerLinksMobile]}>
           <TouchableOpacity onPress={handleGithubRepo} style={styles.footerLinkItem}>
-            <Text style={[styles.footerLinkText, { color: theme.textSecondary }]}>Repository</Text>
+            <Text style={[styles.footerLinkText, { color: theme.textSecondary }]}>GitHub</Text>
           </TouchableOpacity>
           <TouchableOpacity onPress={handleDownloadRelease} style={styles.footerLinkItem}>
             <Text style={[styles.footerLinkText, { color: theme.textSecondary }]}>Releases</Text>
@@ -832,8 +889,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   );
 };
 
-const { width } = Dimensions.get('window');
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -846,6 +901,11 @@ const styles = StyleSheet.create({
     width: '100%',
     alignSelf: 'center',
   },
+  contentContainerMobile: {
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 40,
+  },
 
   // Navbar
   navbar: {
@@ -856,10 +916,14 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     marginBottom: 56,
   },
+  navbarMobile: {
+    paddingVertical: 12,
+    marginBottom: 28,
+  },
   brandGroup: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 10,
   },
   logoBadge: {
     width: 38,
@@ -870,9 +934,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     overflow: 'hidden',
   },
+  logoBadgeMobile: {
+    width: 32,
+    height: 32,
+    borderRadius: 7,
+  },
   logoImage: {
     width: 26,
     height: 26,
+  },
+  logoImageMobile: {
+    width: 22,
+    height: 22,
   },
   brandTitleRow: {
     flexDirection: 'row',
@@ -884,6 +957,10 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     letterSpacing: 1.5,
     fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
+  },
+  brandTextMobile: {
+    fontSize: 15,
+    letterSpacing: 1,
   },
   statusTag: {
     flexDirection: 'row',
@@ -914,6 +991,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
   },
+  navActionsMobile: {
+    gap: 8,
+  },
   iconButton: {
     width: 34,
     height: 34,
@@ -921,6 +1001,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  iconButtonMobile: {
+    width: 34,
+    height: 34,
   },
   navGithubBtn: {
     flexDirection: 'row',
@@ -944,11 +1028,18 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  navSignInBtnMobile: {
+    paddingHorizontal: 12,
+    height: 34,
+  },
   navSignInText: {
     fontSize: 11,
     fontWeight: '800',
     letterSpacing: 0.8,
     fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
+  },
+  navSignInTextMobile: {
+    fontSize: 11,
   },
 
   // Hero Section
@@ -956,6 +1047,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     textAlign: 'center',
     marginBottom: 56,
+  },
+  heroSectionMobile: {
+    marginBottom: 36,
   },
   heroPill: {
     flexDirection: 'row',
@@ -967,6 +1061,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     marginBottom: 24,
   },
+  heroPillMobile: {
+    marginBottom: 16,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
   heroPillText: {
     fontSize: 11,
     fontWeight: '700',
@@ -975,39 +1074,61 @@ const styles = StyleSheet.create({
   },
   headlineWrapper: {
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 16,
   },
   heroTitleMain: {
-    fontSize: width > 768 ? 52 : 32,
+    fontSize: 48,
     fontWeight: '900',
     letterSpacing: -1,
     textAlign: 'center',
     fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
-    lineHeight: width > 768 ? 60 : 38,
+    lineHeight: 56,
+  },
+  heroTitleMainMobile: {
+    fontSize: 27,
+    lineHeight: 33,
+    letterSpacing: -0.5,
   },
   heroTitleAccent: {
-    fontSize: width > 768 ? 52 : 32,
+    fontSize: 48,
     fontWeight: '900',
     letterSpacing: -1,
     textAlign: 'center',
     fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
-    lineHeight: width > 768 ? 60 : 38,
+    lineHeight: 56,
+  },
+  heroTitleAccentMobile: {
+    fontSize: 27,
+    lineHeight: 33,
+    letterSpacing: -0.5,
   },
   heroSubtitle: {
-    fontSize: 17,
-    lineHeight: 28,
+    fontSize: 16,
+    lineHeight: 26,
     textAlign: 'center',
     maxWidth: 720,
-    marginBottom: 36,
+    marginBottom: 32,
     fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
   },
+  heroSubtitleMobile: {
+    fontSize: 14,
+    lineHeight: 21,
+    maxWidth: 350,
+    marginBottom: 24,
+  },
   heroButtonsRow: {
-    flexDirection: width > 600 ? 'row' : 'column',
+    flexDirection: 'row',
     gap: 14,
     marginBottom: 28,
     width: '100%',
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  heroButtonsRowMobile: {
+    flexDirection: 'column',
+    width: '100%',
+    gap: 10,
+    marginBottom: 22,
   },
   primaryActionBtn: {
     flexDirection: 'row',
@@ -1017,6 +1138,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 26,
     height: 48,
     borderRadius: 6,
+  },
+  primaryActionBtnMobile: {
+    width: '100%',
+    height: 46,
   },
   primaryActionText: {
     color: '#FFFFFF',
@@ -1035,6 +1160,10 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     borderWidth: 1,
   },
+  secondaryActionBtnMobile: {
+    width: '100%',
+    height: 46,
+  },
   secondaryActionText: {
     fontSize: 13,
     fontWeight: '700',
@@ -1047,6 +1176,9 @@ const styles = StyleSheet.create({
     gap: 12,
     flexWrap: 'wrap',
     justifyContent: 'center',
+  },
+  guaranteeRowMobile: {
+    gap: 8,
   },
   guaranteeItem: {
     flexDirection: 'row',
@@ -1070,15 +1202,22 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: 8,
     overflow: 'hidden',
-    marginBottom: 88,
+    marginBottom: 72,
+  },
+  interactiveCardMobile: {
+    borderRadius: 10,
+    marginBottom: 44,
   },
   interactiveHeader: {
-    flexDirection: width > 650 ? 'row' : 'column',
+    flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: width > 650 ? 'center' : 'flex-start',
+    alignItems: 'center',
     padding: 18,
     borderBottomWidth: 1,
     gap: 12,
+  },
+  interactiveHeaderMobile: {
+    padding: 14,
   },
   interactiveHeaderLeft: {
     flexDirection: 'row',
@@ -1110,6 +1249,10 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     borderWidth: 1,
   },
+  showcaseBadgeMobile: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
   showcaseBadgeText: {
     fontSize: 10,
     fontWeight: '800',
@@ -1120,6 +1263,10 @@ const styles = StyleSheet.create({
     paddingVertical: 20,
     paddingHorizontal: 16,
     alignItems: 'center',
+  },
+  matrixViewWrapperMobile: {
+    paddingVertical: 14,
+    paddingHorizontal: 8,
   },
   fullWidthMatrixScroll: {
     paddingBottom: 8,
@@ -1182,15 +1329,30 @@ const styles = StyleSheet.create({
     borderRadius: 3,
     borderWidth: 1,
   },
+  mobileScrollCue: {
+    paddingTop: 8,
+    alignItems: 'center',
+  },
+  mobileScrollCueText: {
+    fontSize: 10,
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
+  },
   matrixFooterRow: {
     width: '100%',
-    flexDirection: width > 650 ? 'row' : 'column',
+    flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: width > 650 ? 'center' : 'flex-start',
+    alignItems: 'center',
     paddingTop: 16,
     marginTop: 14,
     borderTopWidth: 1,
     gap: 10,
+  },
+  matrixFooterRowMobile: {
+    flexDirection: 'column',
+    alignItems: 'center',
+    gap: 8,
+    paddingTop: 12,
+    marginTop: 10,
   },
   interactiveHintRow: {
     flexDirection: 'row',
@@ -1228,6 +1390,10 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     paddingHorizontal: 20,
   },
+  metricsStripMobile: {
+    paddingVertical: 12,
+    paddingHorizontal: 10,
+  },
   metricBlock: {
     alignItems: 'center',
     flex: 1,
@@ -1256,40 +1422,55 @@ const styles = StyleSheet.create({
 
   // Philosophy Section
   sectionWrapper: {
-    marginBottom: 88,
+    marginBottom: 72,
+  },
+  sectionWrapperMobile: {
+    marginBottom: 44,
   },
   sectionHeaderCol: {
-    marginBottom: 36,
+    marginBottom: 28,
   },
   sectionOverline: {
     fontSize: 11,
     fontWeight: '800',
     letterSpacing: 1.5,
-    marginBottom: 8,
+    marginBottom: 6,
     fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
   },
   sectionTitle: {
-    fontSize: width > 768 ? 32 : 24,
+    fontSize: 28,
     fontWeight: '800',
     letterSpacing: -0.5,
     fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
   },
+  sectionTitleMobile: {
+    fontSize: 22,
+    lineHeight: 28,
+  },
   pillarsGrid: {
-    flexDirection: width > 800 ? 'row' : 'column',
-    gap: 20,
+    flexDirection: 'row',
+    gap: 16,
+  },
+  pillarsGridMobile: {
+    flexDirection: 'column',
+    gap: 12,
   },
   pillarCard: {
     flex: 1,
     borderWidth: 1,
     borderRadius: 8,
-    padding: 24,
+    padding: 22,
     justifyContent: 'space-between',
+  },
+  pillarCardMobile: {
+    padding: 16,
+    width: '100%',
   },
   pillarHeaderRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 12,
   },
   pillarBadge: {
     paddingHorizontal: 8,
@@ -1304,23 +1485,23 @@ const styles = StyleSheet.create({
     fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
   },
   pillarTitle: {
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: '700',
-    marginBottom: 12,
+    marginBottom: 8,
     letterSpacing: -0.2,
     fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
   },
   pillarBody: {
     fontSize: 13,
-    lineHeight: 22,
-    marginBottom: 20,
+    lineHeight: 20,
+    marginBottom: 16,
     fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
   },
   comparisonBox: {
     borderWidth: 1,
     borderRadius: 6,
-    padding: 12,
-    gap: 10,
+    padding: 10,
+    gap: 8,
   },
   comparisonRow: {
     flexDirection: 'row',
@@ -1328,8 +1509,8 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   compStatusTag: {
-    width: 20,
-    height: 20,
+    width: 18,
+    height: 18,
     borderRadius: 4,
     justifyContent: 'center',
     alignItems: 'center',
@@ -1347,7 +1528,7 @@ const styles = StyleSheet.create({
   paletteShowcase: {
     borderWidth: 1,
     borderRadius: 6,
-    padding: 12,
+    padding: 10,
     gap: 8,
   },
   palettePill: {
@@ -1368,20 +1549,20 @@ const styles = StyleSheet.create({
   intensityBox: {
     borderWidth: 1,
     borderRadius: 6,
-    padding: 12,
+    padding: 10,
   },
   intensityBoxLabel: {
-    fontSize: 9,
+    fontSize: 8,
     fontWeight: '800',
     letterSpacing: 0.8,
-    marginBottom: 8,
+    marginBottom: 6,
     fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
   },
   intensityBar: {
     flexDirection: 'row',
     borderRadius: 4,
     overflow: 'hidden',
-    height: 24,
+    height: 22,
   },
   intensitySegment: {
     flex: 1,
@@ -1397,25 +1578,33 @@ const styles = StyleSheet.create({
 
   // Platforms Grid
   platformsGrid: {
-    flexDirection: width > 800 ? 'row' : 'column',
-    gap: 20,
+    flexDirection: 'row',
+    gap: 16,
+  },
+  platformsGridMobile: {
+    flexDirection: 'column',
+    gap: 12,
   },
   platformCard: {
     flex: 1,
     borderWidth: 1,
     borderRadius: 8,
-    padding: 24,
+    padding: 22,
     justifyContent: 'space-between',
+  },
+  platformCardMobile: {
+    padding: 16,
+    width: '100%',
   },
   platformTop: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 18,
+    marginBottom: 14,
   },
   platformIconFrame: {
-    width: 44,
-    height: 44,
+    width: 40,
+    height: 40,
     borderRadius: 8,
     borderWidth: 1,
     justifyContent: 'center',
@@ -1434,23 +1623,15 @@ const styles = StyleSheet.create({
     fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
   },
   platformName: {
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: '700',
-    marginBottom: 8,
+    marginBottom: 6,
     fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
   },
   platformDesc: {
-    fontSize: 13,
-    lineHeight: 20,
+    fontSize: 12,
+    lineHeight: 18,
     marginBottom: 16,
-    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
-  },
-  specList: {
-    gap: 6,
-    marginBottom: 24,
-  },
-  specItem: {
-    fontSize: 11,
     fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
   },
   platformDownloadBtn: {
@@ -1458,7 +1639,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    height: 42,
+    height: 40,
     borderRadius: 5,
     borderWidth: 1,
   },
@@ -1473,10 +1654,14 @@ const styles = StyleSheet.create({
   bottomCtaCard: {
     borderWidth: 1,
     borderRadius: 8,
-    padding: 40,
+    padding: 36,
     alignItems: 'center',
     textAlign: 'center',
-    marginBottom: 72,
+    marginBottom: 60,
+  },
+  bottomCtaCardMobile: {
+    padding: 20,
+    marginBottom: 40,
   },
   bottomCtaContent: {
     alignItems: 'center',
@@ -1486,44 +1671,68 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '800',
     letterSpacing: 1.5,
-    marginBottom: 12,
+    marginBottom: 8,
     fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
   },
   bottomCtaTitle: {
-    fontSize: width > 600 ? 30 : 22,
+    fontSize: 26,
     fontWeight: '800',
     textAlign: 'center',
-    marginBottom: 12,
+    marginBottom: 8,
     fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
+  },
+  bottomCtaTitleMobile: {
+    fontSize: 21,
+    lineHeight: 27,
   },
   bottomCtaSub: {
     fontSize: 14,
-    lineHeight: 22,
+    lineHeight: 20,
     textAlign: 'center',
-    marginBottom: 28,
+    marginBottom: 24,
     fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
   },
+  bottomCtaSubMobile: {
+    fontSize: 13,
+    lineHeight: 18,
+    marginBottom: 18,
+  },
   bottomCtaButtons: {
-    flexDirection: width > 500 ? 'row' : 'column',
+    flexDirection: 'row',
     gap: 12,
     width: '100%',
     justifyContent: 'center',
   },
+  bottomCtaButtonsMobile: {
+    flexDirection: 'column',
+    width: '100%',
+    gap: 10,
+  },
 
   // Footer
   footer: {
-    flexDirection: width > 700 ? 'row' : 'column',
+    flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: width > 700 ? 'center' : 'flex-start',
-    paddingTop: 28,
+    alignItems: 'center',
+    paddingTop: 24,
     borderTopWidth: 1,
     gap: 16,
+  },
+  footerMobile: {
+    flexDirection: 'column',
+    alignItems: 'center',
+    gap: 14,
+    paddingTop: 20,
   },
   footerLeft: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
     flexWrap: 'wrap',
+  },
+  footerLeftMobile: {
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   footerLogo: {
     width: 20,
@@ -1543,6 +1752,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 16,
+  },
+  footerLinksMobile: {
+    justifyContent: 'center',
+    gap: 14,
   },
   footerLinkItem: {
     paddingVertical: 4,
