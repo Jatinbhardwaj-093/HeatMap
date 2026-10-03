@@ -8,6 +8,8 @@ import {
   Platform,
   ActivityIndicator,
   Image,
+  KeyboardAvoidingView,
+  ScrollView,
 } from 'react-native';
 import { ArrowLeft, Lock, Mail, Eye, EyeOff } from 'lucide-react-native';
 import { supabase } from '../utils/supabase';
@@ -71,33 +73,42 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onBack, onLoginSuccess
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.background }]}>
-      <TouchableOpacity
-        style={[
-          styles.backBtn,
-          {
-            backgroundColor: isDark ? '#161B22' : '#FFFFFF',
-            borderColor: isDark ? '#30363D' : '#D0D7DE',
-            ...(Platform.OS === 'web'
-              ? {
-                  boxShadow: isDark
-                    ? '0 2px 8px rgba(0, 0, 0, 0.4)'
-                    : '0 2px 8px rgba(0, 0, 0, 0.05)',
-                }
-              : {}),
-          },
-        ]}
-        onPress={onBack}
-        activeOpacity={0.7}
-        accessibilityLabel="Go back"
+    <KeyboardAvoidingView
+      style={[styles.container, { backgroundColor: theme.background }]}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+    >
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
       >
-        <ArrowLeft color={theme.textSecondary} size={18} />
-      </TouchableOpacity>
+        <TouchableOpacity
+          style={[
+            styles.backBtn,
+            {
+              backgroundColor: isDark ? '#161B22' : '#FFFFFF',
+              borderColor: isDark ? '#30363D' : '#D0D7DE',
+              ...(Platform.OS === 'web'
+                ? {
+                    boxShadow: isDark
+                      ? '0 2px 8px rgba(0, 0, 0, 0.4)'
+                      : '0 2px 8px rgba(0, 0, 0, 0.05)',
+                  }
+                : {}),
+            },
+          ]}
+          onPress={onBack}
+          activeOpacity={0.7}
+          accessibilityLabel="Go back"
+        >
+          <ArrowLeft color={theme.textSecondary} size={18} />
+        </TouchableOpacity>
 
-      <View style={styles.cardWrapper}>
-        <View style={styles.header}>
-          {/* HabitHeat App Icon Badge */}
-          <View
+        <View style={styles.cardWrapper}>
+          <View style={styles.header}>
+            {/* HabitHeat App Icon Badge */}
+            <View
             style={[
               styles.logoBadge,
               {
@@ -301,27 +312,34 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onBack, onLoginSuccess
           </Text>
         </View>
       </View>
-    </View>
-  );
+    </ScrollView>
+  </KeyboardAvoidingView>
+);
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
     justifyContent: 'center',
     alignItems: 'center',
     padding: 24,
+    paddingTop: Platform.OS === 'web' ? 40 : 64,
+    paddingBottom: 48,
   },
   backBtn: {
     position: 'absolute',
-    top: 32,
-    left: 32,
+    top: Platform.OS === 'web' ? 24 : 16,
+    left: Platform.OS === 'web' ? 24 : 16,
     width: 38,
     height: 38,
     borderRadius: 10,
     borderWidth: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    zIndex: 20,
   },
   cardWrapper: {
     width: '100%',

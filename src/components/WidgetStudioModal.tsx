@@ -305,8 +305,18 @@ const styles = StyleSheet.create({
     padding: 20,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundImage: 'radial-gradient(#21262D 1px, transparent 0)',
-    backgroundSize: '20px 20px',
+    ...(Platform.OS === 'web'
+      ? ({
+          backgroundImage: 'radial-gradient(#21262D 1px, transparent 0)',
+          backgroundSize: '20px 20px',
+        } as any)
+      : {}),
+  },
+  emptyText: {
+    color: '#8B949E',
+    fontSize: 14,
+    textAlign: 'center',
+    padding: 24,
   },
   widgetSmall: {
     width: 140,

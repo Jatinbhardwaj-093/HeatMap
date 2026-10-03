@@ -2,6 +2,20 @@ export type ViewMode = 'monthly' | 'yearly';
 export type ThemeMode = 'light' | 'dark' | 'system';
 export type PaletteId = 'emerald' | 'amber' | 'obsidian' | 'cyan' | 'crimson';
 
+export interface ColorTheme {
+  background: string;
+  surface: string;
+  surfaceHighlight: string;
+  border: string;
+  borderSubtle: string;
+  text: string;
+  textSecondary: string;
+  textMuted: string;
+  success: string;
+  error: string;
+  isDark: boolean;
+}
+
 export interface ColorPalette {
   id: PaletteId;
   name: string;

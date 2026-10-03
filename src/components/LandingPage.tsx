@@ -59,6 +59,15 @@ const MONTH_HEADERS = [
   { label: 'Dec', week: 48 },
 ];
 
+const MOBILE_MONTH_HEADERS = [
+  { label: 'Jan', week: 0 },
+  { label: 'Mar', week: 9 },
+  { label: 'May', week: 18 },
+  { label: 'Jul', week: 26 },
+  { label: 'Sep', week: 35 },
+  { label: 'Nov', week: 44 },
+];
+
 // Generate authentic full-year 52-week matrix patterns with realistic blanks and streaks
 function generateFullYearData(): number[][] {
   const weeks: number[][] = [];
@@ -135,6 +144,14 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
   const activePreset = DEMO_DATA;
 
+  // Dynamic cell sizing on mobile to fit the entire year with ZERO horizontal scrolling
+  const mobileCellGap = 1.5;
+  const mobileDayLabelWidth = 14;
+  const mobileAvailableWidth = Math.max(260, width - 48);
+  const mobileMatrixWidth = mobileAvailableWidth - mobileDayLabelWidth;
+  const mobileCellSize = Math.max(3.2, Math.min(6, (mobileMatrixWidth - (51 * mobileCellGap)) / 52));
+  const mobileStep = mobileCellSize + mobileCellGap;
+
   // Interactive user edits in the demo
   const [clickedCells, setClickedCells] = useState<Record<string, number>>({});
 
@@ -142,16 +159,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   const baseMatrix = useMemo(() => {
     return generateFullYearData();
   }, []);
-
-  // On mobile, scroll matrix to the active recent streak (Nov/Dec) so green compounding cells are front and center
-  useEffect(() => {
-    if (isMobile) {
-      const timer = setTimeout(() => {
-        matrixScrollRef.current?.scrollToEnd({ animated: false });
-      }, 120);
-      return () => clearTimeout(timer);
-    }
-  }, [isMobile]);
 
   const toggleDemoCell = (cellKey: string, currentLevel: number) => {
     setClickedCells((prev) => ({
@@ -419,27 +426,19 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
         {/* Matrix Grid Visualization */}
         <View style={[styles.matrixViewWrapper, isMobile && styles.matrixViewWrapperMobile]}>
-          <ScrollView
-            ref={matrixScrollRef}
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={[
-              styles.fullWidthMatrixScroll,
-              isMobile && { minWidth: undefined, paddingHorizontal: 4 },
-            ]}
-          >
-            <View style={styles.matrixContainerInner}>
-              {/* Month Header Labels across the 52 weeks */}
-              <View style={styles.monthHeaderRow}>
-                <View style={{ width: 40 }} />
-                <View style={styles.monthLabelsContainer}>
-                  {MONTH_HEADERS.map((m) => (
+          {isMobile ? (
+            <View style={styles.matrixContainerInnerMobile}>
+              {/* Month Header Labels across the 52 weeks (Clean non-overlapping bi-monthly markers) */}
+              <View style={styles.monthHeaderRowMobile}>
+                <View style={{ width: mobileDayLabelWidth }} />
+                <View style={[styles.monthLabelsContainerMobile, { width: 52 * mobileStep }]}>
+                  {MOBILE_MONTH_HEADERS.map((m) => (
                     <Text
                       key={m.label}
                       style={[
-                        styles.monthHeaderText,
+                        styles.monthHeaderTextMobile,
                         {
-                          left: m.week * 19,
+                          left: m.week * mobileStep,
                           color: theme.textMuted,
                         },
                       ]}
@@ -450,20 +449,23 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 </View>
               </View>
 
-              {/* Grid Body: Day labels + 52-week columns */}
-              <View style={styles.matrixBodyRow}>
+              {/* Grid Body: Day labels + 52-week micro columns */}
+              <View style={styles.matrixBodyRowMobile}>
                 {/* Day Labels column */}
-                <View style={styles.matrixDayLabels}>
-                  <Text style={[styles.dayLabel, { color: theme.textMuted }]}>Mon</Text>
-                  <Text style={[styles.dayLabel, { color: theme.textMuted }]}>Wed</Text>
-                  <Text style={[styles.dayLabel, { color: theme.textMuted }]}>Fri</Text>
-                  <Text style={[styles.dayLabel, { color: theme.textMuted }]}>Sun</Text>
+                <View style={[styles.matrixDayLabelsMobile, { width: mobileDayLabelWidth }]}>
+                  <Text style={[styles.dayLabelMobile, { color: theme.textMuted }]}>M</Text>
+                  <Text style={[styles.dayLabelMobile, { color: theme.textMuted }]}>W</Text>
+                  <Text style={[styles.dayLabelMobile, { color: theme.textMuted }]}>F</Text>
+                  <Text style={[styles.dayLabelMobile, { color: theme.textMuted }]}>S</Text>
                 </View>
 
-                {/* 52 Columns */}
-                <View style={styles.columnsWrapper}>
+                {/* 52 Columns fitted to card */}
+                <View style={styles.columnsWrapperMobile}>
                   {baseMatrix.map((week, weekIdx) => (
-                    <View key={`week-${weekIdx}`} style={styles.matrixColumn}>
+                    <View
+                      key={`week-${weekIdx}`}
+                      style={[styles.matrixColumnMobile, { width: mobileCellSize, marginRight: mobileCellGap }]}
+                    >
                       {week.map((baseLevel, dayIdx) => {
                         const cellKey = `w${weekIdx}-d${dayIdx}`;
                         const currentLevel =
@@ -477,8 +479,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                             activeOpacity={0.6}
                             onPress={() => toggleDemoCell(cellKey, currentLevel)}
                             style={[
-                              styles.matrixCell,
+                              styles.matrixCellMobile,
                               {
+                                width: mobileCellSize,
+                                height: mobileCellSize,
+                                marginBottom: mobileCellGap,
                                 backgroundColor: !isDark && currentLevel === 0 ? '#EAECEF' : cellColor,
                                 borderColor: isDark ? '#21262D' : '#D0D7DE',
                               },
@@ -491,15 +496,77 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 </View>
               </View>
             </View>
-          </ScrollView>
+          ) : (
+            <ScrollView
+              ref={matrixScrollRef}
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.fullWidthMatrixScroll}
+            >
+              <View style={styles.matrixContainerInner}>
+                {/* Month Header Labels across the 52 weeks */}
+                <View style={styles.monthHeaderRow}>
+                  <View style={{ width: 40 }} />
+                  <View style={styles.monthLabelsContainer}>
+                    {MONTH_HEADERS.map((m) => (
+                      <Text
+                        key={m.label}
+                        style={[
+                          styles.monthHeaderText,
+                          {
+                            left: m.week * 19,
+                            color: theme.textMuted,
+                          },
+                        ]}
+                      >
+                        {m.label}
+                      </Text>
+                    ))}
+                  </View>
+                </View>
 
-          {/* Mobile Swipe Cue */}
-          {isMobile && (
-            <View style={styles.mobileScrollCue}>
-              <Text style={[styles.mobileScrollCueText, { color: theme.textMuted }]}>
-                ← Swipe horizontally to explore full year
-              </Text>
-            </View>
+                {/* Grid Body: Day labels + 52-week columns */}
+                <View style={styles.matrixBodyRow}>
+                  {/* Day Labels column */}
+                  <View style={styles.matrixDayLabels}>
+                    <Text style={[styles.dayLabel, { color: theme.textMuted }]}>Mon</Text>
+                    <Text style={[styles.dayLabel, { color: theme.textMuted }]}>Wed</Text>
+                    <Text style={[styles.dayLabel, { color: theme.textMuted }]}>Fri</Text>
+                    <Text style={[styles.dayLabel, { color: theme.textMuted }]}>Sun</Text>
+                  </View>
+
+                  {/* 52 Columns */}
+                  <View style={styles.columnsWrapper}>
+                    {baseMatrix.map((week, weekIdx) => (
+                      <View key={`week-${weekIdx}`} style={styles.matrixColumn}>
+                        {week.map((baseLevel, dayIdx) => {
+                          const cellKey = `w${weekIdx}-d${dayIdx}`;
+                          const currentLevel =
+                            clickedCells[cellKey] !== undefined ? clickedCells[cellKey] : baseLevel;
+                          const cellColor =
+                            activePreset.levelColors[currentLevel] || activePreset.levelColors[0];
+
+                          return (
+                            <TouchableOpacity
+                              key={cellKey}
+                              activeOpacity={0.6}
+                              onPress={() => toggleDemoCell(cellKey, currentLevel)}
+                              style={[
+                                styles.matrixCell,
+                                {
+                                  backgroundColor: !isDark && currentLevel === 0 ? '#EAECEF' : cellColor,
+                                  borderColor: isDark ? '#21262D' : '#D0D7DE',
+                                },
+                              ]}
+                            />
+                          );
+                        })}
+                      </View>
+                    ))}
+                  </View>
+                </View>
+              </View>
+            </ScrollView>
           )}
 
           {/* Matrix Footnote / Legend */}
@@ -577,125 +644,183 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           </Text>
         </View>
 
-        <View style={[styles.pillarsGrid, isMobile && styles.pillarsGridMobile]}>
-          {/* Pillar 01 */}
-          <View style={[styles.pillarCard, isMobile && styles.pillarCardMobile, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-            <View style={styles.pillarHeaderRow}>
-              <View
-                style={[
-                  styles.pillarBadge,
-                  { backgroundColor: 'rgba(245, 158, 11, 0.1)', borderColor: 'rgba(245, 158, 11, 0.3)' },
-                ]}
-              >
-                <Text style={[styles.pillarBadgeText, { color: '#F59E0B' }]}>01 · ZERO FRICTION</Text>
+        {isMobile ? (
+          <View style={[styles.mobilePillarsCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+            {/* Pillar 01 */}
+            <View style={[styles.mobilePillarItem, { borderBottomColor: theme.borderSubtle }]}>
+              <View style={styles.mobilePillarTop}>
+                <View
+                  style={[
+                    styles.mobilePillarBadge,
+                    { backgroundColor: 'rgba(245, 158, 11, 0.12)', borderColor: 'rgba(245, 158, 11, 0.3)' },
+                  ]}
+                >
+                  <Text style={[styles.mobilePillarBadgeText, { color: '#F59E0B' }]}>01 · ZERO FRICTION</Text>
+                </View>
+              </View>
+              <Text style={[styles.mobilePillarTitle, { color: theme.text }]}>Binary Simplicity</Text>
+              <Text style={[styles.mobilePillarBody, { color: theme.textSecondary }]}>
+                Did you execute today? Yes or no. No counting calories, timer logging, or metric fatigue. One tap and complete.
+              </Text>
+            </View>
+
+            {/* Pillar 02 */}
+            <View style={[styles.mobilePillarItem, { borderBottomColor: theme.borderSubtle }]}>
+              <View style={styles.mobilePillarTop}>
+                <View
+                  style={[
+                    styles.mobilePillarBadge,
+                    { backgroundColor: 'rgba(56, 189, 248, 0.12)', borderColor: 'rgba(56, 189, 248, 0.3)' },
+                  ]}
+                >
+                  <Text style={[styles.mobilePillarBadgeText, { color: '#38BDF8' }]}>02 · ISOLATION</Text>
+                </View>
+              </View>
+              <Text style={[styles.mobilePillarTitle, { color: theme.text }]}>Dedicated Matrices</Text>
+              <Text style={[styles.mobilePillarBody, { color: theme.textSecondary }]}>
+                Never blend discordant habits into a generic checklist. Running, deep coding, and reading each get their own autonomous heatmap.
+              </Text>
+            </View>
+
+            {/* Pillar 03 */}
+            <View style={[styles.mobilePillarItem, { borderBottomWidth: 0 }]}>
+              <View style={styles.mobilePillarTop}>
+                <View
+                  style={[
+                    styles.mobilePillarBadge,
+                    { backgroundColor: 'rgba(57, 211, 83, 0.12)', borderColor: 'rgba(57, 211, 83, 0.3)' },
+                  ]}
+                >
+                  <Text style={[styles.mobilePillarBadgeText, { color: isDark ? '#39D353' : '#1A7F37' }]}>03 · PSYCHOLOGY</Text>
+                </View>
+              </View>
+              <Text style={[styles.mobilePillarTitle, { color: theme.text }]}>GitHub Momentum</Text>
+              <Text style={[styles.mobilePillarBody, { color: theme.textSecondary }]}>
+                Inspired by GitHub contribution graphs. Watch your daily discipline compound into vibrant green matrix tiles.
+              </Text>
+            </View>
+          </View>
+        ) : (
+          <View style={styles.pillarsGrid}>
+            {/* Pillar 01 */}
+            <View style={[styles.pillarCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+              <View style={styles.pillarHeaderRow}>
+                <View
+                  style={[
+                    styles.pillarBadge,
+                    { backgroundColor: 'rgba(245, 158, 11, 0.1)', borderColor: 'rgba(245, 158, 11, 0.3)' },
+                  ]}
+                >
+                  <Text style={[styles.pillarBadgeText, { color: '#F59E0B' }]}>01 · ZERO FRICTION</Text>
+                </View>
+              </View>
+
+              <Text style={[styles.pillarTitle, { color: theme.text }]}>
+                Binary Simplicity
+              </Text>
+
+              <Text style={[styles.pillarBody, { color: theme.textSecondary }]}>
+                Did you execute today? Yes or no. No counting calories, timer logging, or metric fatigue. One tap and complete.
+              </Text>
+
+              <View style={[styles.comparisonBox, { backgroundColor: theme.surfaceHighlight, borderColor: theme.borderSubtle }]}>
+                <View style={styles.comparisonRow}>
+                  <View style={[styles.compStatusTag, { backgroundColor: 'rgba(248, 81, 73, 0.15)' }]}>
+                    <X size={12} color="#F85149" strokeWidth={3} />
+                  </View>
+                  <Text style={[styles.compTextStriked, { color: theme.textMuted }]}>
+                    Logged 42/60 mins (fail)
+                  </Text>
+                </View>
+                <View style={styles.comparisonRow}>
+                  <View style={[styles.compStatusTag, { backgroundColor: 'rgba(57, 211, 83, 0.15)' }]}>
+                    <Check size={12} color={theme.success} strokeWidth={3} />
+                  </View>
+                  <Text style={[styles.compTextSuccess, { color: theme.text }]}>
+                    Executed workout (complete)
+                  </Text>
+                </View>
               </View>
             </View>
 
-            <Text style={[styles.pillarTitle, isMobile && { fontSize: 16 }, { color: theme.text }]}>
-              Binary Simplicity
-            </Text>
-
-            <Text style={[styles.pillarBody, isMobile && { fontSize: 12, lineHeight: 18, marginBottom: 14 }, { color: theme.textSecondary }]}>
-              Did you execute today? Yes or no. No counting calories, timer logging, or metric fatigue. One tap and complete.
-            </Text>
-
-            <View style={[styles.comparisonBox, { backgroundColor: theme.surfaceHighlight, borderColor: theme.borderSubtle }]}>
-              <View style={styles.comparisonRow}>
-                <View style={[styles.compStatusTag, { backgroundColor: 'rgba(248, 81, 73, 0.15)' }]}>
-                  <X size={12} color="#F85149" strokeWidth={3} />
+            {/* Pillar 02 */}
+            <View style={[styles.pillarCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+              <View style={styles.pillarHeaderRow}>
+                <View
+                  style={[
+                    styles.pillarBadge,
+                    { backgroundColor: 'rgba(56, 189, 248, 0.1)', borderColor: 'rgba(56, 189, 248, 0.3)' },
+                  ]}
+                >
+                  <Text style={[styles.pillarBadgeText, { color: '#38BDF8' }]}>02 · ISOLATION</Text>
                 </View>
-                <Text style={[styles.compTextStriked, { color: theme.textMuted }]}>
-                  Logged 42/60 mins (fail)
-                </Text>
               </View>
-              <View style={styles.comparisonRow}>
-                <View style={[styles.compStatusTag, { backgroundColor: 'rgba(57, 211, 83, 0.15)' }]}>
-                  <Check size={12} color={theme.success} strokeWidth={3} />
+
+              <Text style={[styles.pillarTitle, { color: theme.text }]}>
+                Dedicated Matrices
+              </Text>
+
+              <Text style={[styles.pillarBody, { color: theme.textSecondary }]}>
+                Never blend discordant habits into a generic checklist. Running, deep coding, and reading each get their own autonomous heatmap.
+              </Text>
+
+              <View style={[styles.paletteShowcase, { backgroundColor: theme.surfaceHighlight, borderColor: theme.borderSubtle }]}>
+                <View style={styles.palettePill}>
+                  <View style={[styles.dotSmall, { backgroundColor: '#39D353' }]} />
+                  <Text style={[styles.palettePillText, { color: theme.textSecondary }]}>Emerald</Text>
                 </View>
-                <Text style={[styles.compTextSuccess, { color: theme.text }]}>
-                  Executed workout (complete)
-                </Text>
+                <View style={styles.palettePill}>
+                  <View style={[styles.dotSmall, { backgroundColor: '#F59E0B' }]} />
+                  <Text style={[styles.palettePillText, { color: theme.textSecondary }]}>Amber</Text>
+                </View>
+                <View style={styles.palettePill}>
+                  <View style={[styles.dotSmall, { backgroundColor: '#38BDF8' }]} />
+                  <Text style={[styles.palettePillText, { color: theme.textSecondary }]}>Cyan</Text>
+                </View>
+              </View>
+            </View>
+
+            {/* Pillar 03 */}
+            <View style={[styles.pillarCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+              <View style={styles.pillarHeaderRow}>
+                <View
+                  style={[
+                    styles.pillarBadge,
+                    { backgroundColor: 'rgba(57, 211, 83, 0.1)', borderColor: 'rgba(57, 211, 83, 0.3)' },
+                  ]}
+                >
+                  <Text style={[styles.pillarBadgeText, { color: isDark ? '#39D353' : '#1A7F37' }]}>03 · PSYCHOLOGY</Text>
+                </View>
+              </View>
+
+              <Text style={[styles.pillarTitle, { color: theme.text }]}>
+                GitHub Momentum
+              </Text>
+
+              <Text style={[styles.pillarBody, { color: theme.textSecondary }]}>
+                Inspired by GitHub contribution graphs. Watch your daily discipline compound into vibrant green matrix tiles.
+              </Text>
+
+              <View style={[styles.intensityBox, { backgroundColor: theme.surfaceHighlight, borderColor: theme.borderSubtle }]}>
+                <Text style={[styles.intensityBoxLabel, { color: theme.textMuted }]}>DYNAMIC STREAK INTENSITY</Text>
+                <View style={styles.intensityBar}>
+                  <View style={[styles.intensitySegment, { backgroundColor: '#0E4429' }]}>
+                    <Text style={styles.segText}>1d</Text>
+                  </View>
+                  <View style={[styles.intensitySegment, { backgroundColor: '#006D32' }]}>
+                    <Text style={styles.segText}>3d</Text>
+                  </View>
+                  <View style={[styles.intensitySegment, { backgroundColor: '#26A641' }]}>
+                    <Text style={styles.segText}>7d</Text>
+                  </View>
+                  <View style={[styles.intensitySegment, { backgroundColor: '#39D353' }]}>
+                    <Text style={[styles.segText, { color: '#090A0C', fontWeight: '800' }]}>14d+</Text>
+                  </View>
+                </View>
               </View>
             </View>
           </View>
-
-          {/* Pillar 02 */}
-          <View style={[styles.pillarCard, isMobile && styles.pillarCardMobile, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-            <View style={styles.pillarHeaderRow}>
-              <View
-                style={[
-                  styles.pillarBadge,
-                  { backgroundColor: 'rgba(56, 189, 248, 0.1)', borderColor: 'rgba(56, 189, 248, 0.3)' },
-                ]}
-              >
-                <Text style={[styles.pillarBadgeText, { color: '#38BDF8' }]}>02 · ISOLATION</Text>
-              </View>
-            </View>
-
-            <Text style={[styles.pillarTitle, isMobile && { fontSize: 16 }, { color: theme.text }]}>
-              Dedicated Matrices
-            </Text>
-
-            <Text style={[styles.pillarBody, isMobile && { fontSize: 12, lineHeight: 18, marginBottom: 14 }, { color: theme.textSecondary }]}>
-              Never blend discordant habits into a generic checklist. Running, deep coding, and reading each get their own autonomous heatmap.
-            </Text>
-
-            <View style={[styles.paletteShowcase, { backgroundColor: theme.surfaceHighlight, borderColor: theme.borderSubtle }]}>
-              <View style={styles.palettePill}>
-                <View style={[styles.dotSmall, { backgroundColor: '#39D353' }]} />
-                <Text style={[styles.palettePillText, { color: theme.textSecondary }]}>Emerald</Text>
-              </View>
-              <View style={styles.palettePill}>
-                <View style={[styles.dotSmall, { backgroundColor: '#F59E0B' }]} />
-                <Text style={[styles.palettePillText, { color: theme.textSecondary }]}>Amber</Text>
-              </View>
-              <View style={styles.palettePill}>
-                <View style={[styles.dotSmall, { backgroundColor: '#38BDF8' }]} />
-                <Text style={[styles.palettePillText, { color: theme.textSecondary }]}>Cyan</Text>
-              </View>
-            </View>
-          </View>
-
-          {/* Pillar 03 */}
-          <View style={[styles.pillarCard, isMobile && styles.pillarCardMobile, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-            <View style={styles.pillarHeaderRow}>
-              <View
-                style={[
-                  styles.pillarBadge,
-                  { backgroundColor: 'rgba(57, 211, 83, 0.1)', borderColor: 'rgba(57, 211, 83, 0.3)' },
-                ]}
-              >
-                <Text style={[styles.pillarBadgeText, { color: isDark ? '#39D353' : '#1A7F37' }]}>03 · PSYCHOLOGY</Text>
-              </View>
-            </View>
-
-            <Text style={[styles.pillarTitle, isMobile && { fontSize: 16 }, { color: theme.text }]}>
-              GitHub Momentum
-            </Text>
-
-            <Text style={[styles.pillarBody, isMobile && { fontSize: 12, lineHeight: 18, marginBottom: 14 }, { color: theme.textSecondary }]}>
-              Inspired by GitHub contribution graphs. Watch your daily discipline compound into vibrant green matrix tiles.
-            </Text>
-
-            <View style={[styles.intensityBox, { backgroundColor: theme.surfaceHighlight, borderColor: theme.borderSubtle }]}>
-              <Text style={[styles.intensityBoxLabel, { color: theme.textMuted }]}>DYNAMIC STREAK INTENSITY</Text>
-              <View style={styles.intensityBar}>
-                <View style={[styles.intensitySegment, { backgroundColor: '#0E4429' }]}>
-                  <Text style={styles.segText}>1d</Text>
-                </View>
-                <View style={[styles.intensitySegment, { backgroundColor: '#006D32' }]}>
-                  <Text style={styles.segText}>3d</Text>
-                </View>
-                <View style={[styles.intensitySegment, { backgroundColor: '#26A641' }]}>
-                  <Text style={styles.segText}>7d</Text>
-                </View>
-                <View style={[styles.intensitySegment, { backgroundColor: '#39D353' }]}>
-                  <Text style={[styles.segText, { color: '#090A0C', fontWeight: '800' }]}>14d+</Text>
-                </View>
-              </View>
-            </View>
-          </View>
-        </View>
+        )}
       </View>
 
       {/* ─── NATIVE APPLICATIONS & PLATFORMS ─────────────────────── */}
@@ -709,109 +834,190 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           </Text>
         </View>
 
-        <View style={[styles.platformsGrid, isMobile && styles.platformsGridMobile]}>
-          {/* macOS Desktop */}
-          <View style={[styles.platformCard, isMobile && styles.platformCardMobile, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-            <View style={styles.platformTop}>
-              <View style={[styles.platformIconFrame, { borderColor: theme.border, backgroundColor: theme.surfaceHighlight }]}>
-                <Monitor size={20} color={theme.text} />
-              </View>
-              <View style={[styles.osTag, { backgroundColor: 'rgba(57, 211, 83, 0.1)', borderColor: 'rgba(57, 211, 83, 0.3)' }]}>
-                <Text style={[styles.osTagText, { color: isDark ? '#39D353' : '#1A7F37' }]}>MACOS</Text>
-              </View>
-            </View>
-
-            <Text style={[styles.platformName, isMobile && { fontSize: 16 }, { color: theme.text }]}>macOS Universal</Text>
-            <Text style={[styles.platformDesc, isMobile && { fontSize: 12, lineHeight: 18 }, { color: theme.textSecondary }]}>
-              Native Electron build with custom dock badges, menu bar shortcuts, and offline-first disk persistence.
-            </Text>
-
+        {isMobile ? (
+          <View style={[styles.mobilePlatformsCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+            {/* macOS Universal */}
             <TouchableOpacity
-              style={[styles.platformDownloadBtn, { backgroundColor: theme.surfaceHighlight, borderColor: theme.border }]}
+              style={[styles.mobilePlatformRow, { borderBottomColor: theme.borderSubtle }]}
               onPress={handleDownloadRelease}
               activeOpacity={0.7}
             >
-              <Download size={14} color={theme.text} />
-              <Text style={[styles.platformDownloadText, { color: theme.text }]}>DOWNLOAD .DMG</Text>
+              <View style={[styles.mobilePlatformIcon, { borderColor: theme.border, backgroundColor: theme.surfaceHighlight }]}>
+                <Monitor size={18} color={theme.text} />
+              </View>
+              <View style={styles.mobilePlatformContent}>
+                <View style={styles.mobilePlatformTitleRow}>
+                  <Text style={[styles.mobilePlatformTitle, { color: theme.text }]}>macOS Universal</Text>
+                  <View style={[styles.mobilePlatformBadge, { backgroundColor: 'rgba(57, 211, 83, 0.1)', borderColor: 'rgba(57, 211, 83, 0.3)' }]}>
+                    <Text style={[styles.mobilePlatformBadgeText, { color: isDark ? '#39D353' : '#1A7F37' }]}>DMG</Text>
+                  </View>
+                </View>
+                <Text style={[styles.mobilePlatformSubtitle, { color: theme.textSecondary }]}>
+                  Native desktop client with offline-first disk storage.
+                </Text>
+              </View>
+              <Download size={15} color={theme.textMuted} />
             </TouchableOpacity>
-          </View>
 
-          {/* Web App */}
-          <View style={[styles.platformCard, isMobile && styles.platformCardMobile, { backgroundColor: theme.surface, borderColor: isDark ? '#39D353' : '#1A7F37' }]}>
-            <View style={styles.platformTop}>
+            {/* Browser Web App */}
+            <TouchableOpacity
+              style={[styles.mobilePlatformRow, { borderBottomColor: theme.borderSubtle }]}
+              onPress={handlePrimaryAuthAction}
+              activeOpacity={0.7}
+            >
               <View
                 style={[
-                  styles.platformIconFrame,
+                  styles.mobilePlatformIcon,
                   {
                     borderColor: isDark ? '#39D353' : '#1A7F37',
-                    backgroundColor: isDark ? 'rgba(57, 211, 83, 0.1)' : 'rgba(26, 127, 55, 0.08)',
+                    backgroundColor: isDark ? 'rgba(57, 211, 83, 0.12)' : 'rgba(26, 127, 55, 0.08)',
                   },
                 ]}
               >
-                <Globe size={20} color={isDark ? '#39D353' : '#1A7F37'} />
+                <Globe size={18} color={isDark ? '#39D353' : '#1A7F37'} />
               </View>
-              <View
-                style={[
-                  styles.osTag,
-                  {
-                    backgroundColor: isDark ? 'rgba(57, 211, 83, 0.15)' : 'rgba(26, 127, 55, 0.12)',
-                    borderColor: isDark ? 'rgba(57, 211, 83, 0.4)' : 'rgba(26, 127, 55, 0.3)',
-                  },
-                ]}
-              >
-                <Text style={[styles.osTagText, { color: isDark ? '#39D353' : '#1A7F37' }]}>CLOUD SYNC</Text>
+              <View style={styles.mobilePlatformContent}>
+                <View style={styles.mobilePlatformTitleRow}>
+                  <Text style={[styles.mobilePlatformTitle, { color: theme.text }]}>Browser Web App</Text>
+                  <View style={[styles.mobilePlatformBadge, { backgroundColor: 'rgba(57, 211, 83, 0.1)', borderColor: 'rgba(57, 211, 83, 0.3)' }]}>
+                    <Text style={[styles.mobilePlatformBadgeText, { color: isDark ? '#39D353' : '#1A7F37' }]}>CLOUD SYNC</Text>
+                  </View>
+                </View>
+                <Text style={[styles.mobilePlatformSubtitle, { color: theme.textSecondary }]}>
+                  Instant access with Supabase cloud backup.
+                </Text>
               </View>
-            </View>
-
-            <Text style={[styles.platformName, isMobile && { fontSize: 16 }, { color: theme.text }]}>Browser Web App</Text>
-            <Text style={[styles.platformDesc, isMobile && { fontSize: 12, lineHeight: 18 }, { color: theme.textSecondary }]}>
-              Instant zero-install access with Supabase cloud backup across all your workstations.
-            </Text>
-
-            <TouchableOpacity
-              style={[
-                styles.platformDownloadBtn,
-                {
-                  backgroundColor: isDark ? '#39D353' : '#1A7F37',
-                  borderColor: isDark ? '#39D353' : '#1A7F37',
-                },
-              ]}
-              onPress={handlePrimaryAuthAction}
-              activeOpacity={0.8}
-            >
-              <ArrowRight size={14} color="#FFFFFF" strokeWidth={2.5} />
-              <Text style={[styles.platformDownloadText, { color: '#FFFFFF' }]}>
-                {isLoggedIn ? 'OPEN DASHBOARD' : 'SIGN IN TO WEB'}
-              </Text>
+              <ArrowRight size={15} color={theme.textMuted} />
             </TouchableOpacity>
-          </View>
 
-          {/* Android & iOS Mobile */}
-          <View style={[styles.platformCard, isMobile && styles.platformCardMobile, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-            <View style={styles.platformTop}>
-              <View style={[styles.platformIconFrame, { borderColor: theme.border, backgroundColor: theme.surfaceHighlight }]}>
-                <Smartphone size={20} color={theme.text} />
-              </View>
-              <View style={[styles.osTag, { backgroundColor: 'rgba(56, 189, 248, 0.1)', borderColor: 'rgba(56, 189, 248, 0.3)' }]}>
-                <Text style={[styles.osTagText, { color: '#38BDF8' }]}>WIDGETS</Text>
-              </View>
-            </View>
-
-            <Text style={[styles.platformName, isMobile && { fontSize: 16 }, { color: theme.text }]}>iOS & Android</Text>
-            <Text style={[styles.platformDesc, isMobile && { fontSize: 12, lineHeight: 18 }, { color: theme.textSecondary }]}>
-              Pocket habit tracking with live home screen and lockscreen glanceable widgets.
-            </Text>
-
+            {/* iOS & Android */}
             <TouchableOpacity
-              style={[styles.platformDownloadBtn, { backgroundColor: theme.surfaceHighlight, borderColor: theme.border }]}
+              style={[styles.mobilePlatformRow, { borderBottomWidth: 0 }]}
               onPress={handleDownloadRelease}
               activeOpacity={0.7}
             >
-              <Download size={14} color={theme.text} />
-              <Text style={[styles.platformDownloadText, { color: theme.text }]}>GET MOBILE BUILD</Text>
+              <View style={[styles.mobilePlatformIcon, { borderColor: theme.border, backgroundColor: theme.surfaceHighlight }]}>
+                <Smartphone size={18} color={theme.text} />
+              </View>
+              <View style={styles.mobilePlatformContent}>
+                <View style={styles.mobilePlatformTitleRow}>
+                  <Text style={[styles.mobilePlatformTitle, { color: theme.text }]}>iOS & Android</Text>
+                  <View style={[styles.mobilePlatformBadge, { backgroundColor: 'rgba(56, 189, 248, 0.1)', borderColor: 'rgba(56, 189, 248, 0.3)' }]}>
+                    <Text style={[styles.mobilePlatformBadgeText, { color: '#38BDF8' }]}>WIDGETS</Text>
+                  </View>
+                </View>
+                <Text style={[styles.mobilePlatformSubtitle, { color: theme.textSecondary }]}>
+                  Pocket tracking with live glanceable widgets.
+                </Text>
+              </View>
+              <Download size={15} color={theme.textMuted} />
             </TouchableOpacity>
           </View>
-        </View>
+        ) : (
+          <View style={styles.platformsGrid}>
+            {/* macOS Desktop */}
+            <View style={[styles.platformCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+              <View style={styles.platformTop}>
+                <View style={[styles.platformIconFrame, { borderColor: theme.border, backgroundColor: theme.surfaceHighlight }]}>
+                  <Monitor size={20} color={theme.text} />
+                </View>
+                <View style={[styles.osTag, { backgroundColor: 'rgba(57, 211, 83, 0.1)', borderColor: 'rgba(57, 211, 83, 0.3)' }]}>
+                  <Text style={[styles.osTagText, { color: isDark ? '#39D353' : '#1A7F37' }]}>MACOS</Text>
+                </View>
+              </View>
+
+              <Text style={[styles.platformName, { color: theme.text }]}>macOS Universal</Text>
+              <Text style={[styles.platformDesc, { color: theme.textSecondary }]}>
+                Native Electron build with custom dock badges, menu bar shortcuts, and offline-first disk persistence.
+              </Text>
+
+              <TouchableOpacity
+                style={[styles.platformDownloadBtn, { backgroundColor: theme.surfaceHighlight, borderColor: theme.border }]}
+                onPress={handleDownloadRelease}
+                activeOpacity={0.7}
+              >
+                <Download size={14} color={theme.text} />
+                <Text style={[styles.platformDownloadText, { color: theme.text }]}>DOWNLOAD .DMG</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Web App */}
+            <View style={[styles.platformCard, { backgroundColor: theme.surface, borderColor: isDark ? '#39D353' : '#1A7F37' }]}>
+              <View style={styles.platformTop}>
+                <View
+                  style={[
+                    styles.platformIconFrame,
+                    {
+                      borderColor: isDark ? '#39D353' : '#1A7F37',
+                      backgroundColor: isDark ? 'rgba(57, 211, 83, 0.1)' : 'rgba(26, 127, 55, 0.08)',
+                    },
+                  ]}
+                >
+                  <Globe size={20} color={isDark ? '#39D353' : '#1A7F37'} />
+                </View>
+                <View
+                  style={[
+                    styles.osTag,
+                    {
+                      backgroundColor: isDark ? 'rgba(57, 211, 83, 0.15)' : 'rgba(26, 127, 55, 0.12)',
+                      borderColor: isDark ? 'rgba(57, 211, 83, 0.4)' : 'rgba(26, 127, 55, 0.3)',
+                    },
+                  ]}
+                >
+                  <Text style={[styles.osTagText, { color: isDark ? '#39D353' : '#1A7F37' }]}>CLOUD SYNC</Text>
+                </View>
+              </View>
+
+              <Text style={[styles.platformName, { color: theme.text }]}>Browser Web App</Text>
+              <Text style={[styles.platformDesc, { color: theme.textSecondary }]}>
+                Instant zero-install access with Supabase cloud backup across all your workstations.
+              </Text>
+
+              <TouchableOpacity
+                style={[
+                  styles.platformDownloadBtn,
+                  {
+                    backgroundColor: isDark ? '#39D353' : '#1A7F37',
+                    borderColor: isDark ? '#39D353' : '#1A7F37',
+                  },
+                ]}
+                onPress={handlePrimaryAuthAction}
+                activeOpacity={0.8}
+              >
+                <ArrowRight size={14} color="#FFFFFF" strokeWidth={2.5} />
+                <Text style={[styles.platformDownloadText, { color: '#FFFFFF' }]}>
+                  {isLoggedIn ? 'OPEN DASHBOARD' : 'SIGN IN TO WEB'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Android & iOS Mobile */}
+            <View style={[styles.platformCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+              <View style={styles.platformTop}>
+                <View style={[styles.platformIconFrame, { borderColor: theme.border, backgroundColor: theme.surfaceHighlight }]}>
+                  <Smartphone size={20} color={theme.text} />
+                </View>
+                <View style={[styles.osTag, { backgroundColor: 'rgba(56, 189, 248, 0.1)', borderColor: 'rgba(56, 189, 248, 0.3)' }]}>
+                  <Text style={[styles.osTagText, { color: '#38BDF8' }]}>WIDGETS</Text>
+                </View>
+              </View>
+
+              <Text style={[styles.platformName, { color: theme.text }]}>iOS & Android</Text>
+              <Text style={[styles.platformDesc, { color: theme.textSecondary }]}>
+                Pocket habit tracking with live home screen and lockscreen glanceable widgets.
+              </Text>
+
+              <TouchableOpacity
+                style={[styles.platformDownloadBtn, { backgroundColor: theme.surfaceHighlight, borderColor: theme.border }]}
+                onPress={handleDownloadRelease}
+                activeOpacity={0.7}
+              >
+                <Download size={14} color={theme.text} />
+                <Text style={[styles.platformDownloadText, { color: theme.text }]}>GET MOBILE BUILD</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
       </View>
 
       {/* ─── BOTTOM CALL TO ACTION ───────────────────────────────── */}
@@ -837,10 +1043,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               onPress={handlePrimaryAuthAction}
               activeOpacity={0.85}
             >
-              <Text style={styles.primaryActionText}>
+              <Text style={[styles.primaryActionText, isMobile && { fontSize: 12 }]}>
                 {isLoggedIn ? 'OPEN YOUR DASHBOARD' : 'CREATE ACCOUNT & START'}
               </Text>
-              <ArrowRight size={16} color="#FFFFFF" strokeWidth={2.5} />
+              <ArrowRight size={14} color="#FFFFFF" strokeWidth={2.5} />
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -852,8 +1058,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               onPress={handleGithubRepo}
               activeOpacity={0.85}
             >
-              <Github size={16} color={theme.text} />
-              <Text style={[styles.secondaryActionText, { color: theme.text }]}>STAR ON GITHUB</Text>
+              <Github size={14} color={theme.text} />
+              <Text style={[styles.secondaryActionText, isMobile && { fontSize: 12 }, { color: theme.text }]}>STAR ON GITHUB</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -862,26 +1068,30 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       {/* ─── FOOTER ─────────────────────────────────────────────── */}
       <View style={[styles.footer, isMobile && styles.footerMobile, { borderTopColor: theme.borderSubtle }]}>
         <View style={[styles.footerLeft, isMobile && styles.footerLeftMobile]}>
-          <Image
-            source={require('../../assets/icon.png')}
-            style={styles.footerLogo}
-            resizeMode="contain"
-          />
-          <Text style={[styles.footerBrand, { color: theme.text }]}>HABITHEAT</Text>
-          <Text style={[styles.footerCopy, isMobile && { textAlign: 'center' }, { color: theme.textMuted }]}>
-            © 2026 HabitHeat. Open Source. Built for high-discipline builders.
+          <View style={styles.footerBrandRow}>
+            <Image
+              source={require('../../assets/icon.png')}
+              style={styles.footerLogo}
+              resizeMode="contain"
+            />
+            <Text style={[styles.footerBrand, { color: theme.text }]}>HABITHEAT</Text>
+          </View>
+          <Text style={[styles.footerCopy, isMobile && { textAlign: 'center', fontSize: 11, marginTop: 4 }, { color: theme.textMuted }]}>
+            {isMobile ? '© 2026 HabitHeat · Open Source' : '© 2026 HabitHeat. Open Source. Built for high-discipline builders.'}
           </Text>
         </View>
 
         <View style={[styles.footerLinks, isMobile && styles.footerLinksMobile]}>
           <TouchableOpacity onPress={handleGithubRepo} style={styles.footerLinkItem}>
-            <Text style={[styles.footerLinkText, { color: theme.textSecondary }]}>GitHub</Text>
+            <Text style={[styles.footerLinkText, isMobile && { fontSize: 11 }, { color: theme.textSecondary }]}>GitHub</Text>
           </TouchableOpacity>
           <TouchableOpacity onPress={handleDownloadRelease} style={styles.footerLinkItem}>
-            <Text style={[styles.footerLinkText, { color: theme.textSecondary }]}>Releases</Text>
+            <Text style={[styles.footerLinkText, isMobile && { fontSize: 11 }, { color: theme.textSecondary }]}>Releases</Text>
           </TouchableOpacity>
           <TouchableOpacity onPress={onLogin} style={styles.footerLinkItem}>
-            <Text style={[styles.footerLinkText, { color: theme.textSecondary }]}>Account Login</Text>
+            <Text style={[styles.footerLinkText, isMobile && { fontSize: 11 }, { color: theme.textSecondary }]}>
+              {isLoggedIn ? 'Account' : 'Login'}
+            </Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -1085,9 +1295,9 @@ const styles = StyleSheet.create({
     lineHeight: 56,
   },
   heroTitleMainMobile: {
-    fontSize: 27,
-    lineHeight: 33,
-    letterSpacing: -0.5,
+    fontSize: 22,
+    lineHeight: 27,
+    letterSpacing: -0.4,
   },
   heroTitleAccent: {
     fontSize: 48,
@@ -1098,9 +1308,9 @@ const styles = StyleSheet.create({
     lineHeight: 56,
   },
   heroTitleAccentMobile: {
-    fontSize: 27,
-    lineHeight: 33,
-    letterSpacing: -0.5,
+    fontSize: 22,
+    lineHeight: 27,
+    letterSpacing: -0.4,
   },
   heroSubtitle: {
     fontSize: 16,
@@ -1111,10 +1321,10 @@ const styles = StyleSheet.create({
     fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
   },
   heroSubtitleMobile: {
-    fontSize: 14,
-    lineHeight: 21,
-    maxWidth: 350,
-    marginBottom: 24,
+    fontSize: 13,
+    lineHeight: 18.5,
+    maxWidth: 330,
+    marginBottom: 20,
   },
   heroButtonsRow: {
     flexDirection: 'row',
@@ -1329,13 +1539,54 @@ const styles = StyleSheet.create({
     borderRadius: 3,
     borderWidth: 1,
   },
-  mobileScrollCue: {
-    paddingTop: 8,
+  matrixContainerInnerMobile: {
+    width: '100%',
     alignItems: 'center',
+    overflow: 'hidden',
   },
-  mobileScrollCueText: {
-    fontSize: 10,
+  monthHeaderRowMobile: {
+    flexDirection: 'row',
+    height: 16,
+    marginBottom: 4,
+    width: '100%',
+    position: 'relative',
+  },
+  monthLabelsContainerMobile: {
+    position: 'relative',
+    height: 16,
+  },
+  monthHeaderTextMobile: {
+    position: 'absolute',
+    fontSize: 8.5,
+    fontWeight: '600',
     fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
+  },
+  matrixBodyRowMobile: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    width: '100%',
+  },
+  matrixDayLabelsMobile: {
+    height: 46,
+    justifyContent: 'space-between',
+    paddingTop: 1,
+    paddingBottom: 1,
+  },
+  dayLabelMobile: {
+    fontSize: 7.5,
+    fontWeight: '700',
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
+  },
+  columnsWrapperMobile: {
+    flexDirection: 'row',
+    flex: 1,
+  },
+  matrixColumnMobile: {
+    flexDirection: 'column',
+  },
+  matrixCellMobile: {
+    borderRadius: 1.5,
+    borderWidth: 0.5,
   },
   matrixFooterRow: {
     width: '100%',
@@ -1444,9 +1695,50 @@ const styles = StyleSheet.create({
     fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
   },
   sectionTitleMobile: {
-    fontSize: 22,
-    lineHeight: 28,
+    fontSize: 20,
+    lineHeight: 25,
+    letterSpacing: -0.3,
   },
+  // Mobile Streamlined Architecture Card
+  mobilePillarsCard: {
+    borderWidth: 1,
+    borderRadius: 8,
+    overflow: 'hidden',
+  },
+  mobilePillarItem: {
+    padding: 16,
+    borderBottomWidth: 1,
+  },
+  mobilePillarTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  mobilePillarBadge: {
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 3,
+    borderWidth: 1,
+  },
+  mobilePillarBadgeText: {
+    fontSize: 9,
+    fontWeight: '800',
+    letterSpacing: 0.8,
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
+  },
+  mobilePillarTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    marginBottom: 4,
+    letterSpacing: -0.2,
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
+  },
+  mobilePillarBody: {
+    fontSize: 12,
+    lineHeight: 17,
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
+  },
+
   pillarsGrid: {
     flexDirection: 'row',
     gap: 16,
@@ -1576,6 +1868,59 @@ const styles = StyleSheet.create({
     fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
   },
 
+  // Mobile Streamlined Platforms Card
+  mobilePlatformsCard: {
+    borderWidth: 1,
+    borderRadius: 8,
+    overflow: 'hidden',
+  },
+  mobilePlatformRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 14,
+    borderBottomWidth: 1,
+    gap: 12,
+  },
+  mobilePlatformIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 8,
+    borderWidth: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  mobilePlatformContent: {
+    flex: 1,
+  },
+  mobilePlatformTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 2,
+  },
+  mobilePlatformTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
+  },
+  mobilePlatformBadge: {
+    paddingHorizontal: 5,
+    paddingVertical: 1.5,
+    borderRadius: 3,
+    borderWidth: 1,
+  },
+  mobilePlatformBadgeText: {
+    fontSize: 8.5,
+    fontWeight: '800',
+    letterSpacing: 0.6,
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
+  },
+  mobilePlatformSubtitle: {
+    fontSize: 11.5,
+    lineHeight: 16,
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
+  },
+
   // Platforms Grid
   platformsGrid: {
     flexDirection: 'row',
@@ -1682,8 +2027,9 @@ const styles = StyleSheet.create({
     fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
   },
   bottomCtaTitleMobile: {
-    fontSize: 21,
-    lineHeight: 27,
+    fontSize: 19,
+    lineHeight: 24,
+    letterSpacing: -0.3,
   },
   bottomCtaSub: {
     fontSize: 14,
@@ -1693,9 +2039,9 @@ const styles = StyleSheet.create({
     fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
   },
   bottomCtaSubMobile: {
-    fontSize: 13,
-    lineHeight: 18,
-    marginBottom: 18,
+    fontSize: 12,
+    lineHeight: 17,
+    marginBottom: 16,
   },
   bottomCtaButtons: {
     flexDirection: 'row',
@@ -1733,6 +2079,11 @@ const styles = StyleSheet.create({
   footerLeftMobile: {
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  footerBrandRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   footerLogo: {
     width: 20,

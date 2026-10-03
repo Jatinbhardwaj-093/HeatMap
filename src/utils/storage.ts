@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { HeatMapModel } from '../types/heatmap';
+import { supabase } from './supabase';
 
 function getStorageKey(userId?: string): string {
   if (userId) {
@@ -9,21 +10,77 @@ function getStorageKey(userId?: string): string {
 }
 
 export async function loadHeatMaps(userId?: string): Promise<HeatMapModel[]> {
+  const key = getStorageKey(userId);
+  let localMaps: HeatMapModel[] = [];
+
   try {
-    const key = getStorageKey(userId);
     const raw = await AsyncStorage.getItem(key);
-    if (!raw) {
-      return [];
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        localMaps = parsed;
+      }
     }
-    const parsed = JSON.parse(raw);
-    if (Array.isArray(parsed)) {
-      return parsed;
-    }
-    return [];
   } catch (err) {
-    console.warn('Storage read error:', err);
-    return [];
+    console.warn('Local storage read error:', err);
   }
+
+  // If user is authenticated, sync with Supabase cloud user_metadata
+  if (userId) {
+    // If local user storage is empty, check if guest data exists that can be migrated
+    if (localMaps.length === 0) {
+      try {
+        const guestRaw = await AsyncStorage.getItem('@habitheat_maps_guest');
+        if (guestRaw) {
+          const guestParsed = JSON.parse(guestRaw);
+          if (Array.isArray(guestParsed) && guestParsed.length > 0) {
+            localMaps = guestParsed;
+            await AsyncStorage.setItem(key, JSON.stringify(localMaps));
+          }
+        }
+      } catch {
+        // Ignore guest migration errors
+      }
+    }
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      const cloudHabits = user?.user_metadata?.habits;
+
+      if (Array.isArray(cloudHabits) && cloudHabits.length > 0) {
+        if (localMaps.length === 0) {
+          localMaps = cloudHabits;
+          await AsyncStorage.setItem(key, JSON.stringify(cloudHabits));
+        } else {
+          // Merge local and cloud habits
+          const mapById: Record<string, HeatMapModel> = {};
+          cloudHabits.forEach((m) => {
+            mapById[m.id] = m;
+          });
+          localMaps.forEach((m) => {
+            if (mapById[m.id]) {
+              mapById[m.id] = {
+                ...mapById[m.id],
+                ...m,
+                entries: { ...mapById[m.id].entries, ...m.entries },
+              };
+            } else {
+              mapById[m.id] = m;
+            }
+          });
+          localMaps = Object.values(mapById);
+          await AsyncStorage.setItem(key, JSON.stringify(localMaps));
+        }
+      } else if (localMaps.length > 0) {
+        // Cloud has no habits yet, sync local habits to cloud
+        supabase.auth.updateUser({ data: { habits: localMaps } }).catch(() => {});
+      }
+    } catch {
+      // Offline / network failure: fallback smoothly to local storage
+    }
+  }
+
+  return localMaps;
 }
 
 export async function saveHeatMaps(maps: HeatMapModel[], userId?: string): Promise<void> {
@@ -31,6 +88,13 @@ export async function saveHeatMaps(maps: HeatMapModel[], userId?: string): Promi
     const key = getStorageKey(userId);
     const payload = JSON.stringify(maps);
     await AsyncStorage.setItem(key, payload);
+
+    // Sync to Supabase user_metadata if logged in
+    if (userId) {
+      supabase.auth.updateUser({ data: { habits: maps } }).catch((err) => {
+        console.warn('Cloud sync error:', err);
+      });
+    }
   } catch (err) {
     console.error('Storage write error:', err);
   }
