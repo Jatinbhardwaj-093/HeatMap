@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   StyleSheet,
   View,
@@ -10,6 +10,7 @@ import {
   Image,
   KeyboardAvoidingView,
   ScrollView,
+  Keyboard,
 } from 'react-native';
 import { ArrowLeft, Lock, Mail, Eye, EyeOff } from 'lucide-react-native';
 import { supabase } from '../utils/supabase';
@@ -38,6 +39,29 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onBack, onLoginSuccess
   const [errorMsg, setErrorMsg] = useState('');
   const [infoMsg, setInfoMsg] = useState('');
   const [isSignUp, setIsSignUp] = useState(false);
+
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const scrollViewRef = useRef<ScrollView>(null);
+
+  useEffect(() => {
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+
+    const showSub = Keyboard.addListener(showEvent, (e) => {
+      setKeyboardVisible(true);
+      setKeyboardHeight(e.endCoordinates?.height || 280);
+    });
+    const hideSub = Keyboard.addListener(hideEvent, () => {
+      setKeyboardVisible(false);
+      setKeyboardHeight(0);
+    });
+
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
 
   const handleAuth = async () => {
     if (!email || !password) {
@@ -75,13 +99,22 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onBack, onLoginSuccess
   return (
     <KeyboardAvoidingView
       style={[styles.container, { backgroundColor: theme.background }]}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 25}
     >
       <ScrollView
-        contentContainerStyle={styles.scrollContent}
+        ref={scrollViewRef}
+        style={styles.scrollView}
+        contentContainerStyle={[
+          styles.scrollContent,
+          keyboardVisible && styles.scrollContentKeyboard,
+          {
+            paddingBottom: keyboardVisible ? (Platform.OS === 'android' ? 220 : 140) : 48,
+          },
+        ]}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
+        bounces={true}
       >
         <TouchableOpacity
           style={[
@@ -212,7 +245,12 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onBack, onLoginSuccess
                 keyboardType="email-address"
                 autoCapitalize="none"
                 value={email}
-                onFocus={() => setFocusedField('email')}
+                onFocus={() => {
+                  setFocusedField('email');
+                  setTimeout(() => {
+                    scrollViewRef.current?.scrollTo({ y: 40, animated: true });
+                  }, 120);
+                }}
                 onBlur={() => setFocusedField(null)}
                 onChangeText={(t) => {
                   setEmail(t);
@@ -258,7 +296,12 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onBack, onLoginSuccess
                 placeholderTextColor={theme.textMuted}
                 secureTextEntry={!showPassword}
                 value={password}
-                onFocus={() => setFocusedField('password')}
+                onFocus={() => {
+                  setFocusedField('password');
+                  setTimeout(() => {
+                    scrollViewRef.current?.scrollTo({ y: 160, animated: true });
+                  }, 120);
+                }}
                 onBlur={() => setFocusedField(null)}
                 onChangeText={(t) => {
                   setPassword(t);
@@ -321,6 +364,10 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  scrollView: {
+    flex: 1,
+    width: '100%',
+  },
   scrollContent: {
     flexGrow: 1,
     justifyContent: 'center',
@@ -328,6 +375,10 @@ const styles = StyleSheet.create({
     padding: 24,
     paddingTop: Platform.OS === 'web' ? 40 : 64,
     paddingBottom: 48,
+  },
+  scrollContentKeyboard: {
+    justifyContent: 'flex-start',
+    paddingTop: Platform.OS === 'web' ? 24 : 32,
   },
   backBtn: {
     position: 'absolute',
@@ -339,7 +390,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    zIndex: 20,
+    zIndex: 30,
   },
   cardWrapper: {
     width: '100%',
