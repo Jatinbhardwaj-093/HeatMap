@@ -9,7 +9,7 @@ import {
   ActivityIndicator,
   Image,
 } from 'react-native';
-import { ArrowLeft, Lock, Mail } from 'lucide-react-native';
+import { ArrowLeft, Lock, Mail, Eye, EyeOff } from 'lucide-react-native';
 import { supabase } from '../utils/supabase';
 import { useAppTheme, useIsDark } from '../theme/theme';
 
@@ -30,6 +30,8 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onBack, onLoginSuccess
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [focusedField, setFocusedField] = useState<'email' | 'password' | null>(null);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [infoMsg, setInfoMsg] = useState('');
@@ -71,7 +73,20 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onBack, onLoginSuccess
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
       <TouchableOpacity
-        style={[styles.backBtn, { backgroundColor: theme.surface, borderColor: theme.borderSubtle }]}
+        style={[
+          styles.backBtn,
+          {
+            backgroundColor: isDark ? '#161B22' : '#FFFFFF',
+            borderColor: isDark ? '#30363D' : '#D0D7DE',
+            ...(Platform.OS === 'web'
+              ? {
+                  boxShadow: isDark
+                    ? '0 2px 8px rgba(0, 0, 0, 0.4)'
+                    : '0 2px 8px rgba(0, 0, 0, 0.05)',
+                }
+              : {}),
+          },
+        ]}
         onPress={onBack}
         activeOpacity={0.7}
         accessibilityLabel="Go back"
@@ -81,8 +96,23 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onBack, onLoginSuccess
 
       <View style={styles.cardWrapper}>
         <View style={styles.header}>
-          {/* Flame Icon */}
-          <View style={[styles.logoBadge, { backgroundColor: theme.surface, borderColor: theme.borderSubtle }]}>
+          {/* HabitHeat App Icon Badge */}
+          <View
+            style={[
+              styles.logoBadge,
+              {
+                backgroundColor: isDark ? '#161B22' : '#FFFFFF',
+                borderColor: isDark ? '#30363D' : '#D0D7DE',
+                ...(Platform.OS === 'web'
+                  ? {
+                      boxShadow: isDark
+                        ? '0 4px 16px rgba(0, 0, 0, 0.4)'
+                        : '0 4px 16px rgba(0, 0, 0, 0.06)',
+                    }
+                  : {}),
+              },
+            ]}
+          >
             <Image
               source={require('../../assets/icon.png')}
               style={styles.logoImage}
@@ -100,7 +130,28 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onBack, onLoginSuccess
           </Text>
         </View>
 
-        <View style={[styles.card, { backgroundColor: theme.surface, borderColor: theme.borderSubtle }]}>
+        <View
+          style={[
+            styles.card,
+            {
+              backgroundColor: isDark ? '#161B22' : '#FFFFFF',
+              borderColor: isDark ? '#30363D' : '#D0D7DE',
+              ...(Platform.OS === 'web'
+                ? {
+                    boxShadow: isDark
+                      ? '0 0 0 1px rgba(255, 255, 255, 0.05), 0 8px 24px -4px rgba(0, 0, 0, 0.6), 0 20px 48px -12px rgba(0, 0, 0, 0.8)'
+                      : '0 0 0 1px rgba(0, 0, 0, 0.04), 0 1px 3px rgba(0, 0, 0, 0.05), 0 12px 32px -4px rgba(0, 0, 0, 0.08), 0 4px 12px -2px rgba(0, 0, 0, 0.03)',
+                  }
+                : {
+                    shadowColor: '#000000',
+                    shadowOffset: { width: 0, height: 8 },
+                    shadowOpacity: isDark ? 0.4 : 0.08,
+                    shadowRadius: 24,
+                    elevation: 6,
+                  }),
+            },
+          ]}
+        >
           {errorMsg ? (
             <View style={[styles.alertBox, { backgroundColor: 'rgba(248, 81, 73, 0.1)', borderColor: theme.error }]}>
               <Text style={[styles.alertText, { color: theme.error }]}>{errorMsg}</Text>
@@ -115,8 +166,34 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onBack, onLoginSuccess
 
           <View style={styles.inputGroup}>
             <Text style={[styles.label, { color: theme.text }]}>Email</Text>
-            <View style={[styles.inputWrapper, { backgroundColor: theme.surfaceHighlight, borderColor: theme.borderSubtle }]}>
-              <Mail size={16} color={theme.textMuted} style={styles.inputIcon} />
+            <View
+              style={[
+                styles.inputWrapper,
+                {
+                  backgroundColor: isDark ? '#0D1117' : '#FFFFFF',
+                  borderColor:
+                    focusedField === 'email'
+                      ? isDark
+                        ? '#39D353'
+                        : '#1A7F37'
+                      : isDark
+                      ? '#30363D'
+                      : '#D0D7DE',
+                  ...(Platform.OS === 'web' && focusedField === 'email'
+                    ? {
+                        boxShadow: isDark
+                          ? '0 0 0 3px rgba(57, 211, 83, 0.25)'
+                          : '0 0 0 3px rgba(26, 127, 55, 0.15)',
+                      }
+                    : {}),
+                },
+              ]}
+            >
+              <Mail
+                size={16}
+                color={focusedField === 'email' ? (isDark ? '#39D353' : '#1A7F37') : theme.textMuted}
+                style={styles.inputIcon}
+              />
               <TextInput
                 style={[styles.input, { color: theme.text }]}
                 placeholder="you@example.com"
@@ -124,6 +201,8 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onBack, onLoginSuccess
                 keyboardType="email-address"
                 autoCapitalize="none"
                 value={email}
+                onFocus={() => setFocusedField('email')}
+                onBlur={() => setFocusedField(null)}
                 onChangeText={(t) => {
                   setEmail(t);
                   setErrorMsg('');
@@ -134,19 +213,59 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onBack, onLoginSuccess
 
           <View style={styles.inputGroup}>
             <Text style={[styles.label, { color: theme.text }]}>Password</Text>
-            <View style={[styles.inputWrapper, { backgroundColor: theme.surfaceHighlight, borderColor: theme.borderSubtle }]}>
-              <Lock size={16} color={theme.textMuted} style={styles.inputIcon} />
+            <View
+              style={[
+                styles.inputWrapper,
+                {
+                  backgroundColor: isDark ? '#0D1117' : '#FFFFFF',
+                  borderColor:
+                    focusedField === 'password'
+                      ? isDark
+                        ? '#39D353'
+                        : '#1A7F37'
+                      : isDark
+                      ? '#30363D'
+                      : '#D0D7DE',
+                  ...(Platform.OS === 'web' && focusedField === 'password'
+                    ? {
+                        boxShadow: isDark
+                          ? '0 0 0 3px rgba(57, 211, 83, 0.25)'
+                          : '0 0 0 3px rgba(26, 127, 55, 0.15)',
+                      }
+                    : {}),
+                },
+              ]}
+            >
+              <Lock
+                size={16}
+                color={focusedField === 'password' ? (isDark ? '#39D353' : '#1A7F37') : theme.textMuted}
+                style={styles.inputIcon}
+              />
               <TextInput
                 style={[styles.input, { color: theme.text }]}
-                placeholder="••••••••"
+                placeholder="Enter your password"
                 placeholderTextColor={theme.textMuted}
-                secureTextEntry
+                secureTextEntry={!showPassword}
                 value={password}
+                onFocus={() => setFocusedField('password')}
+                onBlur={() => setFocusedField(null)}
                 onChangeText={(t) => {
                   setPassword(t);
                   setErrorMsg('');
                 }}
               />
+              <TouchableOpacity
+                style={styles.eyeBtn}
+                onPress={() => setShowPassword((prev) => !prev)}
+                activeOpacity={0.6}
+                accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}
+              >
+                {showPassword ? (
+                  <EyeOff size={16} color={theme.textMuted} />
+                ) : (
+                  <Eye size={16} color={theme.textMuted} />
+                )}
+              </TouchableOpacity>
             </View>
           </View>
 
@@ -206,11 +325,11 @@ const styles = StyleSheet.create({
   },
   cardWrapper: {
     width: '100%',
-    maxWidth: 380,
+    maxWidth: 400,
   },
   header: {
     alignItems: 'center',
-    marginBottom: 28,
+    marginBottom: 24,
   },
   logoBadge: {
     width: 52,
@@ -243,8 +362,8 @@ const styles = StyleSheet.create({
   card: {
     borderWidth: 1,
     borderRadius: 16,
-    padding: 24,
-    gap: 16,
+    padding: 26,
+    gap: 18,
   },
   alertBox: {
     borderWidth: 1,
@@ -280,13 +399,22 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 14,
     fontFamily: fontStack,
+    height: '100%',
+    paddingVertical: 0,
+    ...(Platform.OS === 'web' ? ({ outlineStyle: 'none' } as any) : {}),
+  },
+  eyeBtn: {
+    padding: 4,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 6,
   },
   submitBtn: {
-    height: 44,
+    height: 46,
     borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 6,
+    marginTop: 4,
   },
   submitBtnText: {
     color: '#FFFFFF',
