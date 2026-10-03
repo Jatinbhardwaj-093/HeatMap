@@ -326,10 +326,18 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#30363D',
     padding: 14,
-    shadowColor: '#000',
-    shadowOpacity: 0.3,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 4 },
+    ...Platform.select({
+      web: {
+        boxShadow: '0 4px 10px rgba(0, 0, 0, 0.3)',
+      },
+      default: {
+        shadowColor: '#000',
+        shadowOpacity: 0.3,
+        shadowRadius: 10,
+        shadowOffset: { width: 0, height: 4 },
+        elevation: 4,
+      },
+    }),
   },
   widgetSmallHeader: {
     marginBottom: 4,
@@ -366,10 +374,18 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#30363D',
     padding: 16,
-    shadowColor: '#000',
-    shadowOpacity: 0.3,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 4 },
+    ...Platform.select({
+      web: {
+        boxShadow: '0 4px 10px rgba(0, 0, 0, 0.3)',
+      },
+      default: {
+        shadowColor: '#000',
+        shadowOpacity: 0.3,
+        shadowRadius: 10,
+        shadowOffset: { width: 0, height: 4 },
+        elevation: 4,
+      },
+    }),
   },
   widgetMediumHeader: {
     flexDirection: 'row',
