@@ -29,7 +29,7 @@ export const WidgetStudioModal: React.FC<WidgetStudioModalProps> = ({
       <Modal visible={visible} transparent animationType="fade">
         <View style={styles.overlay}>
           <View style={styles.modalBox}>
-            <Text style={styles.emptyText}>No HeatMaps available for Widgets.</Text>
+            <Text style={styles.emptyText}>No habits available for Widgets.</Text>
             <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
               <X size={16} color="#8B949E" />
             </TouchableOpacity>

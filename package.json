@@ -1,6 +1,8 @@
 {
   "name": "habitheat",
   "version": "1.0.0",
+  "description": "High-density binary habit matrix engine inspired by GitHub contribution graphs",
+  "author": "Jatin Bhardwaj",
   "license": "MIT",
   "main": "index.ts",
   "scripts": {
@@ -42,15 +44,20 @@
   "build": {
     "appId": "com.habitheat.app",
     "productName": "HabitHeat",
+    "extraMetadata": {
+      "main": "electron/main.js"
+    },
     "directories": {
       "output": "release"
     },
     "mac": {
-      "target": "dmg"
+      "target": "dmg",
+      "icon": "assets/icon.png"
     },
     "files": [
       "dist/**/*",
       "electron/main.js",
+      "assets/icon.png",
       "package.json"
     ]
   },
