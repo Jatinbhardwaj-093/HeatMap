@@ -1,29 +1,21 @@
 import React from 'react';
-import { StyleSheet, View, Text, TouchableOpacity, Platform, Image, useWindowDimensions } from 'react-native';
-import { ViewMode } from '../types/heatmap';
-import { ViewSwitcher } from './ViewSwitcher';
+import { StyleSheet, View, Text, TouchableOpacity, Platform, Image } from 'react-native';
 import { LogOut, Smartphone, Sun, Moon, Monitor } from 'lucide-react-native';
 import { useAppTheme, useThemeMode } from '../theme/theme';
 
 interface HeaderProps {
-  currentView: ViewMode;
-  onChangeViewMode: (mode: ViewMode) => void;
   onOpenWidgetStudio: () => void;
   onLogout: () => void;
   userEmail?: string;
 }
 
 export const Header: React.FC<HeaderProps> = ({
-  currentView,
-  onChangeViewMode,
   onOpenWidgetStudio,
   onLogout,
   userEmail,
 }) => {
   const theme = useAppTheme();
   const { themeMode, setThemeMode } = useThemeMode();
-  const { width } = useWindowDimensions();
-  const isMobile = width < 768;
 
   const cycleTheme = () => {
     if (themeMode === 'system') setThemeMode('light');
@@ -37,73 +29,10 @@ export const Header: React.FC<HeaderProps> = ({
     return <Monitor size={15} color={theme.textSecondary} />;
   };
 
-  if (isMobile) {
-    return (
-      <View style={[styles.header, styles.headerMobile, { backgroundColor: theme.surface, borderBottomColor: theme.borderSubtle }]}>
-        {/* Tier 1: Brand & Action Icons */}
-        <View style={styles.topRowMobile}>
-          <View style={styles.brandGroup}>
-            <View style={[styles.logoFrame, { backgroundColor: theme.surfaceHighlight, borderColor: theme.borderSubtle }]}>
-              <Image
-                source={require('../../assets/icon.png')}
-                style={styles.logoImage}
-                resizeMode="contain"
-              />
-            </View>
-            <View style={styles.brandTextGroup}>
-              <Text style={[styles.brandName, { color: theme.text }]}>HabitHeat</Text>
-              {userEmail ? (
-                <Text style={[styles.brandEmailMobile, { color: theme.textSecondary }]} numberOfLines={1}>
-                  {userEmail}
-                </Text>
-              ) : null}
-            </View>
-          </View>
-
-          <View style={styles.actionButtons}>
-            <TouchableOpacity
-              style={[styles.actionBtn, { backgroundColor: theme.surfaceHighlight, borderColor: theme.borderSubtle }]}
-              onPress={cycleTheme}
-              activeOpacity={0.7}
-              accessibilityLabel="Toggle Theme"
-            >
-              {getThemeIcon()}
-            </TouchableOpacity>
-
-            {Platform.OS !== 'web' && (
-              <TouchableOpacity
-                style={[styles.actionBtn, { backgroundColor: theme.surfaceHighlight, borderColor: theme.borderSubtle }]}
-                onPress={onOpenWidgetStudio}
-                activeOpacity={0.7}
-                accessibilityLabel="Open Widgets"
-              >
-                <Smartphone size={15} color={theme.text} strokeWidth={2} />
-              </TouchableOpacity>
-            )}
-
-            <TouchableOpacity
-              style={[styles.actionBtn, { backgroundColor: theme.surfaceHighlight, borderColor: theme.borderSubtle }]}
-              onPress={onLogout}
-              activeOpacity={0.7}
-              accessibilityLabel="Sign out"
-            >
-              <LogOut size={15} color={theme.textSecondary} />
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* Tier 2: View Switcher in clean dedicated row */}
-        <View style={styles.bottomRowMobile}>
-          <ViewSwitcher currentView={currentView} onViewChange={onChangeViewMode} />
-        </View>
-      </View>
-    );
-  }
-
   return (
     <View style={[styles.header, { backgroundColor: theme.surface, borderBottomColor: theme.borderSubtle }]}>
       <View style={styles.headerContainer}>
-        {/* Brand group with favicon flame image */}
+        {/* Brand Group */}
         <View style={styles.brandGroup}>
           <View style={[styles.logoFrame, { backgroundColor: theme.surfaceHighlight, borderColor: theme.borderSubtle }]}>
             <Image
@@ -122,12 +51,7 @@ export const Header: React.FC<HeaderProps> = ({
           </View>
         </View>
 
-        {/* View Switcher in the center/nav */}
-        <View style={styles.centerGroup}>
-          <ViewSwitcher currentView={currentView} onViewChange={onChangeViewMode} />
-        </View>
-
-        {/* Right actions */}
+        {/* Right Actions */}
         <View style={styles.actionButtons}>
           <TouchableOpacity
             style={[styles.actionBtn, { backgroundColor: theme.surfaceHighlight, borderColor: theme.borderSubtle }]}
@@ -143,6 +67,7 @@ export const Header: React.FC<HeaderProps> = ({
               style={[styles.actionBtn, styles.widgetBtn, { backgroundColor: theme.surfaceHighlight, borderColor: theme.borderSubtle }]}
               onPress={onOpenWidgetStudio}
               activeOpacity={0.7}
+              accessibilityLabel="Open Widgets"
             >
               <Smartphone size={14} color={theme.text} strokeWidth={2} />
               <Text style={[styles.widgetBtnText, { color: theme.text }]}>Widgets</Text>
@@ -172,24 +97,8 @@ const fontStack = Platform.select({
 const styles = StyleSheet.create({
   header: {
     borderBottomWidth: 1,
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-  },
-  headerMobile: {
     paddingVertical: 10,
     paddingHorizontal: 16,
-    gap: 10,
-  },
-  topRowMobile: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    width: '100%',
-  },
-  bottomRowMobile: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    width: '100%',
   },
   headerContainer: {
     flexDirection: 'row',
@@ -198,7 +107,6 @@ const styles = StyleSheet.create({
     maxWidth: 1080,
     width: '100%',
     alignSelf: 'center',
-    gap: 16,
   },
   brandGroup: {
     flexDirection: 'row',
@@ -231,15 +139,6 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontFamily: fontStack,
     maxWidth: 160,
-  },
-  brandEmailMobile: {
-    fontSize: 10,
-    fontFamily: fontStack,
-    maxWidth: 140,
-    opacity: 0.8,
-  },
-  centerGroup: {
-    alignItems: 'center',
   },
   actionButtons: {
     flexDirection: 'row',

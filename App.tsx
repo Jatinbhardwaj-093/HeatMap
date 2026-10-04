@@ -44,7 +44,6 @@ function AppContent() {
   
   const [heatmaps, setHeatmaps] = useState<HeatMapModel[]>([]);
   const [loading, setLoading] = useState(true);
-  const [viewMode, setViewMode] = useState<ViewMode>('yearly');
   const [searchQuery, setSearchQuery] = useState<string>('');
 
   const [selectedDayInfo, setSelectedDayInfo] = useState<{ mapId: string; dateKey: string } | null>(null);
@@ -196,6 +195,11 @@ function AppContent() {
     updateHeatmaps(updated);
   };
 
+  const handleUpdateMapViewMode = (mapId: string, mode: ViewMode) => {
+    const updated = heatmaps.map((m) => (m.id === mapId ? { ...m, defaultView: mode } : m));
+    updateHeatmaps(updated);
+  };
+
   const handleCreateMap = (newMap: Omit<HeatMapModel, 'id' | 'createdAt' | 'entries'>) => {
     const id = `hm-${Date.now()}`;
     const mapToSave: HeatMapModel = {
@@ -259,8 +263,6 @@ function AppContent() {
       <ExpoStatusBar style={isDark ? "light" : "dark"} />
 
       <Header
-        currentView={viewMode}
-        onChangeViewMode={setViewMode}
         onOpenWidgetStudio={() => setShowWidgetStudio(true)}
         onLogout={handleLogout}
         userEmail={userEmail}
@@ -318,10 +320,10 @@ function AppContent() {
               <HeatmapCard
                 key={hm.id}
                 heatmap={hm}
-                viewMode={viewMode}
                 onSelectDate={(mapId, dKey) => setSelectedDayInfo({ mapId, dateKey: dKey })}
                 onQuickLogToday={handleQuickLogToday}
                 onDeleteMap={handleDeleteMap}
+                onUpdateViewMode={handleUpdateMapViewMode}
               />
             ))
           )}

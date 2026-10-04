@@ -6,15 +6,17 @@ import { calculateStats } from '../utils/streakUtils';
 import { getTodayKey } from '../utils/dateUtils';
 import { YearlyView } from './YearlyView';
 import { MonthlyView } from './MonthlyView';
+import { ViewSwitcher } from './ViewSwitcher';
 import { Check, Plus, Trash2, Flame } from 'lucide-react-native';
 import { useAppTheme } from '../theme/theme';
 
 interface HeatmapCardProps {
   heatmap: HeatMapModel;
-  viewMode: ViewMode;
+  viewMode?: ViewMode;
   onSelectDate: (mapId: string, dateKey: string) => void;
   onQuickLogToday: (mapId: string) => void;
   onDeleteMap: (mapId: string) => void;
+  onUpdateViewMode?: (mapId: string, mode: ViewMode) => void;
 }
 
 const fontStack = Platform.select({
@@ -25,12 +27,17 @@ const fontStack = Platform.select({
 
 export const HeatmapCard: React.FC<HeatmapCardProps> = ({
   heatmap,
-  viewMode,
+  viewMode: propViewMode,
   onSelectDate,
   onQuickLogToday,
   onDeleteMap,
+  onUpdateViewMode,
 }) => {
   const theme = useAppTheme();
+  const [cardViewMode, setCardViewMode] = useState<ViewMode>(
+    heatmap.defaultView || propViewMode || 'yearly'
+  );
+
   const { stats, streakMap } = calculateStats(heatmap);
   const palette = PALETTES[heatmap.paletteId] || PALETTES.emerald;
   const todayKey = getTodayKey();
@@ -39,6 +46,13 @@ export const HeatmapCard: React.FC<HeatmapCardProps> = ({
 
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteInput, setDeleteInput] = useState('');
+
+  const handleViewChange = (mode: ViewMode) => {
+    setCardViewMode(mode);
+    if (onUpdateViewMode) {
+      onUpdateViewMode(heatmap.id, mode);
+    }
+  };
 
   const confirmDelete = () => {
     if (deleteInput === heatmap.title) {
@@ -49,7 +63,7 @@ export const HeatmapCard: React.FC<HeatmapCardProps> = ({
 
   return (
     <View style={[styles.card, { backgroundColor: theme.surface, borderColor: theme.borderSubtle }]}>
-      {/* 1. Habit Header: Title + Palette Indicator + Trash Button */}
+      {/* 1. Habit Header: Title + Palette Indicator + Independent View Switcher + Trash Button */}
       <View style={styles.cardHeader}>
         <View style={styles.titleGroup}>
           <View style={[styles.paletteIndicator, { backgroundColor: palette.accent }]} />
@@ -58,17 +72,25 @@ export const HeatmapCard: React.FC<HeatmapCardProps> = ({
           </Text>
         </View>
 
-        <TouchableOpacity
-          activeOpacity={0.7}
-          onPress={() => {
-            setDeleteInput('');
-            setShowDeleteModal(true);
-          }}
-          style={[styles.deleteButton, { backgroundColor: theme.surfaceHighlight, borderColor: theme.borderSubtle }]}
-          accessibilityLabel="Delete habit"
-        >
-          <Trash2 size={13} color={theme.textMuted} />
-        </TouchableOpacity>
+        <View style={styles.headerRightActions}>
+          <ViewSwitcher
+            currentView={cardViewMode}
+            onViewChange={handleViewChange}
+            size="small"
+          />
+
+          <TouchableOpacity
+            activeOpacity={0.7}
+            onPress={() => {
+              setDeleteInput('');
+              setShowDeleteModal(true);
+            }}
+            style={[styles.deleteButton, { backgroundColor: theme.surfaceHighlight, borderColor: theme.borderSubtle }]}
+            accessibilityLabel="Delete habit"
+          >
+            <Trash2 size={13} color={theme.textMuted} />
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* 2. Separate Dedicated Section: Action Button & Habit Streak Info */}
@@ -118,9 +140,9 @@ export const HeatmapCard: React.FC<HeatmapCardProps> = ({
         )}
       </View>
 
-      {/* 3. Grid Matrix Body */}
+      {/* 3. Grid Matrix Body: Controlled by this card's independent view mode */}
       <View style={styles.viewBody}>
-        {viewMode === 'monthly' ? (
+        {cardViewMode === 'monthly' ? (
           <MonthlyView
             heatmap={heatmap}
             streakMap={streakMap}
@@ -225,13 +247,13 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 12,
+    gap: 8,
   },
   titleGroup: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
     flex: 1,
-    marginRight: 10,
   },
   paletteIndicator: {
     width: 8,
@@ -243,6 +265,11 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     fontFamily: fontStack,
     letterSpacing: -0.2,
+  },
+  headerRightActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   deleteButton: {
     width: 28,

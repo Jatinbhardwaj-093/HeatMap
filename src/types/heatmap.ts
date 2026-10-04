@@ -36,6 +36,7 @@ export interface HeatMapModel {
   category: string;
   paletteId: PaletteId;
   createdAt: string;
+  defaultView?: ViewMode;
   entries: Record<string, DayEntry>; // key: YYYY-MM-DD
 }
 
