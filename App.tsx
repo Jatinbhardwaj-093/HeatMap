@@ -23,10 +23,13 @@ import { WidgetStudioModal } from './src/components/WidgetStudioModal';
 import { LandingPage } from './src/components/LandingPage';
 import { LoginScreen } from './src/components/LoginScreen';
 import { Search, Plus, Sparkles } from 'lucide-react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from './src/utils/supabase';
 import { useAppTheme, useIsDark, ThemeProvider } from './src/theme/theme';
 
 type ScreenState = 'landing' | 'login' | 'dashboard';
+
+const SAVED_USER_KEY = '@habitheat_saved_user';
 
 const fontStack = Platform.select({
   web: '"SF Pro Rounded", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
@@ -53,29 +56,72 @@ function AppContent() {
 
   useEffect(() => {
     async function initAuthAndData() {
-      const { data: { session } } = await supabase.auth.getSession();
-      const uid = session?.user?.id;
-      if (session?.user) {
-        setUserEmail(session.user.email);
-        setUserId(uid);
-        setCurrentScreen('dashboard');
+      // 1. Immediately check cached user for zero-latency dashboard restore (no landing page flash)
+      try {
+        const cachedUserStr = await AsyncStorage.getItem(SAVED_USER_KEY);
+        if (cachedUserStr) {
+          const cachedUser = JSON.parse(cachedUserStr);
+          if (cachedUser?.id && cachedUser?.email) {
+            setUserEmail(cachedUser.email);
+            setUserId(cachedUser.id);
+            setCurrentScreen('dashboard');
+            const localData = await loadHeatMaps(cachedUser.id);
+            if (localData && localData.length > 0) {
+              setHeatmaps(localData);
+            }
+          }
+        }
+      } catch (e) {
+        // ignore cache read errors
       }
-      const data = await loadHeatMaps(uid);
-      setHeatmaps(data);
-      setLoading(false);
+
+      // 2. Validate / Hydrate session from Supabase
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        const uid = session?.user?.id;
+        if (session?.user && uid) {
+          setUserEmail(session.user.email);
+          setUserId(uid);
+          setCurrentScreen('dashboard');
+          await AsyncStorage.setItem(SAVED_USER_KEY, JSON.stringify({ id: uid, email: session.user.email }));
+          const freshData = await loadHeatMaps(uid);
+          setHeatmaps(freshData);
+        } else {
+          // If no active session, attempt background token refresh if cached user exists
+          const cachedUserStr = await AsyncStorage.getItem(SAVED_USER_KEY);
+          if (cachedUserStr) {
+            const { data: refreshed } = await supabase.auth.refreshSession();
+            if (refreshed.session?.user) {
+              const rUid = refreshed.session.user.id;
+              setUserEmail(refreshed.session.user.email);
+              setUserId(rUid);
+              setCurrentScreen('dashboard');
+              const freshData = await loadHeatMaps(rUid);
+              setHeatmaps(freshData);
+            }
+          }
+        }
+      } catch (err) {
+        // If offline or network issue, maintain current cached dashboard
+      } finally {
+        setLoading(false);
+      }
     }
 
     initAuthAndData();
 
-    const { data: authListener } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
       const uid = session?.user?.id;
-      if (session?.user) {
+      if (session?.user && uid) {
         setUserEmail(session.user.email);
         setUserId(uid);
         setCurrentScreen('dashboard');
+        await AsyncStorage.setItem(SAVED_USER_KEY, JSON.stringify({ id: uid, email: session.user.email }));
         const data = await loadHeatMaps(uid);
         setHeatmaps(data);
-      } else {
+      } else if (event === 'SIGNED_OUT') {
+        // Explicit logout only
+        await AsyncStorage.removeItem(SAVED_USER_KEY);
         setUserEmail(undefined);
         setUserId(undefined);
         setCurrentScreen('landing');
@@ -89,6 +135,11 @@ function AppContent() {
   }, []);
 
   const handleLogout = async () => {
+    await AsyncStorage.removeItem(SAVED_USER_KEY);
+    setUserEmail(undefined);
+    setUserId(undefined);
+    setCurrentScreen('landing');
+    setHeatmaps([]);
     await supabase.auth.signOut();
   };
 
@@ -226,6 +277,9 @@ function AppContent() {
               placeholderTextColor={theme.textMuted}
               value={searchQuery}
               onChangeText={setSearchQuery}
+              autoCorrect={false}
+              autoCapitalize="none"
+              returnKeyType="search"
             />
           </View>
 
@@ -235,7 +289,7 @@ function AppContent() {
             activeOpacity={0.85}
           >
             <Plus size={15} color="#FFFFFF" strokeWidth={2.5} />
-            <Text style={styles.createButtonText}>New Map</Text>
+            <Text style={styles.createButtonText}>New Habit</Text>
           </TouchableOpacity>
         </View>
 
@@ -320,8 +374,8 @@ const styles = StyleSheet.create({
   controlsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 20,
-    gap: 12,
+    marginBottom: 16,
+    gap: 10,
   },
   searchBar: {
     flex: 1,
@@ -337,13 +391,23 @@ const styles = StyleSheet.create({
   },
   searchInput: {
     flex: 1,
+    height: '100%',
+    paddingVertical: 0,
     fontSize: 14,
     fontFamily: fontStack,
+    ...(Platform.OS === 'android'
+      ? {
+          includeFontPadding: false,
+          textAlignVertical: 'center',
+        }
+      : {}),
+    ...(Platform.OS === 'web' ? ({ outlineStyle: 'none' } as any) : {}),
   },
   createButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
+    justifyContent: 'center',
+    paddingHorizontal: 14,
     height: 42,
     borderRadius: 10,
     gap: 6,

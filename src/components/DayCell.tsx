@@ -59,10 +59,11 @@ export const DayCell: React.FC<DayCellProps> = ({
         {
           width: size,
           height: size,
+          borderRadius: size >= 30 ? 8 : (size >= 12 ? 3 : 1.5),
           backgroundColor: cellColor,
           opacity: dimmed ? 0.35 : 1,
           borderColor: borderColor,
-          borderWidth: isToday ? 1.5 : 1,
+          borderWidth: isToday ? 1.5 : (size < 8 ? 0.5 : 1),
         },
       ]}
     >

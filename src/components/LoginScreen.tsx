@@ -12,7 +12,8 @@ import {
   ScrollView,
   Keyboard,
 } from 'react-native';
-import { ArrowLeft, Lock, Mail, Eye, EyeOff } from 'lucide-react-native';
+import { ArrowLeft, Lock, Mail, Eye, EyeOff, Check } from 'lucide-react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '../utils/supabase';
 import { useAppTheme, useIsDark } from '../theme/theme';
 
@@ -39,6 +40,15 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onBack, onLoginSuccess
   const [errorMsg, setErrorMsg] = useState('');
   const [infoMsg, setInfoMsg] = useState('');
   const [isSignUp, setIsSignUp] = useState(false);
+  const [rememberMe, setRememberMe] = useState(true);
+
+  useEffect(() => {
+    AsyncStorage.getItem('@habitheat_remembered_email').then((saved) => {
+      if (saved) {
+        setEmail(saved);
+      }
+    });
+  }, []);
 
   const [keyboardVisible, setKeyboardVisible] = useState(false);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
@@ -78,6 +88,11 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onBack, onLoginSuccess
         if (error) throw error;
         
         if (data.session) {
+          if (rememberMe) {
+            await AsyncStorage.setItem('@habitheat_remembered_email', email);
+          } else {
+            await AsyncStorage.removeItem('@habitheat_remembered_email');
+          }
           onLoginSuccess();
         } else {
           setInfoMsg('Account created. Check your inbox for confirmation link, or log in.');
@@ -86,6 +101,11 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onBack, onLoginSuccess
         const { data, error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
         if (data.session) {
+          if (rememberMe) {
+            await AsyncStorage.setItem('@habitheat_remembered_email', email);
+          } else {
+            await AsyncStorage.removeItem('@habitheat_remembered_email');
+          }
           onLoginSuccess();
         }
       }
@@ -324,6 +344,37 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onBack, onLoginSuccess
           </View>
 
           <TouchableOpacity
+            style={styles.rememberRow}
+            onPress={() => setRememberMe(!rememberMe)}
+            activeOpacity={0.7}
+          >
+            <View
+              style={[
+                styles.checkbox,
+                {
+                  borderColor: rememberMe
+                    ? isDark
+                      ? '#39D353'
+                      : '#1A7F37'
+                    : isDark
+                    ? '#30363D'
+                    : '#D0D7DE',
+                  backgroundColor: rememberMe
+                    ? isDark
+                      ? '#39D353'
+                      : '#1A7F37'
+                    : theme.surfaceHighlight,
+                },
+              ]}
+            >
+              {rememberMe && <Check size={11} color="#FFFFFF" strokeWidth={3} />}
+            </View>
+            <Text style={[styles.rememberText, { color: theme.textSecondary }]}>
+              Remember login on this device
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
             style={[styles.submitBtn, { backgroundColor: isDark ? '#39D353' : '#1A7F37' }]}
             onPress={handleAuth}
             activeOpacity={0.85}
@@ -477,6 +528,26 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginLeft: 6,
+  },
+  rememberRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginTop: -4,
+    marginBottom: 4,
+  },
+  checkbox: {
+    width: 18,
+    height: 18,
+    borderRadius: 5,
+    borderWidth: 1.5,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  rememberText: {
+    fontSize: 12.5,
+    fontWeight: '500',
+    fontFamily: fontStack,
   },
   submitBtn: {
     height: 46,

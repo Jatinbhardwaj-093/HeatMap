@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, View, Text, TouchableOpacity, Platform, Image } from 'react-native';
+import { StyleSheet, View, Text, TouchableOpacity, Platform, Image, useWindowDimensions } from 'react-native';
 import { ViewMode } from '../types/heatmap';
 import { ViewSwitcher } from './ViewSwitcher';
 import { LogOut, Smartphone, Sun, Moon, Monitor } from 'lucide-react-native';
@@ -22,7 +22,9 @@ export const Header: React.FC<HeaderProps> = ({
 }) => {
   const theme = useAppTheme();
   const { themeMode, setThemeMode } = useThemeMode();
-  
+  const { width } = useWindowDimensions();
+  const isMobile = width < 768;
+
   const cycleTheme = () => {
     if (themeMode === 'system') setThemeMode('light');
     else if (themeMode === 'light') setThemeMode('dark');
@@ -34,6 +36,69 @@ export const Header: React.FC<HeaderProps> = ({
     if (themeMode === 'dark') return <Moon size={15} color={theme.textSecondary} />;
     return <Monitor size={15} color={theme.textSecondary} />;
   };
+
+  if (isMobile) {
+    return (
+      <View style={[styles.header, styles.headerMobile, { backgroundColor: theme.surface, borderBottomColor: theme.borderSubtle }]}>
+        {/* Tier 1: Brand & Action Icons */}
+        <View style={styles.topRowMobile}>
+          <View style={styles.brandGroup}>
+            <View style={[styles.logoFrame, { backgroundColor: theme.surfaceHighlight, borderColor: theme.borderSubtle }]}>
+              <Image
+                source={require('../../assets/icon.png')}
+                style={styles.logoImage}
+                resizeMode="contain"
+              />
+            </View>
+            <View style={styles.brandTextGroup}>
+              <Text style={[styles.brandName, { color: theme.text }]}>HabitHeat</Text>
+              {userEmail ? (
+                <Text style={[styles.brandEmailMobile, { color: theme.textSecondary }]} numberOfLines={1}>
+                  {userEmail}
+                </Text>
+              ) : null}
+            </View>
+          </View>
+
+          <View style={styles.actionButtons}>
+            <TouchableOpacity
+              style={[styles.actionBtn, { backgroundColor: theme.surfaceHighlight, borderColor: theme.borderSubtle }]}
+              onPress={cycleTheme}
+              activeOpacity={0.7}
+              accessibilityLabel="Toggle Theme"
+            >
+              {getThemeIcon()}
+            </TouchableOpacity>
+
+            {Platform.OS !== 'web' && (
+              <TouchableOpacity
+                style={[styles.actionBtn, { backgroundColor: theme.surfaceHighlight, borderColor: theme.borderSubtle }]}
+                onPress={onOpenWidgetStudio}
+                activeOpacity={0.7}
+                accessibilityLabel="Open Widgets"
+              >
+                <Smartphone size={15} color={theme.text} strokeWidth={2} />
+              </TouchableOpacity>
+            )}
+
+            <TouchableOpacity
+              style={[styles.actionBtn, { backgroundColor: theme.surfaceHighlight, borderColor: theme.borderSubtle }]}
+              onPress={onLogout}
+              activeOpacity={0.7}
+              accessibilityLabel="Sign out"
+            >
+              <LogOut size={15} color={theme.textSecondary} />
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* Tier 2: View Switcher in clean dedicated row */}
+        <View style={styles.bottomRowMobile}>
+          <ViewSwitcher currentView={currentView} onViewChange={onChangeViewMode} />
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View style={[styles.header, { backgroundColor: theme.surface, borderBottomColor: theme.borderSubtle }]}>
@@ -110,6 +175,22 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 20,
   },
+  headerMobile: {
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    gap: 10,
+  },
+  topRowMobile: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    width: '100%',
+  },
+  bottomRowMobile: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '100%',
+  },
   headerContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -118,7 +199,6 @@ const styles = StyleSheet.create({
     width: '100%',
     alignSelf: 'center',
     gap: 16,
-    flexWrap: 'wrap',
   },
   brandGroup: {
     flexDirection: 'row',
@@ -151,6 +231,12 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontFamily: fontStack,
     maxWidth: 160,
+  },
+  brandEmailMobile: {
+    fontSize: 10,
+    fontFamily: fontStack,
+    maxWidth: 140,
+    opacity: 0.8,
   },
   centerGroup: {
     alignItems: 'center',

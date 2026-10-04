@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { StyleSheet, View, Text, ScrollView, TouchableOpacity, Platform } from 'react-native';
+import { StyleSheet, View, Text, ScrollView, TouchableOpacity, Platform, useWindowDimensions } from 'react-native';
 import { HeatMapModel } from '../types/heatmap';
 import { getYearlyGrid } from '../utils/dateUtils';
 import { PALETTES } from '../constants/palettes';
@@ -14,10 +14,19 @@ interface YearlyViewProps {
   onSelectDate: (dateKey: string) => void;
 }
 
-const CELL_SIZE = 14;
-const CELL_GAP = 4;
-const COLUMN_STEP = CELL_SIZE + CELL_GAP; // 18px per week
-const DAY_LABELS_WIDTH = 32;
+const DESKTOP_CELL_SIZE = 14;
+const DESKTOP_CELL_GAP = 4;
+const DESKTOP_COLUMN_STEP = DESKTOP_CELL_SIZE + DESKTOP_CELL_GAP; // 18px per week
+const DESKTOP_DAY_LABELS_WIDTH = 32;
+
+const MOBILE_MONTH_HEADERS = [
+  { label: 'Jan', week: 0 },
+  { label: 'Mar', week: 9 },
+  { label: 'May', week: 17 },
+  { label: 'Jul', week: 26 },
+  { label: 'Sep', week: 35 },
+  { label: 'Nov', week: 44 },
+];
 
 const fontStack = Platform.select({
   web: '"SF Pro Rounded", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
@@ -34,6 +43,17 @@ export const YearlyView: React.FC<YearlyViewProps> = ({ heatmap, streakMap, onSe
   const palette = PALETTES[heatmap.paletteId] || PALETTES.emerald;
   const theme = useAppTheme();
   const isDark = useIsDark();
+  const { width } = useWindowDimensions();
+  const isMobile = width < 768;
+
+  // Responsive mobile micro-matrix calculation (zero horizontal cutoff)
+  const mobileCardPadding = 32; // 16px card padding each side
+  const mobileAvailableWidth = Math.max(260, width - 40 - mobileCardPadding);
+  const mobileDayLabelWidth = 14;
+  const mobileCellGap = 1.5;
+  const numWeeks = weeks.length || 52;
+  const mobileCellSize = Math.max(3.2, Math.min(6.5, (mobileAvailableWidth - mobileDayLabelWidth - ((numWeeks - 1) * mobileCellGap)) / numWeeks));
+  const mobileStep = mobileCellSize + mobileCellGap;
 
   const handleCellPress = (dateKey: string) => {
     setHoveredDate({ date: dateKey, streak: streakMap[dateKey] || 0 });
@@ -46,11 +66,11 @@ export const YearlyView: React.FC<YearlyViewProps> = ({ heatmap, streakMap, onSe
       <View style={styles.headerRow}>
         <View style={[styles.yearSelector, { backgroundColor: theme.surfaceHighlight, borderColor: theme.borderSubtle }]}>
           <TouchableOpacity style={styles.navButton} onPress={() => setSelectedYear((y) => y - 1)} activeOpacity={0.7} accessibilityLabel="Previous year">
-            <ChevronLeft size={16} color={theme.textSecondary} />
+            <ChevronLeft size={15} color={theme.textSecondary} />
           </TouchableOpacity>
           <Text style={[styles.yearText, { color: theme.text }]}>{selectedYear}</Text>
           <TouchableOpacity style={styles.navButton} onPress={() => setSelectedYear((y) => y + 1)} activeOpacity={0.7} accessibilityLabel="Next year">
-            <ChevronRight size={16} color={theme.textSecondary} />
+            <ChevronRight size={15} color={theme.textSecondary} />
           </TouchableOpacity>
         </View>
 
@@ -63,42 +83,44 @@ export const YearlyView: React.FC<YearlyViewProps> = ({ heatmap, streakMap, onSe
         ) : null}
       </View>
 
-      {/* Horizontally scrollable on small screens, centered on large screens */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
-      >
-        <View style={styles.centeredMatrixBlock}>
-          {/* Month Headers */}
-          <View style={styles.monthsRow}>
-            {monthHeaders.map((m, idx) => (
-              <Text
-                key={`${m.name}-${idx}`}
-                style={[
-                  styles.monthText,
-                  {
-                    left: m.weekIndex * COLUMN_STEP + DAY_LABELS_WIDTH,
-                    color: theme.textMuted,
-                  },
-                ]}
-              >
-                {m.name}
-              </Text>
-            ))}
+      {/* Matrix Body: Mobile fits 100% cleanly without scroll; Desktop centers */}
+      {isMobile ? (
+        <View style={styles.mobileMatrixContainer}>
+          {/* Mobile Month Headers (clean non-overlapping markers) */}
+          <View style={[styles.mobileMonthsRow, { height: 16 }]}>
+            <View style={{ width: mobileDayLabelWidth }} />
+            <View style={[styles.mobileMonthsRelative, { width: numWeeks * mobileStep }]}>
+              {MOBILE_MONTH_HEADERS.map((m) => (
+                <Text
+                  key={m.label}
+                  style={[
+                    styles.mobileMonthText,
+                    {
+                      left: m.week * mobileStep,
+                      color: theme.textMuted,
+                    },
+                  ]}
+                >
+                  {m.label}
+                </Text>
+              ))}
+            </View>
           </View>
 
-          {/* Matrix Body: Day labels + 53 week columns */}
-          <View style={styles.matrixWrapper}>
-            <View style={[styles.dayLabelsCol, { width: DAY_LABELS_WIDTH }]}>
-              <Text style={[styles.dayLabelText, { color: theme.textMuted, top: 0 }]}>Mon</Text>
-              <Text style={[styles.dayLabelText, { color: theme.textMuted, top: COLUMN_STEP * 2 }]}>Wed</Text>
-              <Text style={[styles.dayLabelText, { color: theme.textMuted, top: COLUMN_STEP * 4 }]}>Fri</Text>
+          {/* Mobile Grid: Day Labels + Columns */}
+          <View style={styles.mobileMatrixBody}>
+            {/* Day labels column */}
+            <View style={[styles.mobileDayLabelsCol, { width: mobileDayLabelWidth }]}>
+              <Text style={[styles.mobileDayLabelText, { color: theme.textMuted, height: mobileStep * 2 }]}>M</Text>
+              <Text style={[styles.mobileDayLabelText, { color: theme.textMuted, height: mobileStep * 2 }]}>W</Text>
+              <Text style={[styles.mobileDayLabelText, { color: theme.textMuted, height: mobileStep * 2 }]}>F</Text>
+              <Text style={[styles.mobileDayLabelText, { color: theme.textMuted, height: mobileStep }]}>S</Text>
             </View>
 
-            <View style={[styles.weeksContainer, { gap: CELL_GAP }]}>
+            {/* 52 Columns fitted to card */}
+            <View style={styles.mobileWeeksRow}>
               {weeks.map((week, weekIdx) => (
-                <View key={`w-${weekIdx}`} style={[styles.weekColumn, { gap: CELL_GAP }]}>
+                <View key={`w-${weekIdx}`} style={[styles.mobileWeekCol, { width: mobileCellSize, marginRight: mobileCellGap }]}>
                   {week.map((day) => {
                     const entry = heatmap.entries[day.dateKey];
                     const level = entry?.completed ? getStreakIntensityLevel(streakMap[day.dateKey] || 1) : 0;
@@ -108,7 +130,7 @@ export const YearlyView: React.FC<YearlyViewProps> = ({ heatmap, streakMap, onSe
                         dateKey={day.dateKey}
                         level={level}
                         paletteId={heatmap.paletteId}
-                        size={CELL_SIZE}
+                        size={mobileCellSize}
                         dimmed={!day.inYear}
                         disabled={!day.inYear}
                         onPress={handleCellPress}
@@ -120,7 +142,7 @@ export const YearlyView: React.FC<YearlyViewProps> = ({ heatmap, streakMap, onSe
             </View>
           </View>
 
-          {/* Legend aligned with matrix */}
+          {/* Mobile Legend */}
           <View style={styles.legendRow}>
             <Text style={[styles.legendLabel, { color: theme.textMuted }]}>Less</Text>
             <View style={styles.legendSwatches}>
@@ -128,7 +150,7 @@ export const YearlyView: React.FC<YearlyViewProps> = ({ heatmap, streakMap, onSe
                 <View
                   key={`legend-${idx}`}
                   style={[
-                    styles.legendSwatch,
+                    styles.legendSwatchMobile,
                     {
                       backgroundColor: !isDark && idx === 0 ? theme.surfaceHighlight : color,
                       borderColor: isDark ? '#22272E' : theme.borderSubtle,
@@ -140,21 +162,100 @@ export const YearlyView: React.FC<YearlyViewProps> = ({ heatmap, streakMap, onSe
             <Text style={[styles.legendLabel, { color: theme.textMuted }]}>More</Text>
           </View>
         </View>
-      </ScrollView>
+      ) : (
+        /* Desktop centered matrix view */
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.scrollContent}
+        >
+          <View style={styles.centeredMatrixBlock}>
+            {/* Desktop Month Headers */}
+            <View style={styles.monthsRow}>
+              {monthHeaders.map((m, idx) => (
+                <Text
+                  key={`${m.name}-${idx}`}
+                  style={[
+                    styles.monthText,
+                    {
+                      left: m.weekIndex * DESKTOP_COLUMN_STEP + DESKTOP_DAY_LABELS_WIDTH,
+                      color: theme.textMuted,
+                    },
+                  ]}
+                >
+                  {m.name}
+                </Text>
+              ))}
+            </View>
+
+            {/* Matrix Body: Day labels + 53 week columns */}
+            <View style={styles.matrixWrapper}>
+              <View style={[styles.dayLabelsCol, { width: DESKTOP_DAY_LABELS_WIDTH }]}>
+                <Text style={[styles.dayLabelText, { color: theme.textMuted, top: 0 }]}>Mon</Text>
+                <Text style={[styles.dayLabelText, { color: theme.textMuted, top: DESKTOP_COLUMN_STEP * 2 }]}>Wed</Text>
+                <Text style={[styles.dayLabelText, { color: theme.textMuted, top: DESKTOP_COLUMN_STEP * 4 }]}>Fri</Text>
+              </View>
+
+              <View style={[styles.weeksContainer, { gap: DESKTOP_CELL_GAP }]}>
+                {weeks.map((week, weekIdx) => (
+                  <View key={`w-${weekIdx}`} style={[styles.weekColumn, { gap: DESKTOP_CELL_GAP }]}>
+                    {week.map((day) => {
+                      const entry = heatmap.entries[day.dateKey];
+                      const level = entry?.completed ? getStreakIntensityLevel(streakMap[day.dateKey] || 1) : 0;
+                      return (
+                        <DayCell
+                          key={day.dateKey}
+                          dateKey={day.dateKey}
+                          level={level}
+                          paletteId={heatmap.paletteId}
+                          size={DESKTOP_CELL_SIZE}
+                          dimmed={!day.inYear}
+                          disabled={!day.inYear}
+                          onPress={handleCellPress}
+                        />
+                      );
+                    })}
+                  </View>
+                ))}
+              </View>
+            </View>
+
+            {/* Desktop Legend */}
+            <View style={styles.legendRow}>
+              <Text style={[styles.legendLabel, { color: theme.textMuted }]}>Less</Text>
+              <View style={styles.legendSwatches}>
+                {palette.levels.map((color, idx) => (
+                  <View
+                    key={`legend-${idx}`}
+                    style={[
+                      styles.legendSwatch,
+                      {
+                        backgroundColor: !isDark && idx === 0 ? theme.surfaceHighlight : color,
+                        borderColor: isDark ? '#22272E' : theme.borderSubtle,
+                      },
+                    ]}
+                  />
+                ))}
+              </View>
+              <Text style={[styles.legendLabel, { color: theme.textMuted }]}>More</Text>
+            </View>
+          </View>
+        </ScrollView>
+      )}
     </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    paddingVertical: 6,
+    paddingVertical: 4,
     width: '100%',
   },
   headerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 14,
+    marginBottom: 10,
   },
   yearSelector: {
     flexDirection: 'row',
@@ -162,7 +263,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: 8,
     paddingHorizontal: 8,
-    paddingVertical: 4,
+    paddingVertical: 3,
   },
   navButton: {
     padding: 3,
@@ -183,6 +284,53 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontFamily: fontStack,
   },
+
+  // Mobile micro-matrix layout
+  mobileMatrixContainer: {
+    width: '100%',
+    alignItems: 'center',
+  },
+  mobileMonthsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    width: '100%',
+    marginBottom: 4,
+  },
+  mobileMonthsRelative: {
+    position: 'relative',
+    height: 14,
+  },
+  mobileMonthText: {
+    position: 'absolute',
+    fontSize: 9,
+    fontWeight: '600',
+    fontFamily: fontStack,
+  },
+  mobileMatrixBody: {
+    flexDirection: 'row',
+    width: '100%',
+    alignItems: 'flex-start',
+  },
+  mobileDayLabelsCol: {
+    justifyContent: 'flex-start',
+  },
+  mobileDayLabelText: {
+    fontSize: 7.5,
+    fontWeight: '700',
+    fontFamily: fontStack,
+    lineHeight: 9,
+  },
+  mobileWeeksRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    flex: 1,
+  },
+  mobileWeekCol: {
+    flexDirection: 'column',
+    gap: 1.5,
+  },
+
+  // Desktop layout
   scrollContent: {
     minWidth: '100%',
     justifyContent: 'center',
@@ -208,13 +356,13 @@ const styles = StyleSheet.create({
   },
   dayLabelsCol: {
     position: 'relative',
-    height: COLUMN_STEP * 7,
+    height: DESKTOP_COLUMN_STEP * 7,
   },
   dayLabelText: {
     position: 'absolute',
     fontSize: 9,
     fontFamily: fontStack,
-    lineHeight: CELL_SIZE,
+    lineHeight: DESKTOP_CELL_SIZE,
   },
   weeksContainer: {
     flexDirection: 'row',
@@ -226,21 +374,28 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'flex-end',
-    marginTop: 12,
+    marginTop: 8,
     gap: 6,
+    width: '100%',
   },
   legendLabel: {
-    fontSize: 10,
+    fontSize: 9.5,
     fontFamily: fontStack,
   },
   legendSwatches: {
     flexDirection: 'row',
-    gap: 3,
+    gap: 2.5,
   },
   legendSwatch: {
     width: 11,
     height: 11,
     borderRadius: 2.5,
     borderWidth: 1,
+  },
+  legendSwatchMobile: {
+    width: 8,
+    height: 8,
+    borderRadius: 1.5,
+    borderWidth: 0.5,
   },
 });
