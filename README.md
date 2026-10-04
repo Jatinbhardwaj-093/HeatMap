@@ -10,9 +10,10 @@
 
 <p align="center">
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square" alt="License: MIT" /></a>
-  <img src="https://img.shields.io/badge/Expo-SDK_52-black.svg?style=flat-square&logo=expo" alt="Expo SDK 52" />
-  <img src="https://img.shields.io/badge/React_Native-0.76-61DAFB.svg?style=flat-square&logo=react" alt="React Native 0.76" />
-  <img src="https://img.shields.io/badge/TypeScript-5.3-3178C6.svg?style=flat-square&logo=typescript" alt="TypeScript 5.3" />
+  <img src="https://img.shields.io/badge/Expo-SDK_57-black.svg?style=flat-square&logo=expo" alt="Expo SDK 57" />
+  <img src="https://img.shields.io/badge/React_Native-0.86-61DAFB.svg?style=flat-square&logo=react" alt="React Native 0.86" />
+  <img src="https://img.shields.io/badge/React-19.2-61DAFB.svg?style=flat-square&logo=react" alt="React 19" />
+  <img src="https://img.shields.io/badge/TypeScript-6.0-3178C6.svg?style=flat-square&logo=typescript" alt="TypeScript 6.0" />
   <img src="https://img.shields.io/badge/Platform-Web_%7C_macOS_%7C_iOS_%7C_Android-green.svg?style=flat-square" alt="Platform Support" />
 </p>
 
@@ -22,6 +23,7 @@
   <a href="#screenshots">Screenshots</a> •
   <a href="#quickstart">Quickstart</a> •
   <a href="#architecture">Architecture</a> •
+  <a href="#tech-stack">Tech Stack</a> •
   <a href="#license">License</a>
 </p>
 
@@ -33,7 +35,7 @@
 
 ## Core Philosophy
 
-Most habit trackers fail because they demand excessive bookkeeping: *“8,450 / 10,000 steps”*, *“42 / 60 minutes”*, or complex slider ratings. This creates cognitive friction and guilt.
+Most habit trackers fail because they demand excessive bookkeeping: *"8,450 / 10,000 steps"*, *"42 / 60 minutes"*, or complex slider ratings. This creates cognitive friction and guilt.
 
 **HabitHeat strips tracking down to a pure boolean:**
 > **Did you show up today? Yes or No.**
@@ -45,9 +47,13 @@ Inspired by software engineering commit history, HabitHeat translates daily huma
 ## Features
 
 - **Full-Year Annual Grid (52 Weeks)**: View an entire year of discipline (364 days) in a single glance with intuitive month headers and centered matrix alignment.
+- **Zero-Scroll Mobile Micro-Matrix**: Mobile viewports automatically calculate micro cell dimensions (~4.5px cells with 1.5px gaps) with non-overlapping bi-monthly markers (Jan, Mar, May, Jul, Sep, Nov) and compact weekday labels (M, W, F, S). Zero horizontal scrolling required on mobile phones.
 - **Dynamic Streak Intensity**: Cell brightness and color depth scale organically with consecutive streak length (1 day, 3 days, 7 days, and 14+ days).
+- **Widget Studio**: Preview and design compact Small (2x2) and Medium (4x2) home screen widgets with real-time streak badges, current weekly commit heat, and custom palette previews.
 - **Monthly Detail Calendar**: Instantly toggle between annual macro view and monthly micro view for focused date logging and notes.
 - **Isolated Habit Matrices**: Every habit commands its own dedicated grid, autonomous streak calculation, and independent palette. Never jumble fitness with deep work.
+- **Dual-Tier Offline Persistence & Cloud Sync**: Data persists locally in `AsyncStorage` scoped per user account, paired with automatic cloud backup and cross-device sync via Supabase Auth metadata (`user_metadata.habits`).
+- **Keyboard-Aware Mobile Authentication**: Clean modal authentication with dynamic virtual keyboard height tracking, automatic input field auto-scrolling on focus, and safe-area offsets on Android and iOS.
 - **Curated Color Palettes**:
   - `Emerald Matrix` (Classic GitHub green)
   - `Industrial Amber` (Warm discipline)
@@ -55,9 +61,9 @@ Inspired by software engineering commit history, HabitHeat translates daily huma
   - `Obsidian` (Minimalist mono)
   - `Crimson` (High intensity)
 - **Soft Minimalist Aesthetic**: Clean typography powered by `SF Pro Rounded`, balanced spacing, and zero distracting animations or emojis.
+- **Modern Cross-Platform Styling**: Clean platform-specific elevation handling using `boxShadow` on Web and native elevation shadows on iOS and Android.
 - **Adaptive Light & Dark Modes**: Automatic system preference detection paired with a manual toggle for instant theme switching.
-- **Local-First & Cloud-Synced**: Data persists offline in `AsyncStorage` scoped per user account, with seamless cloud authentication via Supabase.
-- **Cross-Platform**: Run in any web browser, compile to standalone desktop apps via Electron, or deploy to mobile devices with glanceable widgets.
+- **Cross-Platform**: Run in any web browser, compile to standalone desktop apps via Electron, or run natively on iOS and Android with Expo Go and standalone builds.
 
 ---
 
@@ -130,13 +136,18 @@ habitheat/
 │   └── main.js              # Electron desktop main process & window wrapper
 ├── src/
 │   ├── components/          # Reusable UI components
-│   │   ├── Header.tsx       # Navbar with brand icon, view switcher & theme toggle
-│   │   ├── HeatmapCard.tsx  # Streamlined habit tracker card with inline metrics
-│   │   ├── YearlyView.tsx   # Centered 52-week contribution matrix grid
-│   │   ├── MonthlyView.tsx  # Month calendar view with date selection
+│   │   ├── CreateHeatmapModal.tsx # New habit creation dialog with palette picker
 │   │   ├── DayCell.tsx      # Individual matrix tile with intensity levels
-│   │   ├── LandingPage.tsx  # Interactive landing page with live matrix simulator
-│   │   └── LoginScreen.tsx  # Rounded authentication interface
+│   │   ├── DayDetailModal.tsx # Day inspection modal with completion toggle & notes
+│   │   ├── Header.tsx       # Navbar with brand icon, view switcher & theme toggle
+│   │   ├── HeatmapCard.tsx  # Habit tracker card with inline metrics & action menu
+│   │   ├── LandingPage.tsx  # Responsive landing page with live simulator & mobile micro-grid
+│   │   ├── LoginScreen.tsx  # Keyboard-aware authentication interface with Supabase
+│   │   ├── MonthlyView.tsx  # Month calendar view with date selection
+│   │   ├── StatsOverview.tsx# Top-level metric aggregates & completion streaks
+│   │   ├── ViewSwitcher.tsx # Segmented toggle between Monthly and Yearly views
+│   │   ├── WidgetStudioModal.tsx # Home screen widget configuration & preview studio
+│   │   └── YearlyView.tsx   # Centered 52-week contribution matrix grid
 │   ├── constants/
 │   │   └── palettes.ts      # 5-tier intensity color palettes
 │   ├── theme/
@@ -146,10 +157,10 @@ habitheat/
 │   └── utils/
 │       ├── dateUtils.ts     # Grid date math & month header calculations
 │       ├── streakUtils.ts   # Consecutive streak & intensity level algorithms
-│       ├── storage.ts       # Local-first storage scoped per user account
+│       ├── storage.ts       # Dual-tier offline storage & Supabase cloud sync
 │       └── supabase.ts      # Supabase cloud client initialization
-├── App.tsx                  # Root navigation router & state container
-├── app.json                 # Expo project configuration
+├── App.tsx                  # Root navigation router, safe area provider & state container
+├── app.json                 # Expo SDK 57 project configuration
 └── package.json             # Build scripts & dependency manifest
 ```
 
@@ -157,12 +168,15 @@ habitheat/
 
 ## Tech Stack
 
-- **Framework**: [Expo SDK 52](https://expo.dev/) + [React Native Web](https://necolas.github.io/react-native-web/) (0.76)
-- **Language**: [TypeScript 5.3](https://www.typescriptlang.org/)
+- **Framework**: [Expo SDK 57](https://expo.dev/) (`~57.0.26`)
+- **Language**: [TypeScript 6.0](https://www.typescriptlang.org/) (`~6.0.3`)
+- **Core Runtime**: [React 19](https://react.dev/) (`19.2.3`) & [React Native 0.86](https://reactnative.dev/) (`0.86.3`)
+- **Web Engine**: [React Native Web](https://necolas.github.io/react-native-web/) (`~0.21.0`)
+- **Safe Area**: [React Native Safe Area Context](https://github.com/th3rdwave/react-native-safe-area-context) (`~5.7.0`)
 - **Icons**: [Lucide Icons](https://lucide.dev/) (`lucide-react-native`)
 - **Desktop Runtime**: [Electron 34](https://www.electronjs.org/) + `electron-builder`
-- **Auth & Cloud Sync**: [@supabase/supabase-js](https://supabase.com/)
-- **Local Persistence**: [@react-native-async-storage/async-storage](https://react-native-async-storage.github.io/async-storage/)
+- **Auth & Cloud Sync**: [@supabase/supabase-js](https://supabase.com/) (`^2.116.0`)
+- **Local Persistence**: [@react-native-async-storage/async-storage](https://react-native-async-storage.github.io/async-storage/) (`2.2.0`)
 
 ---
 
