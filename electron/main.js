@@ -1,4 +1,4 @@
-const { app, BrowserWindow, protocol, net } = require('electron');
+const { app, BrowserWindow, protocol, net, shell } = require('electron');
 const path = require('path');
 const url = require('url');
 
@@ -22,6 +22,8 @@ function createWindow() {
     app.dock.setIcon(iconPath);
   }
 
+  const isDev = process.env.NODE_ENV !== 'production' && !app.isPackaged;
+
   const win = new BrowserWindow({
     title: 'TrackHeat',
     width: 1180,
@@ -35,12 +37,19 @@ function createWindow() {
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
-      webSecurity: false,
+      webSecurity: true,
+      allowRunningInsecureContent: false,
+      devTools: isDev,
     },
   });
 
+  // Secure window opening: only allow internal widget popups, open external links in default OS browser
   win.webContents.setWindowOpenHandler(({ url: targetUrl }) => {
-    if (targetUrl.includes('mode=widget')) {
+    const isInternalWidget =
+      targetUrl.includes('mode=widget') &&
+      (targetUrl.startsWith('app://') || targetUrl.startsWith('http://localhost:8081'));
+
+    if (isInternalWidget) {
       return {
         action: 'allow',
         overrideBrowserWindowOptions: {
@@ -56,15 +65,38 @@ function createWindow() {
           webPreferences: {
             nodeIntegration: false,
             contextIsolation: true,
-            webSecurity: false,
+            webSecurity: true,
+            allowRunningInsecureContent: false,
+            devTools: isDev,
           },
         },
       };
     }
-    return { action: 'allow' };
+
+    // External link: open in user default browser
+    if (targetUrl.startsWith('https://') || targetUrl.startsWith('http://')) {
+      shell.openExternal(targetUrl);
+    }
+    return { action: 'deny' };
   });
 
-  const isDev = process.env.NODE_ENV !== 'production' && !app.isPackaged;
+  // Prevent unauthorized in-window navigation away from the app
+  win.webContents.on('will-navigate', (event, navigationUrl) => {
+    const isLocal =
+      navigationUrl.startsWith('app://') ||
+      (isDev && navigationUrl.startsWith('http://localhost:8081'));
+    if (!isLocal) {
+      event.preventDefault();
+      if (navigationUrl.startsWith('https://') || navigationUrl.startsWith('http://')) {
+        shell.openExternal(navigationUrl);
+      }
+    }
+  });
+
+  // Block webview creation for security
+  win.webContents.on('will-attach-webview', (event) => {
+    event.preventDefault();
+  });
 
   if (isDev) {
     const devUrl = 'http://localhost:8081';
@@ -89,8 +121,9 @@ function createWindow() {
 }
 
 app.whenReady().then(() => {
-  const distDir = path.join(__dirname, '../dist');
+  const distDir = path.resolve(__dirname, '../dist');
 
+  // Secure custom protocol handler with directory traversal prevention
   protocol.handle('app', (request) => {
     try {
       const parsedUrl = new URL(request.url);
@@ -98,8 +131,12 @@ app.whenReady().then(() => {
       if (pathname === '/' || !pathname) {
         pathname = '/index.html';
       }
-      const filePath = path.join(distDir, pathname);
-      return net.fetch(url.pathToFileURL(filePath).toString());
+      const safePath = path.normalize(path.join(distDir, pathname));
+      // Strict directory traversal prevention
+      if (!safePath.startsWith(distDir)) {
+        return new Response('Forbidden', { status: 403 });
+      }
+      return net.fetch(url.pathToFileURL(safePath).toString());
     } catch (err) {
       console.warn('Protocol fetch error, serving index.html fallback:', err);
       const fallback = path.join(distDir, 'index.html');

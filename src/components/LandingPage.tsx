@@ -168,12 +168,25 @@ export const LandingPage: React.FC<LandingPageProps> = ({
     }));
   };
 
+  const GITHUB_REPO = 'https://github.com/Jatinbhardwaj-093/HeatMap';
+  const RELEASE_TAG_URL = `${GITHUB_REPO}/releases/tag/v1.1.0`;
+  const MAC_DMG_URL = `${GITHUB_REPO}/releases/download/v1.1.0/TrackHeat-1.1.0-arm64.dmg`;
+  const ANDROID_APK_URL = `${GITHUB_REPO}/releases/download/v1.1.0/TrackHeat-1.1.0.apk`;
+
+  const handleDownloadMac = () => {
+    Linking.openURL(MAC_DMG_URL).catch(() => Linking.openURL(RELEASE_TAG_URL));
+  };
+
+  const handleDownloadAndroid = () => {
+    Linking.openURL(ANDROID_APK_URL).catch(() => Linking.openURL(RELEASE_TAG_URL));
+  };
+
   const handleDownloadRelease = () => {
-    Linking.openURL('https://github.com/Jatinbhardwaj-093/HeatMap/releases');
+    Linking.openURL(RELEASE_TAG_URL).catch(() => Linking.openURL(`${GITHUB_REPO}/releases`));
   };
 
   const handleGithubRepo = () => {
-    Linking.openURL('https://github.com/Jatinbhardwaj-093/HeatMap');
+    Linking.openURL(GITHUB_REPO);
   };
 
   const toggleTheme = () => {
@@ -837,7 +850,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             {/* macOS Universal */}
             <TouchableOpacity
               style={[styles.mobilePlatformRow, { borderBottomColor: theme.borderSubtle }]}
-              onPress={handleDownloadRelease}
+              onPress={handleDownloadMac}
               activeOpacity={0.7}
             >
               <View style={[styles.mobilePlatformIcon, { borderColor: theme.border, backgroundColor: theme.surfaceHighlight }]}>
@@ -847,11 +860,34 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 <View style={styles.mobilePlatformTitleRow}>
                   <Text style={[styles.mobilePlatformTitle, { color: theme.text }]}>macOS Universal</Text>
                   <View style={[styles.mobilePlatformBadge, { backgroundColor: 'rgba(57, 211, 83, 0.1)', borderColor: 'rgba(57, 211, 83, 0.3)' }]}>
-                    <Text style={[styles.mobilePlatformBadgeText, { color: isDark ? '#39D353' : '#1A7F37' }]}>DMG</Text>
+                    <Text style={[styles.mobilePlatformBadgeText, { color: isDark ? '#39D353' : '#1A7F37' }]}>DMG · v1.1.0</Text>
                   </View>
                 </View>
                 <Text style={[styles.mobilePlatformSubtitle, { color: theme.textSecondary }]}>
                   Native desktop client with offline-first disk storage.
+                </Text>
+              </View>
+              <Download size={15} color={theme.textMuted} />
+            </TouchableOpacity>
+
+            {/* Android Mobile */}
+            <TouchableOpacity
+              style={[styles.mobilePlatformRow, { borderBottomColor: theme.borderSubtle }]}
+              onPress={handleDownloadAndroid}
+              activeOpacity={0.7}
+            >
+              <View style={[styles.mobilePlatformIcon, { borderColor: theme.border, backgroundColor: theme.surfaceHighlight }]}>
+                <Smartphone size={18} color={theme.text} />
+              </View>
+              <View style={styles.mobilePlatformContent}>
+                <View style={styles.mobilePlatformTitleRow}>
+                  <Text style={[styles.mobilePlatformTitle, { color: theme.text }]}>Android Mobile</Text>
+                  <View style={[styles.mobilePlatformBadge, { backgroundColor: 'rgba(57, 211, 83, 0.1)', borderColor: 'rgba(57, 211, 83, 0.3)' }]}>
+                    <Text style={[styles.mobilePlatformBadgeText, { color: isDark ? '#39D353' : '#1A7F37' }]}>APK · v1.1.0</Text>
+                  </View>
+                </View>
+                <Text style={[styles.mobilePlatformSubtitle, { color: theme.textSecondary }]}>
+                  Pocket tracking with interactive Home Screen widgets.
                 </Text>
               </View>
               <Download size={15} color={theme.textMuted} />
@@ -878,7 +914,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 <View style={styles.mobilePlatformTitleRow}>
                   <Text style={[styles.mobilePlatformTitle, { color: theme.text }]}>Browser Web App</Text>
                   <View style={[styles.mobilePlatformBadge, { backgroundColor: 'rgba(57, 211, 83, 0.1)', borderColor: 'rgba(57, 211, 83, 0.3)' }]}>
-                    <Text style={[styles.mobilePlatformBadgeText, { color: isDark ? '#39D353' : '#1A7F37' }]}>CLOUD SYNC</Text>
+                    <Text style={[styles.mobilePlatformBadgeText, { color: isDark ? '#39D353' : '#1A7F37' }]}>LIVE</Text>
                   </View>
                 </View>
                 <Text style={[styles.mobilePlatformSubtitle, { color: theme.textSecondary }]}>
@@ -888,28 +924,23 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               <ArrowRight size={15} color={theme.textMuted} />
             </TouchableOpacity>
 
-            {/* iOS & Android */}
-            <TouchableOpacity
-              style={[styles.mobilePlatformRow, { borderBottomWidth: 0 }]}
-              onPress={handleDownloadRelease}
-              activeOpacity={0.7}
-            >
+            {/* Apple iOS */}
+            <View style={[styles.mobilePlatformRow, { borderBottomWidth: 0, opacity: 0.65 }]}>
               <View style={[styles.mobilePlatformIcon, { borderColor: theme.border, backgroundColor: theme.surfaceHighlight }]}>
-                <Smartphone size={18} color={theme.text} />
+                <Smartphone size={18} color={theme.textSecondary} />
               </View>
               <View style={styles.mobilePlatformContent}>
                 <View style={styles.mobilePlatformTitleRow}>
-                  <Text style={[styles.mobilePlatformTitle, { color: theme.text }]}>iOS & Android</Text>
-                  <View style={[styles.mobilePlatformBadge, { backgroundColor: 'rgba(56, 189, 248, 0.1)', borderColor: 'rgba(56, 189, 248, 0.3)' }]}>
-                    <Text style={[styles.mobilePlatformBadgeText, { color: '#38BDF8' }]}>WIDGETS</Text>
+                  <Text style={[styles.mobilePlatformTitle, { color: theme.text }]}>Apple iOS</Text>
+                  <View style={[styles.mobilePlatformBadge, { backgroundColor: 'rgba(139, 148, 158, 0.1)', borderColor: 'rgba(139, 148, 158, 0.3)' }]}>
+                    <Text style={[styles.mobilePlatformBadgeText, { color: theme.textMuted }]}>COMING SOON</Text>
                   </View>
                 </View>
                 <Text style={[styles.mobilePlatformSubtitle, { color: theme.textSecondary }]}>
-                  Pocket tracking with live glanceable widgets.
+                  Native iOS client with WidgetKit currently in development.
                 </Text>
               </View>
-              <Download size={15} color={theme.textMuted} />
-            </TouchableOpacity>
+            </View>
           </View>
         ) : (
           <View style={styles.platformsGrid}>
@@ -920,22 +951,48 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   <Monitor size={20} color={theme.text} />
                 </View>
                 <View style={[styles.osTag, { backgroundColor: 'rgba(57, 211, 83, 0.1)', borderColor: 'rgba(57, 211, 83, 0.3)' }]}>
-                  <Text style={[styles.osTagText, { color: isDark ? '#39D353' : '#1A7F37' }]}>MACOS</Text>
+                  <Text style={[styles.osTagText, { color: isDark ? '#39D353' : '#1A7F37' }]}>DMG · v1.1.0</Text>
                 </View>
               </View>
 
               <Text style={[styles.platformName, { color: theme.text }]}>macOS Universal</Text>
               <Text style={[styles.platformDesc, { color: theme.textSecondary }]}>
-                Native Electron build with custom dock badges, menu bar shortcuts, and offline-first disk persistence.
+                Native desktop build with custom traffic-light styling, title bar dragging, and offline-first disk persistence.
               </Text>
 
               <TouchableOpacity
                 style={[styles.platformDownloadBtn, { backgroundColor: theme.surfaceHighlight, borderColor: theme.border }]}
-                onPress={handleDownloadRelease}
+                onPress={handleDownloadMac}
                 activeOpacity={0.7}
               >
                 <Download size={14} color={theme.text} />
                 <Text style={[styles.platformDownloadText, { color: theme.text }]}>DOWNLOAD .DMG</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Android Mobile */}
+            <View style={[styles.platformCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+              <View style={styles.platformTop}>
+                <View style={[styles.platformIconFrame, { borderColor: theme.border, backgroundColor: theme.surfaceHighlight }]}>
+                  <Smartphone size={20} color={theme.text} />
+                </View>
+                <View style={[styles.osTag, { backgroundColor: 'rgba(57, 211, 83, 0.1)', borderColor: 'rgba(57, 211, 83, 0.3)' }]}>
+                  <Text style={[styles.osTagText, { color: isDark ? '#39D353' : '#1A7F37' }]}>APK · v1.1.0</Text>
+                </View>
+              </View>
+
+              <Text style={[styles.platformName, { color: theme.text }]}>Android Mobile</Text>
+              <Text style={[styles.platformDesc, { color: theme.textSecondary }]}>
+                Native Android app with live interactive Home Screen widgets, real-time 1-tap logging, and theme customization.
+              </Text>
+
+              <TouchableOpacity
+                style={[styles.platformDownloadBtn, { backgroundColor: theme.surfaceHighlight, borderColor: theme.border }]}
+                onPress={handleDownloadAndroid}
+                activeOpacity={0.7}
+              >
+                <Download size={14} color={theme.text} />
+                <Text style={[styles.platformDownloadText, { color: theme.text }]}>DOWNLOAD .APK</Text>
               </TouchableOpacity>
             </View>
 
@@ -962,7 +1019,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                     },
                   ]}
                 >
-                  <Text style={[styles.osTagText, { color: isDark ? '#39D353' : '#1A7F37' }]}>CLOUD SYNC</Text>
+                  <Text style={[styles.osTagText, { color: isDark ? '#39D353' : '#1A7F37' }]}>LIVE</Text>
                 </View>
               </View>
 
@@ -989,30 +1046,27 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               </TouchableOpacity>
             </View>
 
-            {/* Android & iOS Mobile */}
-            <View style={[styles.platformCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+            {/* Apple iOS */}
+            <View style={[styles.platformCard, { backgroundColor: theme.surface, borderColor: theme.border, opacity: 0.65 }]}>
               <View style={styles.platformTop}>
                 <View style={[styles.platformIconFrame, { borderColor: theme.border, backgroundColor: theme.surfaceHighlight }]}>
-                  <Smartphone size={20} color={theme.text} />
+                  <Smartphone size={20} color={theme.textSecondary} />
                 </View>
-                <View style={[styles.osTag, { backgroundColor: 'rgba(56, 189, 248, 0.1)', borderColor: 'rgba(56, 189, 248, 0.3)' }]}>
-                  <Text style={[styles.osTagText, { color: '#38BDF8' }]}>WIDGETS</Text>
+                <View style={[styles.osTag, { backgroundColor: 'rgba(139, 148, 158, 0.1)', borderColor: 'rgba(139, 148, 158, 0.3)' }]}>
+                  <Text style={[styles.osTagText, { color: theme.textMuted }]}>COMING SOON</Text>
                 </View>
               </View>
 
-              <Text style={[styles.platformName, { color: theme.text }]}>iOS & Android</Text>
+              <Text style={[styles.platformName, { color: theme.text }]}>Apple iOS</Text>
               <Text style={[styles.platformDesc, { color: theme.textSecondary }]}>
-                Pocket habit tracking with live home screen and lockscreen glanceable widgets.
+                Native iOS client with WidgetKit extensions for lock screen and home screen tracking in active development.
               </Text>
 
-              <TouchableOpacity
-                style={[styles.platformDownloadBtn, { backgroundColor: theme.surfaceHighlight, borderColor: theme.border }]}
-                onPress={handleDownloadRelease}
-                activeOpacity={0.7}
+              <View
+                style={[styles.platformDownloadBtn, { backgroundColor: theme.surfaceHighlight, borderColor: theme.borderSubtle }]}
               >
-                <Download size={14} color={theme.text} />
-                <Text style={[styles.platformDownloadText, { color: theme.text }]}>GET MOBILE BUILD</Text>
-              </TouchableOpacity>
+                <Text style={[styles.platformDownloadText, { color: theme.textMuted }]}>IN DEVELOPMENT</Text>
+              </View>
             </View>
           </View>
         )}
@@ -1923,6 +1977,7 @@ const styles = StyleSheet.create({
   // Platforms Grid
   platformsGrid: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 16,
   },
   platformsGridMobile: {
@@ -1931,6 +1986,7 @@ const styles = StyleSheet.create({
   },
   platformCard: {
     flex: 1,
+    minWidth: 230,
     borderWidth: 1,
     borderRadius: 8,
     padding: 22,

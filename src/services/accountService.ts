@@ -79,7 +79,7 @@ export async function isUsernameAvailable(
 
 /**
  * Resolves an email from an input identifier (which could be an email or @username).
- * First attempts global database resolution via public.profiles, then falls back to local cache.
+ * Uses local secure mapping to prevent email harvesting or privacy leaks.
  */
 export async function resolveEmailFromIdentifier(identifier: string): Promise<string> {
   const clean = identifier.trim();
@@ -88,23 +88,7 @@ export async function resolveEmailFromIdentifier(identifier: string): Promise<st
   }
   const cleanUsername = clean.replace(/^@/, '').toLowerCase();
 
-  // 1. Try global database lookup from public.profiles
-  try {
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('email')
-      .ilike('username', cleanUsername)
-      .maybeSingle();
-
-    if (!error && data?.email) {
-      await storeUsernameMapping(cleanUsername, data.email);
-      return data.email;
-    }
-  } catch {
-    // If profiles table does not exist or network is offline, continue to local cache
-  }
-
-  // 2. Check local device mapping
+  // Check local device mapping
   const map = await getStoredUsernameMap();
   if (map[cleanUsername]) {
     return map[cleanUsername];
@@ -177,7 +161,6 @@ export async function updateUserProfile(params: {
         id: user.id,
         username: cleanUsername,
         display_name: cleanDisplayName,
-        email: user.email,
         updated_at: new Date().toISOString(),
       });
 
