@@ -1,11 +1,20 @@
 import React, { useState } from 'react';
-import { StyleSheet, View, Text, Modal, TouchableOpacity, ScrollView, Platform } from 'react-native';
+import {
+  StyleSheet,
+  View,
+  Text,
+  Modal,
+  TouchableOpacity,
+  ScrollView,
+  Platform,
+  useWindowDimensions,
+} from 'react-native';
 import { HeatMapModel } from '../types/heatmap';
 import { PALETTES } from '../constants/palettes';
-import { getTodayKey } from '../utils/dateUtils';
-import { calculateStats, getStreakIntensityLevel } from '../utils/streakUtils';
+import { getStreakIntensityLevel } from '../utils/streakUtils';
 import { DayCell } from './DayCell';
-import { X, Copy, Code, Check } from 'lucide-react-native';
+import { X, Smartphone, Layers, CheckCircle2 } from 'lucide-react-native';
+import { useAppTheme, useIsDark } from '../theme/theme';
 
 interface WidgetStudioModalProps {
   visible: boolean;
@@ -13,25 +22,38 @@ interface WidgetStudioModalProps {
   onClose: () => void;
 }
 
+type WidgetSize = 'small' | 'medium' | 'large';
+
+const fontStack = Platform.select({
+  web: '"SF Pro Rounded", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+  ios: 'System',
+  default: 'sans-serif',
+});
+
 export const WidgetStudioModal: React.FC<WidgetStudioModalProps> = ({
   visible,
   heatmaps,
   onClose,
 }) => {
+  const theme = useAppTheme();
+  const isDark = useIsDark();
+  const { width } = useWindowDimensions();
+  const isMobile = width < 768;
+
   const [selectedMapId, setSelectedMapId] = useState<string | null>(heatmaps[0]?.id || null);
-  const [copiedNotification, setCopiedNotification] = useState(false);
+  const [widgetSize, setWidgetSize] = useState<WidgetSize>('medium');
 
   if (!visible) return null;
 
   const currentMap = heatmaps.find((m) => m.id === selectedMapId) || heatmaps[0];
   if (!currentMap) {
     return (
-      <Modal visible={visible} transparent animationType="fade">
+      <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
         <View style={styles.overlay}>
-          <View style={styles.modalBox}>
-            <Text style={styles.emptyText}>No habits available for Widgets.</Text>
-            <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
-              <X size={16} color="#8B949E" />
+          <View style={[styles.modalBox, { backgroundColor: theme.surface, borderColor: theme.borderSubtle }]}>
+            <Text style={[styles.emptyText, { color: theme.textSecondary }]}>No habits available for Widgets.</Text>
+            <TouchableOpacity onPress={onClose} style={[styles.closeBtn, { backgroundColor: theme.surfaceHighlight }]}>
+              <X size={16} color={theme.textSecondary} />
             </TouchableOpacity>
           </View>
         </View>
@@ -39,174 +61,224 @@ export const WidgetStudioModal: React.FC<WidgetStudioModalProps> = ({
     );
   }
 
-  const { stats, streakMap } = calculateStats(currentMap);
-  const palette = PALETTES[currentMap.paletteId] || PALETTES.emerald;
-  const todayKey = getTodayKey();
-  const isTodayLogged = !!currentMap.entries[todayKey]?.completed;
+  // Weeks to display based on widget size
+  // Small (2x2): 7 weeks (49 days)
+  // Medium (4x2): 16 weeks (112 days)
+  // Large (4x4): 28 weeks (196 days)
+  const numWeeks = widgetSize === 'small' ? 7 : widgetSize === 'medium' ? 16 : 28;
 
-  const getRecentDays = (count: number) => {
-    const list: Array<{ dateKey: string; level: 0 | 1 | 2 | 3 | 4 }> = [];
+  // Build grid of recent days organized by week columns (each column = 7 days, Mon to Sun)
+  const generateWidgetGrid = () => {
     const today = new Date();
-    for (let i = count - 1; i >= 0; i--) {
-      const d = new Date(today);
-      d.setDate(today.getDate() - i);
-      const key = formatDateKey(d);
-      const entry = currentMap.entries[key];
-      const level = entry?.completed ? getStreakIntensityLevel(streakMap[key] || 1) : 0;
-      list.push({
-        dateKey: key,
-        level,
-      });
+    // find day of week (0 is Sunday, convert so Monday is 0, Sunday is 6)
+    const dayOfWeek = (today.getDay() + 6) % 7;
+    const totalDays = numWeeks * 7;
+    const gridWeeks: Array<Array<{ dateKey: string; level: 0 | 1 | 2 | 3 | 4 }>> = [];
+
+    // Calculate start date so that the last day in the last week is today or end of this week
+    const startDate = new Date(today);
+    startDate.setDate(today.getDate() - (totalDays - 1 - (6 - dayOfWeek)));
+
+    let curDate = new Date(startDate);
+    for (let w = 0; w < numWeeks; w++) {
+      const weekDays = [];
+      for (let d = 0; d < 7; d++) {
+        const year = curDate.getFullYear();
+        const month = String(curDate.getMonth() + 1).padStart(2, '0');
+        const day = String(curDate.getDate()).padStart(2, '0');
+        const key = `${year}-${month}-${day}`;
+        const entry = currentMap.entries[key];
+        const isFuture = curDate > today;
+        const level = entry?.completed && !isFuture ? getStreakIntensityLevel(1) : 0;
+
+        weekDays.push({
+          dateKey: key,
+          level,
+        });
+
+        curDate.setDate(curDate.getDate() + 1);
+      }
+      gridWeeks.push(weekDays);
     }
-    return list;
+    return gridWeeks;
   };
 
-  const handleCopyConfig = () => {
-    setCopiedNotification(true);
-    setTimeout(() => setCopiedNotification(false), 2000);
-  };
+  const widgetGrid = generateWidgetGrid();
+  const palette = PALETTES[currentMap.paletteId] || PALETTES.emerald;
 
-  // Helper inside here just for WidgetStudio formatting
-  function formatDateKey(date: Date): string {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-  }
+  // Dynamic cell sizing inside the widget preview
+  const cellSize = widgetSize === 'small' ? 12 : widgetSize === 'medium' ? 10.5 : 8.5;
+  const cellGap = widgetSize === 'small' ? 3 : widgetSize === 'medium' ? 2.5 : 2;
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <View style={styles.overlay}>
-        <View style={styles.modalBox}>
-          <View style={styles.header}>
+        <View style={[styles.modalBox, { backgroundColor: theme.surface, borderColor: theme.borderSubtle }]}>
+          
+          {/* Header */}
+          <View style={[styles.header, { borderBottomColor: theme.borderSubtle }]}>
             <View>
-              <Text style={styles.modalSubtitle}>WIDGET STUDIO</Text>
-              <Text style={styles.modalTitle}>Native Integrations</Text>
+              <Text style={[styles.modalSubtitle, { color: theme.textMuted }]}>HOME SCREEN WIDGET</Text>
+              <Text style={[styles.modalTitle, { color: theme.text }]}>Widget Studio</Text>
             </View>
-            <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
-              <X size={20} color="#8B949E" />
+            <TouchableOpacity
+              onPress={onClose}
+              style={[styles.closeBtn, { backgroundColor: theme.surfaceHighlight }]}
+              accessibilityLabel="Close"
+            >
+              <X size={16} color={theme.textSecondary} />
             </TouchableOpacity>
           </View>
 
-          <View style={styles.selectorRow}>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.mapSelector}>
-              {heatmaps.map((m) => (
-                <TouchableOpacity
-                  key={m.id}
-                  style={[
-                    styles.mapPill,
-                    selectedMapId === m.id && { borderColor: PALETTES[m.paletteId]?.accent || '#58A6FF' },
-                  ]}
-                  onPress={() => setSelectedMapId(m.id)}
-                >
-                  <Text style={[
-                    styles.mapPillText,
-                    selectedMapId === m.id && { color: '#F0F6FC', fontWeight: '600' }
-                  ]}>
-                    {m.title}
-                  </Text>
-                </TouchableOpacity>
-              ))}
+          {/* Habit Selector Bar */}
+          <View style={[styles.selectorBar, { backgroundColor: theme.surfaceHighlight, borderBottomColor: theme.borderSubtle }]}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.selectorScroll}>
+              {heatmaps.map((m) => {
+                const isSelected = (selectedMapId || currentMap.id) === m.id;
+                const mPalette = PALETTES[m.paletteId] || PALETTES.emerald;
+                return (
+                  <TouchableOpacity
+                    key={m.id}
+                    style={[
+                      styles.habitPill,
+                      {
+                        backgroundColor: isSelected ? theme.surface : 'transparent',
+                        borderColor: isSelected ? mPalette.accent : theme.borderSubtle,
+                      },
+                    ]}
+                    onPress={() => setSelectedMapId(m.id)}
+                    activeOpacity={0.7}
+                  >
+                    <View style={[styles.pillDot, { backgroundColor: mPalette.accent }]} />
+                    <Text
+                      style={[
+                        styles.habitPillText,
+                        { color: isSelected ? theme.text : theme.textSecondary },
+                        isSelected && { fontWeight: '700' },
+                      ]}
+                    >
+                      {m.title}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
             </ScrollView>
           </View>
 
-          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollBody}>
-            
-            {/* Small Square Widget Preview */}
-            <View style={styles.widgetSection}>
-              <Text style={styles.sectionTitle}>Small Square (iOS / Android)</Text>
-              <View style={styles.widgetPreviewBox}>
-                <View style={styles.widgetSmall}>
-                  <View style={styles.widgetSmallHeader}>
-                    <Text style={styles.widgetSmallTitle} numberOfLines={1}>{currentMap.title}</Text>
-                  </View>
-                  <View style={styles.widgetSmallStats}>
-                    <Text style={[styles.widgetSmallVal, { color: palette.accent }]}>
-                      {stats.currentStreak}
-                      <Text style={styles.widgetSmallUnit}>d streak</Text>
-                    </Text>
-                  </View>
-                  <View style={styles.widgetSmallGrid}>
-                    {getRecentDays(14).map((d) => (
-                      <DayCell
-                        key={`sm-${d.dateKey}`}
-                        dateKey={d.dateKey}
-                        level={d.level}
-                        paletteId={currentMap.paletteId}
-                        size={14}
-                      />
-                    ))}
-                  </View>
-                </View>
+          {/* Scrollable Content Body */}
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.scrollBody}
+          >
+            {/* Widget Size Selector Controls */}
+            <View style={styles.sizeControlSection}>
+              <Text style={[styles.sectionLabel, { color: theme.textMuted }]}>PREVIEW RESIZE SIZE</Text>
+              <View style={[styles.sizeSwitcher, { backgroundColor: theme.surfaceHighlight, borderColor: theme.borderSubtle }]}>
+                {(['small', 'medium', 'large'] as WidgetSize[]).map((sz) => {
+                  const isActive = widgetSize === sz;
+                  const label = sz === 'small' ? '2x2 Small' : sz === 'medium' ? '4x2 Medium' : '4x4 Expanded';
+                  return (
+                    <TouchableOpacity
+                      key={sz}
+                      style={[
+                        styles.sizeOption,
+                        isActive && { backgroundColor: theme.surface, borderColor: theme.borderSubtle },
+                      ]}
+                      onPress={() => setWidgetSize(sz)}
+                      activeOpacity={0.7}
+                    >
+                      <Text
+                        style={[
+                          styles.sizeOptionText,
+                          { color: isActive ? theme.text : theme.textSecondary },
+                          isActive && { fontWeight: '700' },
+                        ]}
+                      >
+                        {label}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
               </View>
             </View>
 
-            {/* Medium Rectangle Widget Preview */}
-            <View style={styles.widgetSection}>
-              <Text style={styles.sectionTitle}>Medium Rectangle (iOS / Android / Mac)</Text>
-              <View style={styles.widgetPreviewBox}>
-                <View style={styles.widgetMedium}>
-                  <View style={styles.widgetMediumHeader}>
-                    <View>
-                      <Text style={styles.widgetMediumSubtitle}>{currentMap.category.toUpperCase()}</Text>
-                      <Text style={styles.widgetMediumTitle}>{currentMap.title}</Text>
-                    </View>
-                    <View style={styles.widgetMediumBadge}>
-                      <Text style={[styles.widgetMediumBadgeText, { color: palette.accent }]}>
-                        {isTodayLogged ? 'DONE' : 'PENDING'}
-                      </Text>
-                    </View>
-                  </View>
-                  
-                  <View style={styles.widgetMediumGridContainer}>
-                    <View style={styles.widgetMediumGrid}>
-                      {getRecentDays(35).map((d) => (
+            {/* Widget Preview Canvas */}
+            <View style={[styles.canvasBox, { backgroundColor: theme.surfaceHighlight, borderColor: theme.borderSubtle }]}>
+              {/* Native Home Screen Widget: Habit Name in Top Left, Pure Matrix Everywhere Else */}
+              <View
+                style={[
+                  styles.nativeWidget,
+                  widgetSize === 'small' && styles.nativeWidgetSmall,
+                  widgetSize === 'medium' && styles.nativeWidgetMedium,
+                  widgetSize === 'large' && styles.nativeWidgetLarge,
+                  {
+                    backgroundColor: isDark ? '#161B22' : '#FFFFFF',
+                    borderColor: isDark ? '#30363D' : '#D0D7DE',
+                    ...(Platform.OS === 'web'
+                      ? {
+                          boxShadow: isDark
+                            ? '0 8px 24px rgba(0, 0, 0, 0.45)'
+                            : '0 8px 24px rgba(0, 0, 0, 0.08)',
+                        }
+                      : {}),
+                  },
+                ]}
+              >
+                {/* Top Left: Habit Name Only */}
+                <View style={styles.widgetHeader}>
+                  <Text style={[styles.widgetHabitTitle, { color: isDark ? '#F0F6FC' : '#1F2328' }]} numberOfLines={1}>
+                    {currentMap.title}
+                  </Text>
+                </View>
+
+                {/* Pure Contribution Matrix */}
+                <View style={[styles.matrixColumns, { gap: cellGap }]}>
+                  {widgetGrid.map((week, wIdx) => (
+                    <View key={`ww-${wIdx}`} style={[styles.matrixColumn, { gap: cellGap }]}>
+                      {week.map((day) => (
                         <DayCell
-                          key={`md-${d.dateKey}`}
-                          dateKey={d.dateKey}
-                          level={d.level}
+                          key={`wd-${day.dateKey}`}
+                          dateKey={day.dateKey}
+                          level={day.level}
                           paletteId={currentMap.paletteId}
-                          size={14}
+                          size={cellSize}
+                          disabled={true}
                         />
                       ))}
                     </View>
-                    
-                    <View style={styles.widgetMediumStats}>
-                      <View>
-                        <Text style={styles.wStatLabel}>STREAK</Text>
-                        <Text style={styles.wStatVal}>{stats.currentStreak}d</Text>
-                      </View>
-                      <View style={{marginTop: 6}}>
-                        <Text style={styles.wStatLabel}>TOTAL</Text>
-                        <Text style={styles.wStatVal}>{stats.totalActiveDays}d</Text>
-                      </View>
-                    </View>
-                  </View>
+                  ))}
                 </View>
               </View>
             </View>
 
-            {/* Integration Details */}
-            <View style={styles.integrationBox}>
-              <View style={styles.integrationHeader}>
-                <Code size={16} color="#8B949E" />
-                <Text style={styles.integrationTitle}>Export Configuration</Text>
+            {/* Practical Home Screen Setup Guide */}
+            <View style={[styles.guideCard, { backgroundColor: theme.surfaceHighlight, borderColor: theme.borderSubtle }]}>
+              <View style={styles.guideHeader}>
+                <Smartphone size={16} color={theme.text} />
+                <Text style={[styles.guideTitle, { color: theme.text }]}>How to Add to Home Screen</Text>
               </View>
-              <Text style={styles.integrationText}>
-                Use this Map ID to configure your native iOS WidgetKit or Android RemoteViews instance.
-              </Text>
-              <View style={styles.codeRow}>
-                <Text style={styles.codeText}>{currentMap.id}</Text>
-                <TouchableOpacity style={styles.copyBtn} onPress={handleCopyConfig}>
-                  {copiedNotification ? (
-                    <Check size={14} color="#3FB950" />
-                  ) : (
-                    <Copy size={14} color="#8B949E" />
-                  )}
-                  <Text style={[styles.copyBtnText, copiedNotification && {color: '#3FB950'}]}>
-                    {copiedNotification ? 'Copied' : 'Copy ID'}
+
+              <View style={styles.guideSteps}>
+                <View style={styles.guideStepRow}>
+                  <CheckCircle2 size={13} color={palette.accent} style={styles.stepIcon} />
+                  <Text style={[styles.stepText, { color: theme.textSecondary }]}>
+                    Long-press any empty area on your phone's Home Screen.
                   </Text>
-                </TouchableOpacity>
+                </View>
+
+                <View style={styles.guideStepRow}>
+                  <CheckCircle2 size={13} color={palette.accent} style={styles.stepIcon} />
+                  <Text style={[styles.stepText, { color: theme.textSecondary }]}>
+                    Tap <Text style={{ fontWeight: '700', color: theme.text }}>Widgets</Text>, find <Text style={{ fontWeight: '700', color: theme.text }}>HabitHeat</Text>, and drag it to your screen.
+                  </Text>
+                </View>
+
+                <View style={styles.guideStepRow}>
+                  <CheckCircle2 size={13} color={palette.accent} style={styles.stepIcon} />
+                  <Text style={[styles.stepText, { color: theme.textSecondary }]}>
+                    Touch and hold the placed widget, then drag the corner handles to resize between 2x2, 4x2, or 4x4.
+                  </Text>
+                </View>
               </View>
             </View>
 
@@ -220,291 +292,202 @@ export const WidgetStudioModal: React.FC<WidgetStudioModalProps> = ({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.85)',
+    backgroundColor: 'rgba(0, 0, 0, 0.75)',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
+    padding: 16,
   },
   modalBox: {
     width: '100%',
-    maxWidth: 600,
-    maxHeight: '95%',
-    backgroundColor: '#0D1117',
-    borderColor: '#30363D',
+    maxWidth: 540,
+    maxHeight: '90%',
     borderWidth: 1,
-    borderRadius: 6,
-    padding: 0,
+    borderRadius: 16,
     overflow: 'hidden',
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    padding: 20,
+    alignItems: 'center',
+    paddingHorizontal: 18,
+    paddingVertical: 14,
     borderBottomWidth: 1,
-    borderBottomColor: '#21262D',
   },
   modalSubtitle: {
-    color: '#8B949E',
-    fontSize: 10,
+    fontSize: 9.5,
     fontWeight: '700',
-    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
-    letterSpacing: 0.5,
+    fontFamily: fontStack,
+    letterSpacing: 0.6,
   },
   modalTitle: {
-    color: '#F0F6FC',
-    fontSize: 20,
-    fontWeight: '600',
-    marginTop: 2,
-    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
-  },
-  closeBtn: {
-    padding: 4,
-  },
-  selectorRow: {
-    borderBottomWidth: 1,
-    borderBottomColor: '#21262D',
-    backgroundColor: '#161B22',
-  },
-  mapSelector: {
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    gap: 8,
-  },
-  mapPill: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#30363D',
-    backgroundColor: '#090B0E',
-  },
-  mapPillText: {
-    color: '#8B949E',
-    fontSize: 12,
-    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
-  },
-  scrollBody: {
-    padding: 20,
-  },
-  widgetSection: {
-    marginBottom: 24,
-  },
-  sectionTitle: {
-    color: '#F0F6FC',
-    fontSize: 13,
-    fontWeight: '600',
-    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
-    marginBottom: 10,
-  },
-  widgetPreviewBox: {
-    backgroundColor: '#090B0E',
-    borderWidth: 1,
-    borderColor: '#21262D',
-    borderRadius: 8,
-    padding: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    ...(Platform.OS === 'web'
-      ? ({
-          backgroundImage: 'radial-gradient(#21262D 1px, transparent 0)',
-          backgroundSize: '20px 20px',
-        } as any)
-      : {}),
-  },
-  emptyText: {
-    color: '#8B949E',
-    fontSize: 14,
-    textAlign: 'center',
-    padding: 24,
-  },
-  widgetSmall: {
-    width: 140,
-    height: 140,
-    backgroundColor: '#0D1117',
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: '#30363D',
-    padding: 14,
-    ...Platform.select({
-      web: {
-        boxShadow: '0 4px 10px rgba(0, 0, 0, 0.3)',
-      },
-      default: {
-        shadowColor: '#000',
-        shadowOpacity: 0.3,
-        shadowRadius: 10,
-        shadowOffset: { width: 0, height: 4 },
-        elevation: 4,
-      },
-    }),
-  },
-  widgetSmallHeader: {
-    marginBottom: 4,
-  },
-  widgetSmallTitle: {
-    color: '#F0F6FC',
-    fontSize: 12,
-    fontWeight: '600',
-    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
-  },
-  widgetSmallStats: {
-    marginBottom: 12,
-  },
-  widgetSmallVal: {
     fontSize: 18,
     fontWeight: '700',
-    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
+    fontFamily: fontStack,
+    marginTop: 2,
   },
-  widgetSmallUnit: {
-    fontSize: 10,
-    fontWeight: '500',
-    color: '#8B949E',
+  closeBtn: {
+    width: 30,
+    height: 30,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  widgetSmallGrid: {
+  selectorBar: {
+    borderBottomWidth: 1,
+  },
+  selectorScroll: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    gap: 8,
+  },
+  habitPill: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 3,
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+    borderWidth: 1,
+    gap: 6,
   },
-  widgetMedium: {
-    width: 320,
-    height: 140,
-    backgroundColor: '#0D1117',
+  pillDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  habitPillText: {
+    fontSize: 12,
+    fontFamily: fontStack,
+  },
+  scrollBody: {
+    padding: 18,
+    gap: 16,
+  },
+  sizeControlSection: {
+    gap: 6,
+  },
+  sectionLabel: {
+    fontSize: 10,
+    fontWeight: '700',
+    fontFamily: fontStack,
+    letterSpacing: 0.5,
+  },
+  sizeSwitcher: {
+    flexDirection: 'row',
+    borderWidth: 1,
+    borderRadius: 8,
+    padding: 3,
+  },
+  sizeOption: {
+    flex: 1,
+    paddingVertical: 6,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: 'transparent',
+  },
+  sizeOptionText: {
+    fontSize: 11.5,
+    fontFamily: fontStack,
+  },
+  canvasBox: {
+    borderWidth: 1,
+    borderRadius: 14,
+    padding: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 200,
+  },
+
+  // Native Widget Container (Mimicking iOS & Android system widget chrome)
+  nativeWidget: {
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: '#30363D',
-    padding: 16,
+    padding: 14,
+    alignItems: 'flex-start',
     ...Platform.select({
-      web: {
-        boxShadow: '0 4px 10px rgba(0, 0, 0, 0.3)',
-      },
-      default: {
+      ios: {
         shadowColor: '#000',
-        shadowOpacity: 0.3,
-        shadowRadius: 10,
         shadowOffset: { width: 0, height: 4 },
-        elevation: 4,
+        shadowOpacity: 0.15,
+        shadowRadius: 12,
+      },
+      android: {
+        elevation: 5,
       },
     }),
   },
-  widgetMediumHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 12,
+  nativeWidgetSmall: {
+    width: 146,
+    minHeight: 146,
   },
-  widgetMediumSubtitle: {
-    color: '#8B949E',
-    fontSize: 9,
-    fontWeight: '700',
-    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
-    letterSpacing: 0.5,
+  nativeWidgetMedium: {
+    width: '100%',
+    maxWidth: 310,
+    minHeight: 130,
   },
-  widgetMediumTitle: {
-    color: '#F0F6FC',
-    fontSize: 14,
-    fontWeight: '600',
-    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
-    marginTop: 2,
+  nativeWidgetLarge: {
+    width: '100%',
+    maxWidth: 330,
+    minHeight: 160,
   },
-  widgetMediumBadge: {
-    backgroundColor: '#161B22',
-    borderWidth: 1,
-    borderColor: '#30363D',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
+
+  widgetHeader: {
+    width: '100%',
+    marginBottom: 10,
   },
-  widgetMediumBadgeText: {
-    fontSize: 9,
-    fontWeight: '700',
-    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
-  },
-  widgetMediumGridContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-  },
-  widgetMediumGrid: {
-    flexDirection: 'column',
-    flexWrap: 'wrap',
-    alignContent: 'flex-start',
-    height: 5 * 14 + 4 * 3, // 5 rows
-    width: 7 * 14 + 6 * 3, // 7 cols
-    gap: 3,
-  },
-  widgetMediumStats: {
-    alignItems: 'flex-end',
-    justifyContent: 'center',
-  },
-  wStatLabel: {
-    color: '#6E7681',
-    fontSize: 9,
-    fontWeight: '600',
-    textAlign: 'right',
-    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
-  },
-  wStatVal: {
-    color: '#F0F6FC',
+  widgetHabitTitle: {
     fontSize: 13,
     fontWeight: '700',
-    textAlign: 'right',
-    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
+    fontFamily: fontStack,
+    letterSpacing: -0.1,
   },
-  integrationBox: {
-    backgroundColor: '#161B22',
-    borderColor: '#30363D',
+  matrixColumns: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  matrixColumn: {
+    flexDirection: 'column',
+  },
+
+  // Guide Card
+  guideCard: {
     borderWidth: 1,
-    borderRadius: 6,
-    padding: 16,
-    marginTop: 10,
+    borderRadius: 12,
+    padding: 14,
+    gap: 10,
   },
-  integrationHeader: {
+  guideHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    marginBottom: 6,
   },
-  integrationTitle: {
-    color: '#F0F6FC',
-    fontSize: 14,
-    fontWeight: '600',
-    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
-  },
-  integrationText: {
-    color: '#8B949E',
-    fontSize: 12,
-    lineHeight: 18,
-    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
-    marginBottom: 12,
-  },
-  codeRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: '#0D1117',
-    borderWidth: 1,
-    borderColor: '#30363D',
-    borderRadius: 4,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-  },
-  codeText: {
-    color: '#E6EDF3',
+  guideTitle: {
     fontSize: 13,
+    fontWeight: '700',
+    fontFamily: fontStack,
   },
-  copyBtn: {
+  guideSteps: {
+    gap: 8,
+  },
+  guideStepRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    padding: 6,
-    backgroundColor: '#21262D',
-    borderRadius: 4,
+    alignItems: 'flex-start',
+    gap: 8,
   },
-  copyBtnText: {
-    color: '#8B949E',
-    fontSize: 11,
-    fontWeight: '600',
-    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
+  stepIcon: {
+    marginTop: 2,
+  },
+  stepText: {
+    fontSize: 12,
+    fontFamily: fontStack,
+    lineHeight: 17,
+    flex: 1,
+  },
+  emptyText: {
+    fontSize: 13,
+    fontFamily: fontStack,
+    textAlign: 'center',
+    padding: 24,
   },
 });
