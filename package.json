@@ -29,6 +29,7 @@
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "react-native": "0.86.3",
+    "react-native-android-widget": "^0.22.1",
     "react-native-safe-area-context": "~5.7.0",
     "react-native-svg": "15.15.4",
     "react-native-url-polyfill": "^4.0.0",

@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { HeatMapModel } from '../types/heatmap';
 import { supabase } from './supabase';
+import { updateAndroidWidgets } from '../widgets/widgetSync';
 
 function getStorageKey(userId?: string): string {
   if (userId) {
@@ -108,6 +109,9 @@ export async function saveHeatMaps(maps: HeatMapModel[], userId?: string): Promi
         console.warn('Cloud sync error:', err);
       });
     }
+
+    // Refresh native Android home screen widgets
+    updateAndroidWidgets().catch(() => {});
   } catch (err) {
     console.error('Storage write error:', err);
   }
