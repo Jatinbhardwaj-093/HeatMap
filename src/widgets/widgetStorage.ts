@@ -87,3 +87,52 @@ export async function setActiveWidgetHabit(habitId: string): Promise<void> {
 export async function getActiveWidgetHabitId(): Promise<string | null> {
   return AsyncStorage.getItem('@trackheat_active_widget_habit_id');
 }
+
+export async function toggleHabitToday(habitId: string): Promise<HeatMapModel | undefined> {
+  try {
+    const allKeys = await AsyncStorage.getAllKeys();
+    let targetKey = allKeys.find((k) => k.startsWith('@trackheat_maps_') && k !== '@trackheat_maps_guest');
+    if (!targetKey) {
+      targetKey = '@trackheat_maps_guest';
+    }
+
+    let habits: HeatMapModel[] = [];
+    const raw = await AsyncStorage.getItem(targetKey);
+    if (raw) {
+      habits = JSON.parse(raw);
+    } else {
+      const legacyRaw = await AsyncStorage.getItem('@habitheat_maps_guest');
+      if (legacyRaw) habits = JSON.parse(legacyRaw);
+    }
+
+    const today = new Date();
+    const todayKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+    let updatedHabit: HeatMapModel | undefined;
+
+    const updatedHabits = habits.map((h) => {
+      if (h.id === habitId) {
+        const currentlyDone = Boolean(h.entries?.[todayKey]?.completed);
+        const entries = {
+          ...h.entries,
+          [todayKey]: {
+            date: todayKey,
+            completed: !currentlyDone,
+            notes: h.entries?.[todayKey]?.notes,
+          },
+        };
+        updatedHabit = { ...h, entries };
+        return updatedHabit;
+      }
+      return h;
+    });
+
+    if (updatedHabit) {
+      await AsyncStorage.setItem(targetKey, JSON.stringify(updatedHabits));
+    }
+
+    return updatedHabit;
+  } catch (err) {
+    console.error('Error toggling habit today from widget:', err);
+    return undefined;
+  }
+}

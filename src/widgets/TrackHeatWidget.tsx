@@ -111,6 +111,9 @@ export function TrackHeatWidget({ map, width, height, isDark = true }: TrackHeat
     columns.push(col);
   }
 
+  const todayKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+  const isTodayDone = Boolean(map.entries?.[todayKey]?.completed);
+
   return (
     <FlexWidget
       style={{
@@ -128,26 +131,59 @@ export function TrackHeatWidget({ map, width, height, isDark = true }: TrackHeat
       }}
       clickAction="OPEN_APP"
     >
-      {/* Top Header: Habit title only (streak count removed) */}
+      {/* Top Header: Habit title + Today toggle action */}
       <FlexWidget
         style={{
           flexDirection: 'row',
-          justifyContent: 'flex-start',
+          justifyContent: 'space-between',
           alignItems: 'center',
           width: 'match_parent',
           marginBottom: headerMargin,
         }}
       >
-        <TextWidget
-          text={map.title}
-          maxLines={1}
-          truncate="END"
+        <FlexWidget
           style={{
-            fontSize: titleFontSize,
-            fontWeight: 'bold',
-            color: textPrimary,
+            flex: 1,
+            marginRight: 6,
           }}
-        />
+        >
+          <TextWidget
+            text={map.title}
+            maxLines={1}
+            truncate="END"
+            style={{
+              fontSize: titleFontSize,
+              fontWeight: 'bold',
+              color: textPrimary,
+            }}
+          />
+        </FlexWidget>
+
+        <FlexWidget
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'center',
+            paddingHorizontal: isSingleRow ? 6 : 8,
+            paddingVertical: isSingleRow ? 2 : 3,
+            borderRadius: isSingleRow ? 6 : 8,
+            backgroundColor: isTodayDone ? (isDark ? '#238636' : '#2EA043') : (isDark ? '#21262D' : '#F0F2F5'),
+            borderColor: isTodayDone ? (isDark ? '#2EA043' : '#238636') : (isDark ? '#30363D' : '#D0D7DE'),
+            borderWidth: 1,
+          }}
+          clickAction="TOGGLE_TODAY"
+          clickActionData={{ habitId: map.id }}
+          accessibilityLabel={isTodayDone ? `Mark ${map.title} not done` : `Mark ${map.title} done today`}
+        >
+          <TextWidget
+            text={isTodayDone ? '✓ Done' : '+ Log'}
+            style={{
+              fontSize: isSingleRow ? 9 : 10,
+              fontWeight: 'bold',
+              color: isTodayDone ? '#FFFFFF' : textPrimary,
+            }}
+          />
+        </FlexWidget>
       </FlexWidget>
 
       {/* Contribution Grid: dynamic cell size and dynamic week columns */}

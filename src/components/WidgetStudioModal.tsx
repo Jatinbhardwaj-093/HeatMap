@@ -304,20 +304,53 @@ export const WidgetStudioModal: React.FC<WidgetStudioModalProps> = ({
                   },
                 ]}
               >
-                {/* Top: Habit Name Only (No streak count) */}
-                <View style={[styles.widgetHeader, { marginBottom: isSingleRow ? 4 : 8 }]}>
+                {/* Top: Habit Name + Today Log Button */}
+                <View style={[styles.widgetHeader, { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: isSingleRow ? 4 : 8 }]}>
                   <Text
                     style={[
                       styles.widgetHabitTitle,
                       {
                         color: isDark ? '#F0F6FC' : '#1F2328',
                         fontSize: titleFontSize,
+                        flex: 1,
+                        marginRight: 6,
                       },
                     ]}
                     numberOfLines={1}
                   >
                     {currentMap.title}
                   </Text>
+
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      paddingHorizontal: isSingleRow ? 6 : 8,
+                      paddingVertical: isSingleRow ? 2 : 3,
+                      borderRadius: isSingleRow ? 6 : 8,
+                      backgroundColor: Boolean(currentMap.entries[`${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(new Date().getDate()).padStart(2, '0')}`]?.completed)
+                        ? (isDark ? '#238636' : '#2EA043')
+                        : (isDark ? '#21262D' : '#F0F2F5'),
+                      borderColor: Boolean(currentMap.entries[`${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(new Date().getDate()).padStart(2, '0')}`]?.completed)
+                        ? (isDark ? '#2EA043' : '#238636')
+                        : (isDark ? '#30363D' : '#D0D7DE'),
+                      borderWidth: 1,
+                    }}
+                  >
+                    <Text
+                      style={{
+                        fontSize: isSingleRow ? 9 : 10,
+                        fontWeight: '700',
+                        color: Boolean(currentMap.entries[`${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(new Date().getDate()).padStart(2, '0')}`]?.completed)
+                          ? '#FFFFFF'
+                          : (isDark ? '#F0F3F6' : '#1F2328'),
+                        fontFamily: fontStack,
+                      }}
+                    >
+                      {Boolean(currentMap.entries[`${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(new Date().getDate()).padStart(2, '0')}`]?.completed) ? '✓ Done' : '+ Log'}
+                    </Text>
+                  </View>
                 </View>
 
                 {/* Pure Contribution Matrix - Scaled to size */}
