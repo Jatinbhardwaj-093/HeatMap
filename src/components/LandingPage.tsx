@@ -227,9 +227,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 </View>
               )}
             </View>
-            {!isMobile && (
-              <Text style={[styles.brandSub, { color: theme.textSecondary }]}>Binary Habit Matrix</Text>
-            )}
           </View>
         </View>
 
