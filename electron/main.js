@@ -29,6 +29,7 @@ function createWindow() {
     minWidth: 780,
     minHeight: 600,
     titleBarStyle: 'hiddenInset',
+    trafficLightPosition: { x: 18, y: 18 },
     backgroundColor: '#090A0C',
     icon: iconPath,
     webPreferences: {
@@ -36,6 +37,31 @@ function createWindow() {
       contextIsolation: true,
       webSecurity: false,
     },
+  });
+
+  win.webContents.setWindowOpenHandler(({ url: targetUrl }) => {
+    if (targetUrl.includes('mode=widget')) {
+      return {
+        action: 'allow',
+        overrideBrowserWindowOptions: {
+          title: 'TrackHeat Widget',
+          width: 380,
+          height: 220,
+          minWidth: 300,
+          minHeight: 160,
+          alwaysOnTop: true,
+          titleBarStyle: 'hiddenInset',
+          trafficLightPosition: { x: 12, y: 12 },
+          backgroundColor: '#090A0C',
+          webPreferences: {
+            nodeIntegration: false,
+            contextIsolation: true,
+            webSecurity: false,
+          },
+        },
+      };
+    }
+    return { action: 'allow' };
   });
 
   const isDev = process.env.NODE_ENV !== 'production' && !app.isPackaged;

@@ -22,10 +22,14 @@ import { CreateHeatmapModal } from './src/components/CreateHeatmapModal';
 import { WidgetStudioModal } from './src/components/WidgetStudioModal';
 import { LandingPage } from './src/components/LandingPage';
 import { LoginScreen } from './src/components/LoginScreen';
+import { AccountModal } from './src/components/AccountModal';
+import { DesktopWidgetView } from './src/components/DesktopWidgetView';
+import { getCurrentUserProfile, UserProfile } from './src/services/accountService';
 import { Search, Plus, Sparkles } from 'lucide-react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from './src/utils/supabase';
 import { useAppTheme, useIsDark, ThemeProvider } from './src/theme/theme';
+import { shouldSkipLanding } from './src/utils/platform';
 
 type ScreenState = 'landing' | 'login' | 'dashboard';
 
@@ -38,9 +42,17 @@ const fontStack = Platform.select({
   });
 
 function AppContent() {
-  const [currentScreen, setCurrentScreen] = useState<ScreenState>('landing');
+  const isWidgetMode = typeof window !== 'undefined' && window.location?.search?.includes('mode=widget');
+  if (isWidgetMode) {
+    return <DesktopWidgetView />;
+  }
+
+  const [currentScreen, setCurrentScreen] = useState<ScreenState>(
+    shouldSkipLanding ? 'login' : 'landing'
+  );
   const [userEmail, setUserEmail] = useState<string | undefined>(undefined);
   const [userId, setUserId] = useState<string | undefined>(undefined);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   
   const [heatmaps, setHeatmaps] = useState<HeatMapModel[]>([]);
   const [loading, setLoading] = useState(true);
@@ -49,6 +61,7 @@ function AppContent() {
   const [selectedDayInfo, setSelectedDayInfo] = useState<{ mapId: string; dateKey: string } | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showWidgetStudio, setShowWidgetStudio] = useState(false);
+  const [showAccountModal, setShowAccountModal] = useState(false);
 
   const theme = useAppTheme();
   const isDark = useIsDark();
@@ -88,6 +101,9 @@ function AppContent() {
           await AsyncStorage.setItem(SAVED_USER_KEY, JSON.stringify({ id: uid, email: session.user.email }));
           const freshData = await loadHeatMaps(uid);
           setHeatmaps(freshData);
+          getCurrentUserProfile().then((p) => {
+            if (p) setUserProfile(p);
+          });
         } else {
           // If no active session, attempt background token refresh if cached user exists
           const cachedUserStr = await AsyncStorage.getItem(SAVED_USER_KEY);
@@ -100,6 +116,9 @@ function AppContent() {
               setCurrentScreen('dashboard');
               const freshData = await loadHeatMaps(rUid);
               setHeatmaps(freshData);
+              getCurrentUserProfile().then((p) => {
+                if (p) setUserProfile(p);
+              });
             }
           }
         }
@@ -121,13 +140,17 @@ function AppContent() {
         await AsyncStorage.setItem(SAVED_USER_KEY, JSON.stringify({ id: uid, email: session.user.email }));
         const data = await loadHeatMaps(uid);
         setHeatmaps(data);
+        getCurrentUserProfile().then((p) => {
+          if (p) setUserProfile(p);
+        });
       } else if (event === 'SIGNED_OUT') {
         // Explicit logout only
         await AsyncStorage.removeItem(SAVED_USER_KEY);
         await AsyncStorage.removeItem('@habitheat_saved_user');
         setUserEmail(undefined);
         setUserId(undefined);
-        setCurrentScreen('landing');
+        setUserProfile(null);
+        setCurrentScreen(shouldSkipLanding ? 'login' : 'landing');
         setHeatmaps([]);
       }
     });
@@ -142,9 +165,19 @@ function AppContent() {
     await AsyncStorage.removeItem('@habitheat_saved_user');
     setUserEmail(undefined);
     setUserId(undefined);
-    setCurrentScreen('landing');
+    setUserProfile(null);
+    setCurrentScreen(shouldSkipLanding ? 'login' : 'landing');
     setHeatmaps([]);
     await supabase.auth.signOut();
+  };
+
+  const handleContinueAsGuest = async () => {
+    setUserEmail(undefined);
+    setUserId(undefined);
+    setUserProfile(null);
+    setCurrentScreen('dashboard');
+    const guestData = await loadHeatMaps();
+    setHeatmaps(guestData);
   };
 
   const updateHeatmaps = (updated: HeatMapModel[]) => {
@@ -256,8 +289,9 @@ function AppContent() {
       <SafeAreaView style={{ flex: 1, backgroundColor: theme.background }}>
         <ExpoStatusBar style={isDark ? "light" : "dark"} />
         <LoginScreen 
-          onBack={() => setCurrentScreen('landing')} 
-          onLoginSuccess={() => setCurrentScreen('dashboard')} 
+          onBack={shouldSkipLanding ? undefined : () => setCurrentScreen('landing')} 
+          onLoginSuccess={() => setCurrentScreen('dashboard')}
+          onContinueAsGuest={handleContinueAsGuest}
         />
       </SafeAreaView>
     );
@@ -269,8 +303,11 @@ function AppContent() {
 
       <Header
         onOpenWidgetStudio={() => setShowWidgetStudio(true)}
+        onOpenAccountModal={() => setShowAccountModal(true)}
         onLogout={handleLogout}
         userEmail={userEmail}
+        userName={userProfile?.displayName}
+        userHandle={userProfile?.username}
       />
 
       <View style={styles.mainContent}>
@@ -354,6 +391,13 @@ function AppContent() {
         visible={showWidgetStudio}
         heatmaps={heatmaps}
         onClose={() => setShowWidgetStudio(false)}
+      />
+
+      <AccountModal
+        visible={showAccountModal}
+        onClose={() => setShowAccountModal(false)}
+        onLogout={handleLogout}
+        onProfileUpdated={(p) => setUserProfile(p)}
       />
     </SafeAreaView>
   );

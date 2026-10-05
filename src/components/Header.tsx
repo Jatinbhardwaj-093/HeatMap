@@ -1,18 +1,25 @@
 import React from 'react';
 import { StyleSheet, View, Text, TouchableOpacity, Platform, Image } from 'react-native';
-import { LogOut, Smartphone, Sun, Moon, Monitor } from 'lucide-react-native';
+import { Smartphone, Sun, Moon, Monitor, User } from 'lucide-react-native';
 import { useAppTheme, useThemeMode } from '../theme/theme';
+import { isMacDesktop, dragRegion, noDragRegion } from '../utils/platform';
 
 interface HeaderProps {
   onOpenWidgetStudio: () => void;
-  onLogout: () => void;
+  onOpenAccountModal: () => void;
+  onLogout?: () => void;
   userEmail?: string;
+  userName?: string;
+  userHandle?: string;
 }
 
 export const Header: React.FC<HeaderProps> = ({
   onOpenWidgetStudio,
+  onOpenAccountModal,
   onLogout,
   userEmail,
+  userName,
+  userHandle,
 }) => {
   const theme = useAppTheme();
   const { themeMode, setThemeMode } = useThemeMode();
@@ -29,11 +36,23 @@ export const Header: React.FC<HeaderProps> = ({
     return <Monitor size={15} color={theme.textSecondary} />;
   };
 
+  const displayName = userName || (userHandle ? `@${userHandle}` : userEmail);
+
   return (
-    <View style={[styles.header, { backgroundColor: theme.surface, borderBottomColor: theme.borderSubtle }]}>
+    <View
+      style={[
+        styles.header,
+        {
+          backgroundColor: theme.surface,
+          borderBottomColor: theme.borderSubtle,
+          paddingTop: isMacDesktop ? 38 : 12,
+        },
+        dragRegion,
+      ]}
+    >
       <View style={styles.headerContainer}>
         {/* Brand Group */}
-        <View style={styles.brandGroup}>
+        <View style={[styles.brandGroup, noDragRegion]}>
           <View style={[styles.logoFrame, { backgroundColor: theme.surfaceHighlight, borderColor: theme.borderSubtle }]}>
             <Image
               source={require('../../assets/icon.png')}
@@ -43,16 +62,17 @@ export const Header: React.FC<HeaderProps> = ({
           </View>
           <View style={styles.brandTextGroup}>
             <Text style={[styles.brandName, { color: theme.text }]}>TrackHeat</Text>
-            {userEmail ? (
+            {displayName ? (
               <Text style={[styles.brandEmail, { color: theme.textSecondary }]} numberOfLines={1}>
-                {userEmail}
+                {displayName}
               </Text>
             ) : null}
           </View>
         </View>
 
         {/* Right Actions */}
-        <View style={styles.actionButtons}>
+        <View style={[styles.actionButtons, noDragRegion]}>
+          {/* Theme Switcher */}
           <TouchableOpacity
             style={[styles.actionBtn, { backgroundColor: theme.surfaceHighlight, borderColor: theme.borderSubtle }]}
             onPress={cycleTheme}
@@ -62,25 +82,33 @@ export const Header: React.FC<HeaderProps> = ({
             {getThemeIcon()}
           </TouchableOpacity>
 
+          {/* Widget Studio (Mobile only: clean icon-only button) */}
           {Platform.OS !== 'web' && (
             <TouchableOpacity
-              style={[styles.actionBtn, styles.widgetBtn, { backgroundColor: theme.surfaceHighlight, borderColor: theme.borderSubtle }]}
+              style={[styles.actionBtn, { backgroundColor: theme.surfaceHighlight, borderColor: theme.borderSubtle }]}
               onPress={onOpenWidgetStudio}
               activeOpacity={0.7}
               accessibilityLabel="Open Widgets"
             >
-              <Smartphone size={14} color={theme.text} strokeWidth={2} />
-              <Text style={[styles.widgetBtnText, { color: theme.text }]}>Widgets</Text>
+              <Smartphone size={15} color={theme.text} strokeWidth={2} />
             </TouchableOpacity>
           )}
 
+          {/* Account Management (Icon only on mobile, text on web) */}
           <TouchableOpacity
-            style={[styles.actionBtn, { backgroundColor: theme.surfaceHighlight, borderColor: theme.borderSubtle }]}
-            onPress={onLogout}
+            style={[
+              styles.actionBtn,
+              Platform.OS === 'web' && styles.accountBtn,
+              { backgroundColor: theme.surfaceHighlight, borderColor: theme.borderSubtle },
+            ]}
+            onPress={onOpenAccountModal}
             activeOpacity={0.7}
-            accessibilityLabel="Sign out"
+            accessibilityLabel="Manage Account"
           >
-            <LogOut size={15} color={theme.textSecondary} />
+            <User size={15} color={theme.text} strokeWidth={2} />
+            {Platform.OS === 'web' && (
+              <Text style={[styles.widgetBtnText, { color: theme.text }]}>Account</Text>
+            )}
           </TouchableOpacity>
         </View>
       </View>
@@ -97,7 +125,7 @@ const fontStack = Platform.select({
 const styles = StyleSheet.create({
   header: {
     borderBottomWidth: 1,
-    paddingVertical: 10,
+    paddingBottom: 12,
     paddingHorizontal: 16,
   },
   headerContainer: {
@@ -138,7 +166,7 @@ const styles = StyleSheet.create({
   brandEmail: {
     fontSize: 11,
     fontFamily: fontStack,
-    maxWidth: 160,
+    maxWidth: 180,
   },
   actionButtons: {
     flexDirection: 'row',
@@ -154,6 +182,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   widgetBtn: {
+    width: 'auto',
+    flexDirection: 'row',
+    paddingHorizontal: 10,
+    gap: 6,
+  },
+  accountBtn: {
     width: 'auto',
     flexDirection: 'row',
     paddingHorizontal: 10,

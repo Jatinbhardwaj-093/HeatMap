@@ -22,6 +22,7 @@ export interface ColorPalette {
   levels: [string, string, string, string, string]; // 0 (empty), 1-4 based on streak (dark mode)
   lightLevels?: [string, string, string, string, string]; // light mode levels
   accent: string;
+  lightAccent?: string;
 }
 
 export interface DayEntry {

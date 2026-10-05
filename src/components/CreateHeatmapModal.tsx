@@ -252,9 +252,12 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: 10,
     paddingHorizontal: 14,
-    paddingVertical: 11,
+    paddingVertical: 10,
     fontSize: 14,
     fontFamily: fontStack,
+    textAlignVertical: 'center',
+    ...(Platform.OS === 'android' ? { includeFontPadding: false } : {}),
+    ...(Platform.OS === 'web' ? ({ outlineStyle: 'none' } as any) : {}),
   },
   palettesList: {
     gap: 8,

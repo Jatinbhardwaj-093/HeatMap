@@ -15,6 +15,7 @@ interface DayCellProps {
   showDayNumber?: boolean;
   dayNumber?: number;
   dimmed?: boolean;
+  isDark?: boolean;
 }
 
 export const DayCell: React.FC<DayCellProps> = ({
@@ -28,10 +29,12 @@ export const DayCell: React.FC<DayCellProps> = ({
   showDayNumber = false,
   dayNumber,
   dimmed = false,
+  isDark: propIsDark,
 }) => {
   const palette = PALETTES[paletteId] || PALETTES.emerald;
   const theme = useAppTheme();
-  const isDark = useIsDark();
+  const contextIsDark = useIsDark();
+  const isDark = propIsDark !== undefined ? propIsDark : contextIsDark;
   
   const levels = !isDark && palette.lightLevels ? palette.lightLevels : palette.levels;
   const cellColor = levels[level] || palette.accent;
@@ -43,8 +46,8 @@ export const DayCell: React.FC<DayCellProps> = ({
     borderColor = isDark ? '#FFFFFF' : '#090A0C';
     borderWidth = 1.5;
   } else if (level === 0) {
-    // Ultra-light, whisper-quiet boundary for empty cells so the grid structure is preserved without high shade
-    borderColor = isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.05)';
+    // Subtle boundary for empty cells
+    borderColor = isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.06)';
     borderWidth = size < 8 ? 0.5 : 1;
   }
 
@@ -78,7 +81,6 @@ export const DayCell: React.FC<DayCellProps> = ({
             styles.dayText,
             {
               color: level >= 2 ? '#FFFFFF' : (isDark ? '#8B949E' : '#57606A'),
-              fontSize: size * 0.36,
             },
           ]}
         >
@@ -89,14 +91,20 @@ export const DayCell: React.FC<DayCellProps> = ({
   );
 };
 
+const fontStack = Platform.select({
+  web: '"SF Pro Rounded", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+  ios: 'System',
+  default: 'sans-serif',
+});
+
 const styles = StyleSheet.create({
   cell: {
-    borderRadius: 3,
     justifyContent: 'center',
     alignItems: 'center',
   },
   dayText: {
-    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
-    fontWeight: '600',
+    fontSize: 11,
+    fontWeight: '700',
+    fontFamily: fontStack,
   },
 });

@@ -72,34 +72,42 @@ export function TrackHeatWidget({ map, config, width, height, isDark = true }: T
   const isSingleRow = height < 95;
   const isCompactWidth = width < 260; // 2 or 3 wide
   
-  // Tight padding to maximize matrix area
-  const paddingV = isSingleRow ? 4 : 8;
-  const paddingH = isSingleRow ? 6 : 10;
-  const headerMargin = isSingleRow ? 3 : 5;
+  // Compact padding to give maximum room for the 7 rows
+  const paddingV = isSingleRow ? 4 : 6;
+  const paddingH = isSingleRow ? 6 : 8;
+  const headerMargin = isSingleRow ? 2 : 4;
+
+  // Circular button dimensions
+  const btnSize = isSingleRow ? 18 : 20;
 
   // Habit title font size
   const titleFontSize = isSingleRow
-    ? Math.min(13, Math.max(10, Math.floor(width / 22)))
-    : Math.min(16, Math.max(12, Math.floor(width / 18)));
+    ? Math.min(12, Math.max(10, Math.floor(width / 24)))
+    : Math.min(14, Math.max(11, Math.floor(width / 20)));
 
-  // Available vertical space for 7 matrix rows - stretched to fullest
-  const availableGridHeight = Math.max(28, height - paddingV * 2 - headerMargin - titleFontSize - 3);
-  const minGapY = isSingleRow ? 1.5 : 2;
-  const rawCellSize = Math.floor((availableGridHeight - minGapY * 6) / 7);
+  const headerHeight = Math.max(btnSize, titleFontSize + 2);
+
+  // Available vertical space for 7 matrix rows - strictly measured so Sunday never clips
+  const availableGridHeight = Math.max(28, height - paddingV * 2 - headerHeight - headerMargin - 4);
+  const gapY = isSingleRow ? 1 : 2;
+  const rawCellSize = Math.floor((availableGridHeight - gapY * 6) / 7);
   const cellSize = isSingleRow
-    ? Math.min(7.5, Math.max(4.5, rawCellSize))
-    : Math.min(14, Math.max(8.5, rawCellSize));
+    ? Math.min(7, Math.max(4, rawCellSize))
+    : Math.min(12, Math.max(6, rawCellSize));
 
-  // Available horizontal space for week columns - stretched edge-to-edge
+  // Available horizontal space for week columns
   const availableWidth = width - paddingH * 2;
-  const minGapX = isSingleRow ? 1.5 : 2.5;
-  const numWeeks = Math.max(5, Math.floor((availableWidth + minGapX) / (cellSize + minGapX)));
+  const gapX = isSingleRow ? 1.5 : 2;
+  const numWeeks = Math.max(4, Math.floor((availableWidth + gapX) / (cellSize + gapX)));
 
   const today = new Date();
   const dayOfWeek = (today.getDay() + 6) % 7; // Mon = 0, Sun = 6
   const totalDays = numWeeks * 7;
   const startDate = new Date(today);
   startDate.setDate(today.getDate() - (totalDays - 1 - (6 - dayOfWeek)));
+
+  // Transparent ARGB hex for Android RemoteViews (prevents white square fallback)
+  const COLOR_TRANSPARENT = '#00000000';
 
   const columns: Array<Array<{ key: string; color: string }>> = [];
   let cur = new Date(startDate);
@@ -118,10 +126,10 @@ export function TrackHeatWidget({ map, config, width, height, isDark = true }: T
       const entry = map.entries?.[key];
       const isCompleted = !isFuture && Boolean(entry?.completed);
 
-      // Future days do NOT display an empty box (transparent placeholder)
+      // Future days are completely transparent with 00 alpha
       col.push({
         key,
-        color: isFuture ? 'transparent' : (isCompleted ? activeColor : cellEmpty),
+        color: isFuture ? COLOR_TRANSPARENT : (isCompleted ? activeColor : cellEmpty),
       });
       cur.setDate(cur.getDate() + 1);
     }
@@ -131,10 +139,22 @@ export function TrackHeatWidget({ map, config, width, height, isDark = true }: T
   const todayKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
   const isTodayDone = Boolean(map.entries?.[todayKey]?.completed);
 
-  // In small layout (2, 3 wide), show only '+' or '✓' to leave max space for habit name
-  const logButtonText = isCompactWidth
-    ? (isTodayDone ? '✓' : '+')
-    : (isTodayDone ? '✓ Done' : '+ Log');
+  const isObsidian = activePaletteId === 'obsidian';
+  const toggleBtnBg = isTodayDone
+    ? (effectiveDark
+        ? (isObsidian ? '#F0F3F6' : (palette.levels[3] || palette.accent))
+        : (isObsidian ? '#24292F' : (palette.lightLevels?.[3] || palette.accent)))
+    : (effectiveDark ? '#21262D' : '#F0F2F5');
+
+  const toggleBtnBorder = isTodayDone
+    ? (effectiveDark
+        ? (isObsidian ? '#F0F3F6' : (palette.levels[4] || palette.accent))
+        : (isObsidian ? '#24292F' : (palette.lightLevels?.[4] || palette.accent)))
+    : (effectiveDark ? '#30363D' : '#D0D7DE');
+
+  const toggleBtnTextColor = isTodayDone
+    ? (effectiveDark && isObsidian ? '#090A0C' : '#FFFFFF')
+    : textPrimary;
 
   return (
     <FlexWidget
@@ -153,7 +173,7 @@ export function TrackHeatWidget({ map, config, width, height, isDark = true }: T
       }}
       clickAction="OPEN_APP"
     >
-      {/* Top Header: Habit Title + Today Toggle Button */}
+      {/* Top Header: Habit Title + Circular Today Toggle Button */}
       <FlexWidget
         style={{
           flexDirection: 'row',
@@ -181,21 +201,16 @@ export function TrackHeatWidget({ map, config, width, height, isDark = true }: T
           />
         </FlexWidget>
 
-        {/* Small Log Today Button */}
+        {/* Circular Log Today Button */}
         <FlexWidget
           style={{
-            flexDirection: 'row',
+            width: btnSize,
+            height: btnSize,
+            borderRadius: Math.floor(btnSize / 2),
             alignItems: 'center',
             justifyContent: 'center',
-            paddingHorizontal: isCompactWidth ? 6 : 8,
-            paddingVertical: isSingleRow ? 1.5 : 3,
-            borderRadius: isCompactWidth ? 10 : 8,
-            backgroundColor: isTodayDone
-              ? (effectiveDark ? '#238636' : '#2EA043')
-              : (effectiveDark ? '#21262D' : '#F0F2F5'),
-            borderColor: isTodayDone
-              ? (effectiveDark ? '#2EA043' : '#238636')
-              : (effectiveDark ? '#30363D' : '#D0D7DE'),
+            backgroundColor: toggleBtnBg as `#${string}`,
+            borderColor: toggleBtnBorder as `#${string}`,
             borderWidth: 1,
           }}
           clickAction="TOGGLE_TODAY"
@@ -203,17 +218,17 @@ export function TrackHeatWidget({ map, config, width, height, isDark = true }: T
           accessibilityLabel={isTodayDone ? `Mark ${displayTitle} not done` : `Mark ${displayTitle} done today`}
         >
           <TextWidget
-            text={logButtonText}
+            text={isTodayDone ? '✓' : '+'}
             style={{
-              fontSize: isSingleRow ? (isCompactWidth ? 11 : 9) : (isCompactWidth ? 12 : 10),
+              fontSize: isSingleRow ? 9 : 11,
               fontWeight: 'bold',
-              color: isTodayDone ? '#FFFFFF' : textPrimary,
+              color: toggleBtnTextColor as `#${string}`,
             }}
           />
         </FlexWidget>
       </FlexWidget>
 
-      {/* Contribution Grid: Stretched edge-to-edge horizontally and vertically */}
+      {/* Contribution Grid: Stretched cleanly with exact 7-row height */}
       <FlexWidget
         style={{
           flexDirection: 'row',
@@ -229,7 +244,7 @@ export function TrackHeatWidget({ map, config, width, height, isDark = true }: T
               flexDirection: 'column',
             }}
           >
-            {col.map((cell) => (
+            {col.map((cell, dIdx) => (
               <FlexWidget
                 key={cell.key}
                 style={{
@@ -237,7 +252,7 @@ export function TrackHeatWidget({ map, config, width, height, isDark = true }: T
                   height: cellSize,
                   borderRadius: isSingleRow ? 1 : 2,
                   backgroundColor: cell.color as any,
-                  marginVertical: minGapY / 2,
+                  marginTop: dIdx === 0 ? 0 : gapY,
                 }}
               />
             ))}

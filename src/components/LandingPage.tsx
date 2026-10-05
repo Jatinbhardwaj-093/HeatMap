@@ -26,6 +26,7 @@ import {
   Lock,
 } from 'lucide-react-native';
 import { useAppTheme, useIsDark, useThemeMode } from '../theme/theme';
+import { isMacDesktop, dragRegion, noDragRegion } from '../utils/platform';
 
 interface LandingPageProps {
   onLogin: () => void;
@@ -194,8 +195,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       showsVerticalScrollIndicator={false}
     >
       {/* ─── NAVIGATION BAR ────────────────────────────────────── */}
-      <View style={[styles.navbar, isMobile && styles.navbarMobile, { borderColor: theme.borderSubtle }]}>
-        <View style={styles.brandGroup}>
+      <View style={[styles.navbar, isMobile && styles.navbarMobile, { borderColor: theme.borderSubtle }, dragRegion]}>
+        <View style={[styles.brandGroup, noDragRegion]}>
           <View
             style={[
               styles.logoBadge,
@@ -1102,7 +1103,7 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     paddingHorizontal: 24,
-    paddingTop: 20,
+    paddingTop: isMacDesktop ? 28 : 20,
     paddingBottom: 60,
     maxWidth: 1140,
     width: '100%',
@@ -1119,7 +1120,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 16,
+    paddingTop: isMacDesktop ? 20 : 16,
+    paddingBottom: 16,
     borderBottomWidth: 1,
     marginBottom: 56,
   },

@@ -9,7 +9,7 @@ import {
   StyleSheet,
   Platform,
 } from 'react-native';
-import { X, Smartphone, Check, Plus } from 'lucide-react-native';
+import { X, Smartphone, Check, Plus, Monitor, ExternalLink } from 'lucide-react-native';
 import { HeatMapModel, PaletteId } from '../types/heatmap';
 import { PALETTES } from '../constants/palettes';
 import { DayCell } from './DayCell';
@@ -17,6 +17,7 @@ import { getStreakIntensityLevel } from '../utils/streakUtils';
 import { useAppTheme, useIsDark } from '../theme/theme';
 import { setActiveWidgetConfig, getWidgetConfig } from '../widgets/widgetStorage';
 import { updateAndroidWidgets } from '../widgets/widgetSync';
+import { isMacDesktop } from '../utils/platform';
 
 interface WidgetStudioModalProps {
   visible: boolean;
@@ -85,26 +86,24 @@ export const WidgetStudioModal: React.FC<WidgetStudioModalProps> = ({
   }
 
   // Dimensions based on preset:
-  // Height: 1 row (2x1, 4x1) or 2 rows (2x2, 4x2, 5x2)
-  // Width: 2 to 5 columns wide
   const isSingleRow = preset === '2x1' || preset === '4x1';
   const isCompactWidth = preset === '2x1' || preset === '2x2';
 
   const numWeeks =
-    preset === '2x1' ? 10 :
-    preset === '4x1' ? 22 :
-    preset === '2x2' ? 8 :
-    preset === '4x2' ? 18 : 22;
+    preset === '2x1' ? 9 :
+    preset === '4x1' ? 19 :
+    preset === '2x2' ? 9 :
+    preset === '4x2' ? 19 : 23;
 
   const cellSize = isSingleRow ? 7 : 11;
   const cellGap = isSingleRow ? 2 : 2.5;
   const titleFontSize = isSingleRow ? 11 : 14;
 
   const previewWidth =
-    preset === '2x1' || preset === '2x2' ? 148 :
-    preset === '4x1' || preset === '4x2' ? 310 : 364;
+    preset === '2x1' || preset === '2x2' ? 160 :
+    preset === '4x1' || preset === '4x2' ? 320 : 380;
 
-  const previewMinHeight = isSingleRow ? 88 : 132;
+  const previewMinHeight = isSingleRow ? 84 : 128;
 
   // Resolved preview theme
   const isWidgetDark =
@@ -157,6 +156,38 @@ export const WidgetStudioModal: React.FC<WidgetStudioModalProps> = ({
   const todayKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
   const isTodayDone = Boolean(currentMap.entries[todayKey]?.completed);
 
+  const handleOpenDesktopWidget = async () => {
+    try {
+      const config = {
+        habitId: currentMap.id,
+        customName: customAlias.trim() || undefined,
+        theme: themeChoice,
+        paletteId: selectedPalette,
+      };
+
+      await setActiveWidgetConfig(config);
+
+      if (typeof window !== 'undefined') {
+        const w = 380;
+        const h = 220;
+        const left = window.screen?.width ? window.screen.width - w - 30 : 100;
+        const top = 60;
+        window.open(
+          `?mode=widget`,
+          'TrackHeatWidget',
+          `width=${w},height=${h},top=${top},left=${left},resizable=yes,scrollbars=no,status=no`
+        );
+        setPinStatus('Floating desktop widget launched!');
+      }
+    } catch {
+      setPinStatus('Error launching desktop widget');
+    }
+
+    setTimeout(() => {
+      setPinStatus(null);
+    }, 4000);
+  };
+
   const handleApplyToHomeScreen = async () => {
     try {
       const config = {
@@ -192,6 +223,26 @@ export const WidgetStudioModal: React.FC<WidgetStudioModalProps> = ({
       setPinStatus(null);
     }, 4000);
   };
+
+  const isPaletteObsidian = selectedPalette === 'obsidian';
+  const previewBtnBg = isTodayDone
+    ? (isWidgetDark
+        ? (isPaletteObsidian ? '#F0F3F6' : (palette.levels[3] || palette.accent))
+        : (isPaletteObsidian ? '#24292F' : (palette.lightLevels?.[3] || palette.accent)))
+    : (isWidgetDark ? '#21262D' : '#F0F2F5');
+  const previewBtnBorder = isTodayDone
+    ? (isWidgetDark
+        ? (isPaletteObsidian ? '#F0F3F6' : (palette.levels[4] || palette.accent))
+        : (isPaletteObsidian ? '#24292F' : (palette.lightLevels?.[4] || palette.accent)))
+    : (isWidgetDark ? '#30363D' : '#D0D7DE');
+  const previewBtnTextColor = isTodayDone
+    ? (isWidgetDark && isPaletteObsidian ? '#090A0C' : '#FFFFFF')
+    : (isWidgetDark ? '#F0F3F6' : '#1F2328');
+
+  const actionBtnBg = isAppDark
+    ? (isPaletteObsidian ? '#F0F3F6' : palette.accent)
+    : (isPaletteObsidian ? '#24292F' : (palette.lightAccent || palette.accent));
+  const actionBtnTextColor = isAppDark && isPaletteObsidian ? '#090A0C' : '#FFFFFF';
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
@@ -232,6 +283,11 @@ export const WidgetStudioModal: React.FC<WidgetStudioModalProps> = ({
               {heatmaps.map((m) => {
                 const isSelected = (selectedMapId || currentMap.id) === m.id;
                 const mPalette = PALETTES[m.paletteId] || PALETTES.emerald;
+                const isHabitObsidian = m.paletteId === 'obsidian';
+                const dotColor = isHabitObsidian
+                  ? (isAppDark ? '#F0F3F6' : '#24292F')
+                  : (isAppDark ? mPalette.accent : (mPalette.lightAccent || mPalette.accent));
+
                 return (
                   <TouchableOpacity
                     key={m.id}
@@ -239,7 +295,7 @@ export const WidgetStudioModal: React.FC<WidgetStudioModalProps> = ({
                       styles.habitPill,
                       {
                         backgroundColor: isSelected ? theme.surface : 'transparent',
-                        borderColor: isSelected ? mPalette.accent : theme.borderSubtle,
+                        borderColor: isSelected ? dotColor : theme.borderSubtle,
                       },
                     ]}
                     onPress={() => {
@@ -248,7 +304,7 @@ export const WidgetStudioModal: React.FC<WidgetStudioModalProps> = ({
                     }}
                     activeOpacity={0.7}
                   >
-                    <View style={[styles.pillDot, { backgroundColor: mPalette.accent }]} />
+                    <View style={[styles.pillDot, { backgroundColor: dotColor }]} />
                     <Text
                       style={[
                         styles.habitPillText,
@@ -360,35 +416,28 @@ export const WidgetStudioModal: React.FC<WidgetStudioModalProps> = ({
                     {displayTitle}
                   </Text>
 
-                  {/* Single symbol '+' / '✓' on 2-wide; full badge on wider */}
+                  {/* Circular '+' / '✓' button matching widget */}
                   <View
                     style={{
-                      flexDirection: 'row',
+                      width: isSingleRow ? 18 : 20,
+                      height: isSingleRow ? 18 : 20,
+                      borderRadius: isSingleRow ? 9 : 10,
                       alignItems: 'center',
                       justifyContent: 'center',
-                      paddingHorizontal: isCompactWidth ? 6 : 8,
-                      paddingVertical: isSingleRow ? 1.5 : 3,
-                      borderRadius: isCompactWidth ? 10 : 8,
-                      backgroundColor: isTodayDone
-                        ? (isWidgetDark ? '#238636' : '#2EA043')
-                        : (isWidgetDark ? '#21262D' : '#F0F2F5'),
-                      borderColor: isTodayDone
-                        ? (isWidgetDark ? '#2EA043' : '#238636')
-                        : (isWidgetDark ? '#30363D' : '#D0D7DE'),
+                      backgroundColor: previewBtnBg,
+                      borderColor: previewBtnBorder,
                       borderWidth: 1,
                     }}
                   >
                     <Text
                       style={{
-                        fontSize: isSingleRow ? (isCompactWidth ? 11 : 9) : (isCompactWidth ? 12 : 10),
+                        fontSize: isSingleRow ? 9 : 11,
                         fontWeight: '700',
-                        color: isTodayDone ? '#FFFFFF' : (isWidgetDark ? '#F0F3F6' : '#1F2328'),
+                        color: previewBtnTextColor,
                         fontFamily: fontStack,
                       }}
                     >
-                      {isCompactWidth
-                        ? (isTodayDone ? '✓' : '+')
-                        : (isTodayDone ? '✓ Done' : '+ Log')}
+                      {isTodayDone ? '✓' : '+'}
                     </Text>
                   </View>
                 </View>
@@ -415,6 +464,7 @@ export const WidgetStudioModal: React.FC<WidgetStudioModalProps> = ({
                             paletteId={selectedPalette}
                             size={cellSize}
                             disabled={true}
+                            isDark={isWidgetDark}
                           />
                         )
                       )}
@@ -481,6 +531,12 @@ export const WidgetStudioModal: React.FC<WidgetStudioModalProps> = ({
                   {paletteList.map((pid) => {
                     const pal = PALETTES[pid];
                     const isSelected = selectedPalette === pid;
+                    const isPalObsidian = pid === 'obsidian';
+                    const dotColor = isPalObsidian
+                      ? (isAppDark ? '#F0F3F6' : '#24292F')
+                      : (isAppDark ? pal.accent : (pal.lightAccent || pal.accent));
+                    const pillBorderColor = isSelected ? dotColor : theme.borderSubtle;
+
                     return (
                       <TouchableOpacity
                         key={pid}
@@ -488,13 +544,13 @@ export const WidgetStudioModal: React.FC<WidgetStudioModalProps> = ({
                           styles.paletteOptionPill,
                           {
                             backgroundColor: isSelected ? theme.surface : 'transparent',
-                            borderColor: isSelected ? pal.accent : theme.borderSubtle,
+                            borderColor: pillBorderColor,
                           },
                         ]}
                         onPress={() => setSelectedPalette(pid)}
                         activeOpacity={0.7}
                       >
-                        <View style={[styles.pillDot, { backgroundColor: pal.accent }]} />
+                        <View style={[styles.pillDot, { backgroundColor: dotColor }]} />
                         <Text style={[styles.habitPillText, { color: isSelected ? theme.text : theme.textSecondary }, isSelected && { fontWeight: '700' }]}>
                           {pal.name.split(' ')[0]}
                         </Text>
@@ -505,15 +561,16 @@ export const WidgetStudioModal: React.FC<WidgetStudioModalProps> = ({
               </View>
             </View>
 
-            {/* In-App Direct Widget Pin Action */}
+            {/* Widget Action: Desktop Floating Widget or Mobile Home Screen Pin */}
             <View style={styles.actionSection}>
               <TouchableOpacity
-                style={[styles.applyBtn, { backgroundColor: palette.accent }]}
-                onPress={handleApplyToHomeScreen}
-                activeOpacity={0.8}
+                style={[styles.applyBtn, { backgroundColor: actionBtnBg }]}
+                onPress={Platform.OS === 'web' ? handleOpenDesktopWidget : handleApplyToHomeScreen}
+                activeOpacity={0.85}
               >
-                <Plus size={16} color="#FFFFFF" strokeWidth={2.5} />
-                <Text style={styles.applyBtnText}>Add Widget to Home Screen</Text>
+                <Text style={[styles.applyBtnText, { color: actionBtnTextColor }]}>
+                  {Platform.OS === 'web' ? 'Apply Widget' : 'Add to Home Screen'}
+                </Text>
               </TouchableOpacity>
 
               {pinStatus ? (
@@ -526,26 +583,48 @@ export const WidgetStudioModal: React.FC<WidgetStudioModalProps> = ({
               ) : null}
             </View>
 
-            {/* Brief, Minimalist Home Screen Guide */}
+            {/* Brief, Minimalist Guide */}
             <View style={[styles.guideCard, { backgroundColor: theme.surfaceHighlight, borderColor: theme.borderSubtle }]}>
               <View style={styles.guideHeader}>
-                <Smartphone size={14} color={theme.text} />
-                <Text style={[styles.guideTitle, { color: theme.text }]}>How to Use Widgets</Text>
+                {Platform.OS === 'web' ? (
+                  <Monitor size={14} color={theme.text} />
+                ) : (
+                  <Smartphone size={14} color={theme.text} />
+                )}
+                <Text style={[styles.guideTitle, { color: theme.text }]}>
+                  {Platform.OS === 'web' ? 'macOS Desktop Widget' : 'How to Use Widgets'}
+                </Text>
               </View>
 
               <View style={styles.guideSteps}>
-                <Text style={[styles.stepText, { color: theme.textSecondary }]}>
-                  • Tap <Text style={{ fontWeight: '700', color: theme.text }}>Add Widget to Home Screen</Text> above to pin this habit directly from the app.
-                </Text>
-                <Text style={[styles.stepText, { color: theme.textSecondary }]}>
-                  • Or long-press Home Screen → <Text style={{ fontWeight: '700', color: theme.text }}>Widgets</Text> → <Text style={{ fontWeight: '700', color: theme.text }}>TrackHeat Matrix</Text>.
-                </Text>
-                <Text style={[styles.stepText, { color: theme.textSecondary }]}>
-                  • Tap the <Text style={{ fontWeight: '600', color: theme.text }}>+ / ✓</Text> button on the widget to log today directly from your home screen!
-                </Text>
-                <Text style={[styles.stepText, { color: theme.textSecondary }]}>
-                  • Long-press the widget on your home screen and tap <Text style={{ fontWeight: '600', color: theme.text }}>Edit</Text> anytime to customize its alias, palette, and theme.
-                </Text>
+                {Platform.OS === 'web' ? (
+                  <>
+                    <Text style={[styles.stepText, { color: theme.textSecondary }]}>
+                      • Click <Text style={{ fontWeight: '700', color: theme.text }}>Apply Widget</Text> to launch or update your floating mini-widget on macOS.
+                    </Text>
+                    <Text style={[styles.stepText, { color: theme.textSecondary }]}>
+                      • Tap <Text style={{ fontWeight: '600', color: theme.text }}>+ / ✓</Text> on the widget anytime to instantly log today's progress without opening the full app.
+                    </Text>
+                    <Text style={[styles.stepText, { color: theme.textSecondary }]}>
+                      • Grab the top title bar of the widget to reposition it anywhere on your desktop screen.
+                    </Text>
+                  </>
+                ) : (
+                  <>
+                    <Text style={[styles.stepText, { color: theme.textSecondary }]}>
+                      • Tap <Text style={{ fontWeight: '700', color: theme.text }}>Add to Home Screen</Text> above to pin this habit directly from the app.
+                    </Text>
+                    <Text style={[styles.stepText, { color: theme.textSecondary }]}>
+                      • Or long-press Home Screen → <Text style={{ fontWeight: '700', color: theme.text }}>Widgets</Text> → <Text style={{ fontWeight: '700', color: theme.text }}>TrackHeat Matrix</Text>.
+                    </Text>
+                    <Text style={[styles.stepText, { color: theme.textSecondary }]}>
+                      • Tap the <Text style={{ fontWeight: '600', color: theme.text }}>+ / ✓</Text> button on the widget to log today directly from your home screen!
+                    </Text>
+                    <Text style={[styles.stepText, { color: theme.textSecondary }]}>
+                      • Long-press the widget on your home screen and tap <Text style={{ fontWeight: '600', color: theme.text }}>Edit</Text> anytime to customize its alias, palette, and theme.
+                    </Text>
+                  </>
+                )}
               </View>
             </View>
 
@@ -677,7 +756,7 @@ const styles = StyleSheet.create({
   nativeWidget: {
     borderRadius: 18,
     borderWidth: 1,
-    alignItems: 'flex-start',
+    alignItems: 'stretch',
     alignSelf: 'center',
     ...Platform.select({
       ios: {
@@ -701,8 +780,10 @@ const styles = StyleSheet.create({
     letterSpacing: -0.1,
   },
   matrixColumns: {
+    width: '100%',
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
   },
   matrixColumn: {
     flexDirection: 'column',
@@ -727,6 +808,9 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     fontSize: 13,
     fontFamily: fontStack,
+    textAlignVertical: 'center',
+    ...(Platform.OS === 'android' ? { includeFontPadding: false } : {}),
+    ...(Platform.OS === 'web' ? ({ outlineStyle: 'none' } as any) : {}),
   },
   segmentedControl: {
     flexDirection: 'row',
