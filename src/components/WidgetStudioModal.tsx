@@ -7,13 +7,12 @@ import {
   TouchableOpacity,
   ScrollView,
   Platform,
-  useWindowDimensions,
 } from 'react-native';
 import { HeatMapModel } from '../types/heatmap';
 import { PALETTES } from '../constants/palettes';
 import { getStreakIntensityLevel } from '../utils/streakUtils';
 import { DayCell } from './DayCell';
-import { X, Smartphone, Layers, CheckCircle2 } from 'lucide-react-native';
+import { X, Smartphone, Check } from 'lucide-react-native';
 import { useAppTheme, useIsDark } from '../theme/theme';
 
 interface WidgetStudioModalProps {
@@ -37,8 +36,6 @@ export const WidgetStudioModal: React.FC<WidgetStudioModalProps> = ({
 }) => {
   const theme = useAppTheme();
   const isDark = useIsDark();
-  const { width } = useWindowDimensions();
-  const isMobile = width < 768;
 
   const [selectedMapId, setSelectedMapId] = useState<string | null>(heatmaps[0]?.id || null);
   const [widgetSize, setWidgetSize] = useState<WidgetSize>('medium');
@@ -61,21 +58,23 @@ export const WidgetStudioModal: React.FC<WidgetStudioModalProps> = ({
     );
   }
 
-  // Weeks to display based on widget size
-  // Small (2x2): 7 weeks (49 days)
-  // Medium (4x2): 16 weeks (112 days)
-  // Large (4x4): 28 weeks (196 days)
-  const numWeeks = widgetSize === 'small' ? 7 : widgetSize === 'medium' ? 16 : 28;
+  // Weeks to display based on widget size:
+  // 2x2 Small: 8 weeks (fits 148px widget width)
+  // 4x2 Medium: 19 weeks (fills 300px widget width edge-to-edge)
+  // 4x4 Large: 19 weeks (fills 300px widget width edge-to-edge)
+  const numWeeks = widgetSize === 'small' ? 8 : 19;
+  const cellSize = widgetSize === 'small' ? 12 : 11.5;
+  const cellGap = widgetSize === 'small' ? 3 : 3;
 
   // Build grid of recent days organized by week columns (each column = 7 days, Mon to Sun)
   const generateWidgetGrid = () => {
     const today = new Date();
-    // find day of week (0 is Sunday, convert so Monday is 0, Sunday is 6)
+    // Monday is 0, Sunday is 6
     const dayOfWeek = (today.getDay() + 6) % 7;
     const totalDays = numWeeks * 7;
     const gridWeeks: Array<Array<{ dateKey: string; level: 0 | 1 | 2 | 3 | 4 }>> = [];
 
-    // Calculate start date so that the last day in the last week is today or end of this week
+    // Start date such that the last column ends on this Sunday
     const startDate = new Date(today);
     startDate.setDate(today.getDate() - (totalDays - 1 - (6 - dayOfWeek)));
 
@@ -106,10 +105,6 @@ export const WidgetStudioModal: React.FC<WidgetStudioModalProps> = ({
   const widgetGrid = generateWidgetGrid();
   const palette = PALETTES[currentMap.paletteId] || PALETTES.emerald;
 
-  // Dynamic cell sizing inside the widget preview
-  const cellSize = widgetSize === 'small' ? 12 : widgetSize === 'medium' ? 10.5 : 8.5;
-  const cellGap = widgetSize === 'small' ? 3 : widgetSize === 'medium' ? 2.5 : 2;
-
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <View style={styles.overlay}>
@@ -130,9 +125,22 @@ export const WidgetStudioModal: React.FC<WidgetStudioModalProps> = ({
             </TouchableOpacity>
           </View>
 
-          {/* Habit Selector Bar */}
+          {/* Habit Selector Bar (Always hidden scrollbar) */}
           <View style={[styles.selectorBar, { backgroundColor: theme.surfaceHighlight, borderBottomColor: theme.borderSubtle }]}>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.selectorScroll}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              overScrollMode="never"
+              contentContainerStyle={styles.selectorScroll}
+              style={[
+                Platform.OS === 'web'
+                  ? ({
+                      scrollbarWidth: 'none',
+                      msOverflowStyle: 'none',
+                    } as any)
+                  : {},
+              ]}
+            >
               {heatmaps.map((m) => {
                 const isSelected = (selectedMapId || currentMap.id) === m.id;
                 const mPalette = PALETTES[m.paletteId] || PALETTES.emerald;
@@ -170,13 +178,13 @@ export const WidgetStudioModal: React.FC<WidgetStudioModalProps> = ({
             showsVerticalScrollIndicator={false}
             contentContainerStyle={styles.scrollBody}
           >
-            {/* Widget Size Selector Controls */}
+            {/* Minimalist Size Switcher (2x2, 4x2, 4x4) */}
             <View style={styles.sizeControlSection}>
-              <Text style={[styles.sectionLabel, { color: theme.textMuted }]}>PREVIEW RESIZE SIZE</Text>
+              <Text style={[styles.sectionLabel, { color: theme.textMuted }]}>PREVIEW SIZE</Text>
               <View style={[styles.sizeSwitcher, { backgroundColor: theme.surfaceHighlight, borderColor: theme.borderSubtle }]}>
                 {(['small', 'medium', 'large'] as WidgetSize[]).map((sz) => {
                   const isActive = widgetSize === sz;
-                  const label = sz === 'small' ? '2x2 Small' : sz === 'medium' ? '4x2 Medium' : '4x4 Expanded';
+                  const label = sz === 'small' ? '2×2' : sz === 'medium' ? '4×2' : '4×4';
                   return (
                     <TouchableOpacity
                       key={sz}
@@ -208,9 +216,7 @@ export const WidgetStudioModal: React.FC<WidgetStudioModalProps> = ({
               <View
                 style={[
                   styles.nativeWidget,
-                  widgetSize === 'small' && styles.nativeWidgetSmall,
-                  widgetSize === 'medium' && styles.nativeWidgetMedium,
-                  widgetSize === 'large' && styles.nativeWidgetLarge,
+                  widgetSize === 'small' ? styles.nativeWidgetSmall : styles.nativeWidgetWide,
                   {
                     backgroundColor: isDark ? '#161B22' : '#FFFFFF',
                     borderColor: isDark ? '#30363D' : '#D0D7DE',
@@ -231,7 +237,7 @@ export const WidgetStudioModal: React.FC<WidgetStudioModalProps> = ({
                   </Text>
                 </View>
 
-                {/* Pure Contribution Matrix */}
+                {/* Pure Contribution Matrix - Fills Edge to Edge */}
                 <View style={[styles.matrixColumns, { gap: cellGap }]}>
                   {widgetGrid.map((week, wIdx) => (
                     <View key={`ww-${wIdx}`} style={[styles.matrixColumn, { gap: cellGap }]}>
@@ -251,34 +257,20 @@ export const WidgetStudioModal: React.FC<WidgetStudioModalProps> = ({
               </View>
             </View>
 
-            {/* Practical Home Screen Setup Guide */}
+            {/* Brief, Minimalist Home Screen Guide */}
             <View style={[styles.guideCard, { backgroundColor: theme.surfaceHighlight, borderColor: theme.borderSubtle }]}>
               <View style={styles.guideHeader}>
-                <Smartphone size={16} color={theme.text} />
-                <Text style={[styles.guideTitle, { color: theme.text }]}>How to Add to Home Screen</Text>
+                <Smartphone size={14} color={theme.text} />
+                <Text style={[styles.guideTitle, { color: theme.text }]}>Add to Home Screen</Text>
               </View>
 
               <View style={styles.guideSteps}>
-                <View style={styles.guideStepRow}>
-                  <CheckCircle2 size={13} color={palette.accent} style={styles.stepIcon} />
-                  <Text style={[styles.stepText, { color: theme.textSecondary }]}>
-                    Long-press any empty area on your phone's Home Screen.
-                  </Text>
-                </View>
-
-                <View style={styles.guideStepRow}>
-                  <CheckCircle2 size={13} color={palette.accent} style={styles.stepIcon} />
-                  <Text style={[styles.stepText, { color: theme.textSecondary }]}>
-                    Tap <Text style={{ fontWeight: '700', color: theme.text }}>Widgets</Text>, find <Text style={{ fontWeight: '700', color: theme.text }}>HabitHeat</Text>, and drag it to your screen.
-                  </Text>
-                </View>
-
-                <View style={styles.guideStepRow}>
-                  <CheckCircle2 size={13} color={palette.accent} style={styles.stepIcon} />
-                  <Text style={[styles.stepText, { color: theme.textSecondary }]}>
-                    Touch and hold the placed widget, then drag the corner handles to resize between 2x2, 4x2, or 4x4.
-                  </Text>
-                </View>
+                <Text style={[styles.stepText, { color: theme.textSecondary }]}>
+                  • Long-press Home Screen → <Text style={{ fontWeight: '700', color: theme.text }}>Widgets</Text> → <Text style={{ fontWeight: '700', color: theme.text }}>HabitHeat</Text>
+                </Text>
+                <Text style={[styles.stepText, { color: theme.textSecondary }]}>
+                  • Place widget, then drag borders to resize (<Text style={{ fontWeight: '600', color: theme.text }}>2×2, 4×2, 4×4</Text>)
+                </Text>
               </View>
             </View>
 
@@ -299,7 +291,7 @@ const styles = StyleSheet.create({
   },
   modalBox: {
     width: '100%',
-    maxWidth: 540,
+    maxWidth: 480,
     maxHeight: '90%',
     borderWidth: 1,
     borderRadius: 16,
@@ -375,7 +367,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     borderWidth: 1,
     borderRadius: 8,
-    padding: 3,
+    padding: 2.5,
   },
   sizeOption: {
     flex: 1,
@@ -393,43 +385,38 @@ const styles = StyleSheet.create({
   canvasBox: {
     borderWidth: 1,
     borderRadius: 14,
-    padding: 20,
+    padding: 18,
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 200,
+    minHeight: 180,
   },
 
   // Native Widget Container (Mimicking iOS & Android system widget chrome)
   nativeWidget: {
-    borderRadius: 20,
+    borderRadius: 18,
     borderWidth: 1,
     padding: 14,
     alignItems: 'flex-start',
+    alignSelf: 'center',
     ...Platform.select({
       ios: {
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.15,
-        shadowRadius: 12,
+        shadowOpacity: 0.12,
+        shadowRadius: 10,
       },
       android: {
-        elevation: 5,
+        elevation: 4,
       },
     }),
   },
   nativeWidgetSmall: {
-    width: 146,
-    minHeight: 146,
+    width: 148,
+    minHeight: 148,
   },
-  nativeWidgetMedium: {
-    width: '100%',
-    maxWidth: 310,
-    minHeight: 130,
-  },
-  nativeWidgetLarge: {
-    width: '100%',
-    maxWidth: 330,
-    minHeight: 160,
+  nativeWidgetWide: {
+    width: 304,
+    minHeight: 126,
   },
 
   widgetHeader: {
@@ -450,39 +437,30 @@ const styles = StyleSheet.create({
     flexDirection: 'column',
   },
 
-  // Guide Card
+  // Minimalist Guide Card
   guideCard: {
     borderWidth: 1,
     borderRadius: 12,
-    padding: 14,
-    gap: 10,
+    padding: 12,
+    gap: 8,
   },
   guideHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 6,
   },
   guideTitle: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '700',
     fontFamily: fontStack,
   },
   guideSteps: {
-    gap: 8,
-  },
-  guideStepRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 8,
-  },
-  stepIcon: {
-    marginTop: 2,
+    gap: 5,
   },
   stepText: {
-    fontSize: 12,
+    fontSize: 11.5,
     fontFamily: fontStack,
-    lineHeight: 17,
-    flex: 1,
+    lineHeight: 16,
   },
   emptyText: {
     fontSize: 13,
