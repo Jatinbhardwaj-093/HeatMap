@@ -10,6 +10,7 @@ function createWindow() {
   }
 
   const win = new BrowserWindow({
+    title: 'TrackHeat',
     width: 1180,
     height: 820,
     minWidth: 780,

@@ -1,5 +1,5 @@
 {
-  "name": "habitheat",
+  "name": "trackheat",
   "version": "1.0.0",
   "description": "High-density binary habit matrix engine inspired by GitHub contribution graphs",
   "author": "Jatin Bhardwaj",
@@ -42,8 +42,8 @@
     "wait-on": "^8.0.2"
   },
   "build": {
-    "appId": "com.habitheat.app",
-    "productName": "HabitHeat",
+    "appId": "com.trackheat.app",
+    "productName": "TrackHeat",
     "extraMetadata": {
       "main": "electron/main.js"
     },

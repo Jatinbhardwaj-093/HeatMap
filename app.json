@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "HabitHeat",
-    "slug": "habitheat",
+    "name": "TrackHeat",
+    "slug": "trackheat",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -11,14 +11,14 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.habitheat.tracker"
+      "bundleIdentifier": "com.trackheat.tracker"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/icon.png",
         "backgroundColor": "#090A0C"
       },
-      "package": "com.habitheat.tracker"
+      "package": "com.trackheat.tracker"
     },
     "web": {
       "favicon": "./assets/favicon.png",

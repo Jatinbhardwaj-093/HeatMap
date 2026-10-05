@@ -1,8 +1,8 @@
 <p align="center">
-  <img src="assets/favicon.png" width="80" height="80" alt="HabitHeat Logo" />
+  <img src="assets/favicon.png" width="80" height="80" alt="TrackHeat Logo" />
 </p>
 
-<h1 align="center">HabitHeat</h1>
+<h1 align="center">TrackHeat</h1>
 
 <p align="center">
   <strong>A high-density binary habit matrix engine inspired by GitHub contribution graphs.</strong>
@@ -30,17 +30,17 @@
 ---
 
 <p align="center">
-  <img src="assets/screenshots/dashboard.png" width="94%" alt="HabitHeat Dashboard Overview" />
+  <img src="assets/screenshots/dashboard.png" width="94%" alt="TrackHeat Dashboard Overview" />
 </p>
 
 ## Core Philosophy
 
 Most habit trackers fail because they demand excessive bookkeeping: *"8,450 / 10,000 steps"*, *"42 / 60 minutes"*, or complex slider ratings. This creates cognitive friction and guilt.
 
-**HabitHeat strips tracking down to a pure boolean:**
+**TrackHeat strips tracking down to a pure boolean:**
 > **Did you show up today? Yes or No.**
 
-Inspired by software engineering commit history, HabitHeat translates daily human consistency into the visual momentum of green contribution matrices. Each consecutive day adds momentum, graduating tile colors from dim jade to vivid emerald.
+Inspired by software engineering commit history, TrackHeat translates daily human consistency into the visual momentum of green contribution matrices. Each consecutive day adds momentum, graduating tile colors from dim jade to vivid emerald.
 
 ---
 
@@ -70,14 +70,14 @@ Inspired by software engineering commit history, HabitHeat translates daily huma
 ## Screenshots
 
 <div align="center">
-  <img src="assets/screenshots/landing.png" width="94%" alt="HabitHeat Landing Page" />
-  <p><em>HabitHeat interactive landing page with live 52-week annual matrix simulator</em></p>
+  <img src="assets/screenshots/landing.png" width="94%" alt="TrackHeat Landing Page" />
+  <p><em>TrackHeat interactive landing page with live 52-week annual matrix simulator</em></p>
 </div>
 
 <br />
 
 <div align="center">
-  <img src="assets/screenshots/dashboard.png" width="94%" alt="HabitHeat Individual Dashboard" />
+  <img src="assets/screenshots/dashboard.png" width="94%" alt="TrackHeat Individual Dashboard" />
   <p><em>Individual tracker dashboard featuring centered matrix grids and inline streak metrics</em></p>
 </div>
 
@@ -93,8 +93,8 @@ Inspired by software engineering commit history, HabitHeat translates daily huma
 ### 1. Clone & Install Dependencies
 
 ```bash
-git clone https://github.com/Jatinbhardwaj-093/HeatMap.git habitheat
-cd habitheat
+git clone https://github.com/Jatinbhardwaj-093/HeatMap.git trackheat
+cd trackheat
 npm install
 ```
 
@@ -125,10 +125,10 @@ npm run build:mac
 
 ## Architecture
 
-HabitHeat is built using a modern universal React Native architecture:
+TrackHeat is built using a modern universal React Native architecture:
 
 ```
-habitheat/
+trackheat/
 ├── assets/                  # App icons, favicons, and repository assets
 │   ├── favicon.png          # Green 3x3 matrix contribution grid icon
 │   └── screenshots/         # Dashboard & landing showcase screenshots

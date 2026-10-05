@@ -42,7 +42,7 @@ export const Header: React.FC<HeaderProps> = ({
             />
           </View>
           <View style={styles.brandTextGroup}>
-            <Text style={[styles.brandName, { color: theme.text }]}>HabitHeat</Text>
+            <Text style={[styles.brandName, { color: theme.text }]}>TrackHeat</Text>
             {userEmail ? (
               <Text style={[styles.brandEmail, { color: theme.textSecondary }]} numberOfLines={1}>
                 {userEmail}

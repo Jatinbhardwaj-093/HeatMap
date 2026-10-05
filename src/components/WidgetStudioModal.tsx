@@ -266,7 +266,7 @@ export const WidgetStudioModal: React.FC<WidgetStudioModalProps> = ({
 
               <View style={styles.guideSteps}>
                 <Text style={[styles.stepText, { color: theme.textSecondary }]}>
-                  • Long-press Home Screen → <Text style={{ fontWeight: '700', color: theme.text }}>Widgets</Text> → <Text style={{ fontWeight: '700', color: theme.text }}>HabitHeat</Text>
+                  • Long-press Home Screen → <Text style={{ fontWeight: '700', color: theme.text }}>Widgets</Text> → <Text style={{ fontWeight: '700', color: theme.text }}>TrackHeat</Text>
                 </Text>
                 <Text style={[styles.stepText, { color: theme.textSecondary }]}>
                   • Place widget, then drag borders to resize (<Text style={{ fontWeight: '600', color: theme.text }}>2×2, 4×2, 4×4</Text>)

@@ -4,6 +4,13 @@ import { supabase } from './supabase';
 
 function getStorageKey(userId?: string): string {
   if (userId) {
+    return `@trackheat_maps_${userId}`;
+  }
+  return '@trackheat_maps_guest';
+}
+
+function getLegacyStorageKey(userId?: string): string {
+  if (userId) {
     return `@habitheat_maps_${userId}`;
   }
   return '@habitheat_maps_guest';
@@ -14,7 +21,10 @@ export async function loadHeatMaps(userId?: string): Promise<HeatMapModel[]> {
   let localMaps: HeatMapModel[] = [];
 
   try {
-    const raw = await AsyncStorage.getItem(key);
+    let raw = await AsyncStorage.getItem(key);
+    if (!raw) {
+      raw = await AsyncStorage.getItem(getLegacyStorageKey(userId));
+    }
     if (raw) {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed)) {
@@ -30,7 +40,10 @@ export async function loadHeatMaps(userId?: string): Promise<HeatMapModel[]> {
     // If local user storage is empty, check if guest data exists that can be migrated
     if (localMaps.length === 0) {
       try {
-        const guestRaw = await AsyncStorage.getItem('@habitheat_maps_guest');
+        let guestRaw = await AsyncStorage.getItem('@trackheat_maps_guest');
+        if (!guestRaw) {
+          guestRaw = await AsyncStorage.getItem('@habitheat_maps_guest');
+        }
         if (guestRaw) {
           const guestParsed = JSON.parse(guestRaw);
           if (Array.isArray(guestParsed) && guestParsed.length > 0) {

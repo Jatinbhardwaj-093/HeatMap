@@ -211,7 +211,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           </View>
           <View>
             <View style={styles.brandTitleRow}>
-              <Text style={[styles.brandText, isMobile && styles.brandTextMobile, { color: theme.text }]}>HABITHEAT</Text>
+              <Text style={[styles.brandText, isMobile && styles.brandTextMobile, { color: theme.text }]}>TRACKHEAT</Text>
               {!isMobile && (
                 <View
                   style={[
@@ -326,7 +326,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         <Text style={[styles.heroSubtitle, isMobile && styles.heroSubtitleMobile, { color: theme.textSecondary }]}>
           {isMobile
             ? 'No continuous numbers. No target anxiety. Log a pure yes or no and let daily discipline compound into green contribution heatmaps.'
-            : 'Stop drowning in continuous numbers, target meters, and bookkeeping anxiety. HabitHeat strips routine tracking down to an elegant binary check-in. Log yes or no and let daily consistency compound into green contribution matrices.'}
+            : 'Stop drowning in continuous numbers, target meters, and bookkeeping anxiety. TrackHeat strips routine tracking down to an elegant binary check-in. Log yes or no and let daily consistency compound into green contribution matrices.'}
         </Text>
 
         {/* Hero Actions (Strict Auth Protection) */}
@@ -634,7 +634,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       <View style={[styles.sectionWrapper, isMobile && styles.sectionWrapperMobile]}>
         <View style={styles.sectionHeaderCol}>
           <Text style={[styles.sectionOverline, { color: isDark ? '#39D353' : '#1A7F37' }]}>
-            WHY HABITHEAT
+            WHY TRACKHEAT
           </Text>
           <Text style={[styles.sectionTitle, isMobile && styles.sectionTitleMobile, { color: theme.text }]}>
             Architecture of Pure Discipline
@@ -1071,10 +1071,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               style={styles.footerLogo}
               resizeMode="contain"
             />
-            <Text style={[styles.footerBrand, { color: theme.text }]}>HABITHEAT</Text>
+            <Text style={[styles.footerBrand, { color: theme.text }]}>TRACKHEAT</Text>
           </View>
           <Text style={[styles.footerCopy, isMobile && { textAlign: 'center', fontSize: 11, marginTop: 4 }, { color: theme.textMuted }]}>
-            {isMobile ? '© 2026 HabitHeat · Open Source' : '© 2026 HabitHeat. Open Source. Built for high-discipline builders.'}
+            {isMobile ? '© 2026 TrackHeat · Open Source' : '© 2026 TrackHeat. Open Source. Built for high-discipline builders.'}
           </Text>
         </View>
 

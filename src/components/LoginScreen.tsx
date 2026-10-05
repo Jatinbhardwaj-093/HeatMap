@@ -43,9 +43,13 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onBack, onLoginSuccess
   const [rememberMe, setRememberMe] = useState(true);
 
   useEffect(() => {
-    AsyncStorage.getItem('@habitheat_remembered_email').then((saved) => {
+    AsyncStorage.getItem('@trackheat_remembered_email').then((saved) => {
       if (saved) {
         setEmail(saved);
+      } else {
+        AsyncStorage.getItem('@habitheat_remembered_email').then((legacy) => {
+          if (legacy) setEmail(legacy);
+        });
       }
     });
   }, []);
@@ -89,8 +93,9 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onBack, onLoginSuccess
         
         if (data.session) {
           if (rememberMe) {
-            await AsyncStorage.setItem('@habitheat_remembered_email', email);
+            await AsyncStorage.setItem('@trackheat_remembered_email', email);
           } else {
+            await AsyncStorage.removeItem('@trackheat_remembered_email');
             await AsyncStorage.removeItem('@habitheat_remembered_email');
           }
           onLoginSuccess();
@@ -102,8 +107,9 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onBack, onLoginSuccess
         if (error) throw error;
         if (data.session) {
           if (rememberMe) {
-            await AsyncStorage.setItem('@habitheat_remembered_email', email);
+            await AsyncStorage.setItem('@trackheat_remembered_email', email);
           } else {
+            await AsyncStorage.removeItem('@trackheat_remembered_email');
             await AsyncStorage.removeItem('@habitheat_remembered_email');
           }
           onLoginSuccess();
@@ -160,7 +166,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onBack, onLoginSuccess
 
         <View style={styles.cardWrapper}>
           <View style={styles.header}>
-            {/* HabitHeat App Icon Badge */}
+            {/* TrackHeat App Icon Badge */}
             <View
             style={[
               styles.logoBadge,
@@ -189,7 +195,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onBack, onLoginSuccess
           </Text>
           <Text style={[styles.subtitle, { color: theme.textSecondary }]}>
             {isSignUp
-              ? 'Start building unbreakable habits with HabitHeat.'
+              ? 'Start building unbreakable habits with TrackHeat.'
               : 'Sign in to continue your daily momentum.'}
           </Text>
         </View>

@@ -29,13 +29,13 @@ import { useAppTheme, useIsDark, ThemeProvider } from './src/theme/theme';
 
 type ScreenState = 'landing' | 'login' | 'dashboard';
 
-const SAVED_USER_KEY = '@habitheat_saved_user';
+const SAVED_USER_KEY = '@trackheat_saved_user';
 
 const fontStack = Platform.select({
   web: '"SF Pro Rounded", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
   ios: 'System',
   default: 'sans-serif',
-});
+  });
 
 function AppContent() {
   const [currentScreen, setCurrentScreen] = useState<ScreenState>('landing');
@@ -57,7 +57,10 @@ function AppContent() {
     async function initAuthAndData() {
       // 1. Immediately check cached user for zero-latency dashboard restore (no landing page flash)
       try {
-        const cachedUserStr = await AsyncStorage.getItem(SAVED_USER_KEY);
+        let cachedUserStr = await AsyncStorage.getItem(SAVED_USER_KEY);
+        if (!cachedUserStr) {
+          cachedUserStr = await AsyncStorage.getItem('@habitheat_saved_user');
+        }
         if (cachedUserStr) {
           const cachedUser = JSON.parse(cachedUserStr);
           if (cachedUser?.id && cachedUser?.email) {
@@ -121,6 +124,7 @@ function AppContent() {
       } else if (event === 'SIGNED_OUT') {
         // Explicit logout only
         await AsyncStorage.removeItem(SAVED_USER_KEY);
+        await AsyncStorage.removeItem('@habitheat_saved_user');
         setUserEmail(undefined);
         setUserId(undefined);
         setCurrentScreen('landing');
@@ -135,6 +139,7 @@ function AppContent() {
 
   const handleLogout = async () => {
     await AsyncStorage.removeItem(SAVED_USER_KEY);
+    await AsyncStorage.removeItem('@habitheat_saved_user');
     setUserEmail(undefined);
     setUserId(undefined);
     setCurrentScreen('landing');
@@ -221,7 +226,7 @@ function AppContent() {
     return (
       <View style={[{ flex: 1, backgroundColor: theme.background, justifyContent: 'center', alignItems: 'center' }]}>
         <Text style={{ color: theme.textSecondary, fontFamily: fontStack }}>
-          Loading HabitHeat...
+          Loading TrackHeat...
         </Text>
       </View>
     );
