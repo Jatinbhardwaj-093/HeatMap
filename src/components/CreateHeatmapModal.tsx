@@ -33,6 +33,7 @@ export const CreateHeatmapModal: React.FC<CreateHeatmapModalProps> = ({
   onCreate,
 }) => {
   const theme = useAppTheme();
+  const isDark = useIsDark();
   const [title, setTitle] = useState('');
   const [paletteId, setPaletteId] = useState<PaletteId>(DEFAULT_PALETTE_ID);
   const [errorMsg, setErrorMsg] = useState('');
