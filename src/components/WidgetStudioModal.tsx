@@ -3,18 +3,19 @@ import {
   Modal,
   View,
   Text,
+  TextInput,
   TouchableOpacity,
   ScrollView,
   StyleSheet,
   Platform,
 } from 'react-native';
 import { X, Smartphone, Check, Plus } from 'lucide-react-native';
-import { HeatMapModel } from '../types/heatmap';
+import { HeatMapModel, PaletteId } from '../types/heatmap';
 import { PALETTES } from '../constants/palettes';
 import { DayCell } from './DayCell';
 import { getStreakIntensityLevel } from '../utils/streakUtils';
 import { useAppTheme, useIsDark } from '../theme/theme';
-import { setActiveWidgetHabit, getActiveWidgetHabitId } from '../widgets/widgetStorage';
+import { setActiveWidgetConfig, getWidgetConfig } from '../widgets/widgetStorage';
 import { updateAndroidWidgets } from '../widgets/widgetSync';
 
 interface WidgetStudioModalProps {
@@ -31,23 +32,35 @@ const fontStack = Platform.select({
   default: 'sans-serif',
 });
 
+const paletteList: PaletteId[] = ['emerald', 'cyan', 'amber', 'crimson', 'obsidian'];
+
 export const WidgetStudioModal: React.FC<WidgetStudioModalProps> = ({
   visible,
   heatmaps,
   onClose,
 }) => {
   const theme = useAppTheme();
-  const isDark = useIsDark();
+  const isAppDark = useIsDark();
 
   const [selectedMapId, setSelectedMapId] = useState<string | null>(heatmaps[0]?.id || null);
   const [preset, setPreset] = useState<WidgetPreset>('4x2');
+  const [customAlias, setCustomAlias] = useState<string>('');
+  const [themeChoice, setThemeChoice] = useState<'system' | 'dark' | 'light'>('system');
+  const [selectedPalette, setSelectedPalette] = useState<PaletteId>('emerald');
   const [pinStatus, setPinStatus] = useState<string | null>(null);
 
   useEffect(() => {
     if (visible) {
-      getActiveWidgetHabitId().then((savedId) => {
-        if (savedId && heatmaps.some((h) => h.id === savedId)) {
-          setSelectedMapId(savedId);
+      getWidgetConfig().then((cfg) => {
+        if (cfg) {
+          if (cfg.habitId && heatmaps.some((h) => h.id === cfg.habitId)) {
+            setSelectedMapId(cfg.habitId);
+          }
+          if (cfg.customName) setCustomAlias(cfg.customName);
+          if (cfg.theme) setThemeChoice(cfg.theme);
+          if (cfg.paletteId) setSelectedPalette(cfg.paletteId);
+        } else if (heatmaps[0]) {
+          setSelectedPalette(heatmaps[0].paletteId || 'emerald');
         }
       });
     }
@@ -75,6 +88,8 @@ export const WidgetStudioModal: React.FC<WidgetStudioModalProps> = ({
   // Height: 1 row (2x1, 4x1) or 2 rows (2x2, 4x2, 5x2)
   // Width: 2 to 5 columns wide
   const isSingleRow = preset === '2x1' || preset === '4x1';
+  const isCompactWidth = preset === '2x1' || preset === '2x2';
+
   const numWeeks =
     preset === '2x1' ? 10 :
     preset === '4x1' ? 22 :
@@ -91,12 +106,18 @@ export const WidgetStudioModal: React.FC<WidgetStudioModalProps> = ({
 
   const previewMinHeight = isSingleRow ? 88 : 132;
 
+  // Resolved preview theme
+  const isWidgetDark =
+    themeChoice === 'dark' ? true :
+    themeChoice === 'light' ? false : isAppDark;
+
   // Build grid of recent days organized by week columns (each column = 7 days, Mon to Sun)
   const generateWidgetGrid = () => {
     const today = new Date();
+    const todayMidnight = new Date(today.getFullYear(), today.getMonth(), today.getDate());
     const dayOfWeek = (today.getDay() + 6) % 7;
     const totalDays = numWeeks * 7;
-    const gridWeeks: Array<Array<{ dateKey: string; level: 0 | 1 | 2 | 3 | 4 }>> = [];
+    const gridWeeks: Array<Array<{ dateKey: string; level: 0 | 1 | 2 | 3 | 4; isFuture: boolean }>> = [];
 
     const startDate = new Date(today);
     startDate.setDate(today.getDate() - (totalDays - 1 - (6 - dayOfWeek)));
@@ -105,17 +126,20 @@ export const WidgetStudioModal: React.FC<WidgetStudioModalProps> = ({
     for (let w = 0; w < numWeeks; w++) {
       const weekDays = [];
       for (let d = 0; d < 7; d++) {
+        const curMidnight = new Date(curDate.getFullYear(), curDate.getMonth(), curDate.getDate());
+        const isFuture = curMidnight > todayMidnight;
+
         const year = curDate.getFullYear();
         const month = String(curDate.getMonth() + 1).padStart(2, '0');
         const day = String(curDate.getDate()).padStart(2, '0');
         const key = `${year}-${month}-${day}`;
         const entry = currentMap.entries[key];
-        const isFuture = curDate > today;
         const level = entry?.completed && !isFuture ? getStreakIntensityLevel(1) : 0;
 
         weekDays.push({
           dateKey: key,
           level,
+          isFuture,
         });
 
         curDate.setDate(curDate.getDate() + 1);
@@ -126,11 +150,23 @@ export const WidgetStudioModal: React.FC<WidgetStudioModalProps> = ({
   };
 
   const widgetGrid = generateWidgetGrid();
-  const palette = PALETTES[currentMap.paletteId] || PALETTES.emerald;
+  const palette = PALETTES[selectedPalette] || PALETTES[currentMap.paletteId] || PALETTES.emerald;
+  const displayTitle = customAlias.trim() || currentMap.title;
+
+  const today = new Date();
+  const todayKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+  const isTodayDone = Boolean(currentMap.entries[todayKey]?.completed);
 
   const handleApplyToHomeScreen = async () => {
     try {
-      await setActiveWidgetHabit(currentMap.id);
+      const config = {
+        habitId: currentMap.id,
+        customName: customAlias.trim() || undefined,
+        theme: themeChoice,
+        paletteId: selectedPalette,
+      };
+
+      await setActiveWidgetConfig(config);
       await updateAndroidWidgets();
 
       if (Platform.OS === 'android') {
@@ -140,13 +176,13 @@ export const WidgetStudioModal: React.FC<WidgetStudioModalProps> = ({
           if (pinned) {
             setPinStatus('Prompt opened! Confirm on your home screen.');
           } else {
-            setPinStatus(`Active widget set to "${currentMap.title}"`);
+            setPinStatus(`Widget set to "${displayTitle}"`);
           }
         } catch {
-          setPinStatus(`Active widget set to "${currentMap.title}"`);
+          setPinStatus(`Widget set to "${displayTitle}"`);
         }
       } else {
-        setPinStatus(`Active widget set to "${currentMap.title}"`);
+        setPinStatus(`Widget set to "${displayTitle}"`);
       }
     } catch {
       setPinStatus('Error saving widget habit');
@@ -206,7 +242,10 @@ export const WidgetStudioModal: React.FC<WidgetStudioModalProps> = ({
                         borderColor: isSelected ? mPalette.accent : theme.borderSubtle,
                       },
                     ]}
-                    onPress={() => setSelectedMapId(m.id)}
+                    onPress={() => {
+                      setSelectedMapId(m.id);
+                      setSelectedPalette(m.paletteId || 'emerald');
+                    }}
                     activeOpacity={0.7}
                   >
                     <View style={[styles.pillDot, { backgroundColor: mPalette.accent }]} />
@@ -234,9 +273,9 @@ export const WidgetStudioModal: React.FC<WidgetStudioModalProps> = ({
             <View style={styles.sizeControlSection}>
               <View style={styles.sizeSectionHeader}>
                 <Text style={[styles.sectionLabel, { color: theme.textMuted }]}>PREVIEW SIZE</Text>
-                <Text style={[styles.sizeHint, { color: theme.textSecondary }]}>Height: 1 or 2 rows • Width: 2 to 5</Text>
+                <Text style={[styles.sizeHint, { color: theme.textSecondary }]}>Height: 1, 2 • Width: 2 to 5</Text>
               </View>
-              <View style={[styles.sizeSwitcher, { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)' }]}>
+              <View style={[styles.sizeSwitcher, { backgroundColor: isAppDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)' }]}>
                 {(['2x1', '4x1', '2x2', '4x2', '5x2'] as WidgetPreset[]).map((p) => {
                   const isActive = preset === p;
                   const label = p.replace('x', '×');
@@ -247,10 +286,10 @@ export const WidgetStudioModal: React.FC<WidgetStudioModalProps> = ({
                         styles.sizeOption,
                         isActive && [
                           styles.sizeOptionActive,
-                          { backgroundColor: isDark ? '#21262D' : '#FFFFFF' },
+                          { backgroundColor: isAppDark ? '#21262D' : '#FFFFFF' },
                           Platform.select({
                             web: {
-                              boxShadow: isDark
+                              boxShadow: isAppDark
                                 ? '0 1px 3px rgba(0, 0, 0, 0.4)'
                                 : '0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06)',
                             } as any,
@@ -284,19 +323,19 @@ export const WidgetStudioModal: React.FC<WidgetStudioModalProps> = ({
 
             {/* Widget Preview Canvas */}
             <View style={[styles.canvasBox, { backgroundColor: theme.surfaceHighlight, borderColor: theme.borderSubtle }]}>
-              {/* Native Home Screen Widget: Habit Name Only, Pure Contribution Matrix */}
+              {/* Native Home Screen Widget: Habit Name + Direct Action + Stretched Matrix */}
               <View
                 style={[
                   styles.nativeWidget,
                   {
                     width: previewWidth,
                     minHeight: previewMinHeight,
-                    backgroundColor: isDark ? '#161B22' : '#FFFFFF',
-                    borderColor: isDark ? '#30363D' : '#D0D7DE',
+                    backgroundColor: isWidgetDark ? '#161B22' : '#FFFFFF',
+                    borderColor: isWidgetDark ? '#30363D' : '#D0D7DE',
                     padding: isSingleRow ? 8 : 12,
                     ...(Platform.OS === 'web'
                       ? {
-                          boxShadow: isDark
+                          boxShadow: isWidgetDark
                             ? '0 8px 24px rgba(0, 0, 0, 0.45)'
                             : '0 8px 24px rgba(0, 0, 0, 0.08)',
                         }
@@ -304,13 +343,13 @@ export const WidgetStudioModal: React.FC<WidgetStudioModalProps> = ({
                   },
                 ]}
               >
-                {/* Top: Habit Name + Today Log Button */}
+                {/* Top: Habit Name + Compact Toggle Button */}
                 <View style={[styles.widgetHeader, { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: isSingleRow ? 4 : 8 }]}>
                   <Text
                     style={[
                       styles.widgetHabitTitle,
                       {
-                        color: isDark ? '#F0F6FC' : '#1F2328',
+                        color: isWidgetDark ? '#F0F6FC' : '#1F2328',
                         fontSize: titleFontSize,
                         flex: 1,
                         marginRight: 6,
@@ -318,58 +357,151 @@ export const WidgetStudioModal: React.FC<WidgetStudioModalProps> = ({
                     ]}
                     numberOfLines={1}
                   >
-                    {currentMap.title}
+                    {displayTitle}
                   </Text>
 
+                  {/* Single symbol '+' / '✓' on 2-wide; full badge on wider */}
                   <View
                     style={{
                       flexDirection: 'row',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      paddingHorizontal: isSingleRow ? 6 : 8,
-                      paddingVertical: isSingleRow ? 2 : 3,
-                      borderRadius: isSingleRow ? 6 : 8,
-                      backgroundColor: Boolean(currentMap.entries[`${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(new Date().getDate()).padStart(2, '0')}`]?.completed)
-                        ? (isDark ? '#238636' : '#2EA043')
-                        : (isDark ? '#21262D' : '#F0F2F5'),
-                      borderColor: Boolean(currentMap.entries[`${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(new Date().getDate()).padStart(2, '0')}`]?.completed)
-                        ? (isDark ? '#2EA043' : '#238636')
-                        : (isDark ? '#30363D' : '#D0D7DE'),
+                      paddingHorizontal: isCompactWidth ? 6 : 8,
+                      paddingVertical: isSingleRow ? 1.5 : 3,
+                      borderRadius: isCompactWidth ? 10 : 8,
+                      backgroundColor: isTodayDone
+                        ? (isWidgetDark ? '#238636' : '#2EA043')
+                        : (isWidgetDark ? '#21262D' : '#F0F2F5'),
+                      borderColor: isTodayDone
+                        ? (isWidgetDark ? '#2EA043' : '#238636')
+                        : (isWidgetDark ? '#30363D' : '#D0D7DE'),
                       borderWidth: 1,
                     }}
                   >
                     <Text
                       style={{
-                        fontSize: isSingleRow ? 9 : 10,
+                        fontSize: isSingleRow ? (isCompactWidth ? 11 : 9) : (isCompactWidth ? 12 : 10),
                         fontWeight: '700',
-                        color: Boolean(currentMap.entries[`${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(new Date().getDate()).padStart(2, '0')}`]?.completed)
-                          ? '#FFFFFF'
-                          : (isDark ? '#F0F3F6' : '#1F2328'),
+                        color: isTodayDone ? '#FFFFFF' : (isWidgetDark ? '#F0F3F6' : '#1F2328'),
                         fontFamily: fontStack,
                       }}
                     >
-                      {Boolean(currentMap.entries[`${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(new Date().getDate()).padStart(2, '0')}`]?.completed) ? '✓ Done' : '+ Log'}
+                      {isCompactWidth
+                        ? (isTodayDone ? '✓' : '+')
+                        : (isTodayDone ? '✓ Done' : '+ Log')}
                     </Text>
                   </View>
                 </View>
 
-                {/* Pure Contribution Matrix - Scaled to size */}
+                {/* Pure Contribution Matrix - Future days are transparent */}
                 <View style={[styles.matrixColumns, { gap: cellGap }]}>
                   {widgetGrid.map((week, wIdx) => (
                     <View key={`ww-${wIdx}`} style={[styles.matrixColumn, { gap: cellGap }]}>
-                      {week.map((day) => (
-                        <DayCell
-                          key={`wd-${day.dateKey}`}
-                          dateKey={day.dateKey}
-                          level={day.level}
-                          paletteId={currentMap.paletteId}
-                          size={cellSize}
-                          disabled={true}
-                        />
-                      ))}
+                      {week.map((day) =>
+                        day.isFuture ? (
+                          <View
+                            key={`wd-${day.dateKey}`}
+                            style={{
+                              width: cellSize,
+                              height: cellSize,
+                              backgroundColor: 'transparent',
+                            }}
+                          />
+                        ) : (
+                          <DayCell
+                            key={`wd-${day.dateKey}`}
+                            dateKey={day.dateKey}
+                            level={day.level}
+                            paletteId={selectedPalette}
+                            size={cellSize}
+                            disabled={true}
+                          />
+                        )
+                      )}
                     </View>
                   ))}
                 </View>
+              </View>
+            </View>
+
+            {/* Customization Options: Alias, Theme, Palette */}
+            <View style={styles.customSection}>
+              {/* Display Name Alias */}
+              <View style={styles.settingBlock}>
+                <Text style={[styles.settingLabel, { color: theme.textMuted }]}>DISPLAY NAME (ALIAS)</Text>
+                <TextInput
+                  style={[
+                    styles.aliasInput,
+                    {
+                      backgroundColor: theme.surfaceHighlight,
+                      borderColor: theme.borderSubtle,
+                      color: theme.text,
+                    },
+                  ]}
+                  value={customAlias}
+                  onChangeText={setCustomAlias}
+                  placeholder={currentMap.title}
+                  placeholderTextColor={theme.textMuted}
+                />
+              </View>
+
+              {/* Theme Choice */}
+              <View style={styles.settingBlock}>
+                <Text style={[styles.settingLabel, { color: theme.textMuted }]}>WIDGET THEME</Text>
+                <View style={[styles.segmentedControl, { backgroundColor: isAppDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)' }]}>
+                  {(['system', 'dark', 'light'] as const).map((t) => {
+                    const isActive = themeChoice === t;
+                    const label = t === 'system' ? 'System' : t === 'dark' ? 'Dark' : 'Light';
+                    return (
+                      <TouchableOpacity
+                        key={t}
+                        style={[
+                          styles.segmentBtn,
+                          isActive && [
+                            styles.segmentBtnActive,
+                            { backgroundColor: isAppDark ? '#21262D' : '#FFFFFF' },
+                          ],
+                        ]}
+                        onPress={() => setThemeChoice(t)}
+                        activeOpacity={0.7}
+                      >
+                        <Text style={[styles.segmentText, { color: isActive ? theme.text : theme.textSecondary }, isActive && { fontWeight: '700' }]}>
+                          {label}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              </View>
+
+              {/* Color Palette Choice */}
+              <View style={styles.settingBlock}>
+                <Text style={[styles.settingLabel, { color: theme.textMuted }]}>COLOR PALETTE</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.paletteScroll}>
+                  {paletteList.map((pid) => {
+                    const pal = PALETTES[pid];
+                    const isSelected = selectedPalette === pid;
+                    return (
+                      <TouchableOpacity
+                        key={pid}
+                        style={[
+                          styles.paletteOptionPill,
+                          {
+                            backgroundColor: isSelected ? theme.surface : 'transparent',
+                            borderColor: isSelected ? pal.accent : theme.borderSubtle,
+                          },
+                        ]}
+                        onPress={() => setSelectedPalette(pid)}
+                        activeOpacity={0.7}
+                      >
+                        <View style={[styles.pillDot, { backgroundColor: pal.accent }]} />
+                        <Text style={[styles.habitPillText, { color: isSelected ? theme.text : theme.textSecondary }, isSelected && { fontWeight: '700' }]}>
+                          {pal.name.split(' ')[0]}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </ScrollView>
               </View>
             </View>
 
@@ -385,9 +517,9 @@ export const WidgetStudioModal: React.FC<WidgetStudioModalProps> = ({
               </TouchableOpacity>
 
               {pinStatus ? (
-                <View style={[styles.statusPill, { backgroundColor: isDark ? '#21262D' : '#E6FFED' }]}>
-                  <Check size={13} color={isDark ? '#39D353' : '#1A7F37'} />
-                  <Text style={[styles.statusText, { color: isDark ? '#39D353' : '#1A7F37' }]}>
+                <View style={[styles.statusPill, { backgroundColor: isAppDark ? '#21262D' : '#E6FFED' }]}>
+                  <Check size={13} color={isAppDark ? '#39D353' : '#1A7F37'} />
+                  <Text style={[styles.statusText, { color: isAppDark ? '#39D353' : '#1A7F37' }]}>
                     {pinStatus}
                   </Text>
                 </View>
@@ -409,10 +541,10 @@ export const WidgetStudioModal: React.FC<WidgetStudioModalProps> = ({
                   • Or long-press Home Screen → <Text style={{ fontWeight: '700', color: theme.text }}>Widgets</Text> → <Text style={{ fontWeight: '700', color: theme.text }}>TrackHeat Matrix</Text>.
                 </Text>
                 <Text style={[styles.stepText, { color: theme.textSecondary }]}>
-                  • Resize height between <Text style={{ fontWeight: '600', color: theme.text }}>1 or 2 rows</Text>, and width between <Text style={{ fontWeight: '600', color: theme.text }}>2 to 5 columns</Text>.
+                  • Tap the <Text style={{ fontWeight: '600', color: theme.text }}>+ / ✓</Text> button on the widget to log today directly from your home screen!
                 </Text>
                 <Text style={[styles.stepText, { color: theme.textSecondary }]}>
-                  • Long-press the widget on your home screen and tap <Text style={{ fontWeight: '600', color: theme.text }}>Edit</Text> anytime to switch habits.
+                  • Long-press the widget on your home screen and tap <Text style={{ fontWeight: '600', color: theme.text }}>Edit</Text> anytime to customize its alias, palette, and theme.
                 </Text>
               </View>
             </View>
@@ -536,10 +668,10 @@ const styles = StyleSheet.create({
   canvasBox: {
     borderWidth: 1,
     borderRadius: 14,
-    padding: 18,
+    padding: 16,
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 160,
+    minHeight: 150,
   },
 
   nativeWidget: {
@@ -574,6 +706,57 @@ const styles = StyleSheet.create({
   },
   matrixColumn: {
     flexDirection: 'column',
+  },
+
+  customSection: {
+    gap: 12,
+  },
+  settingBlock: {
+    gap: 6,
+  },
+  settingLabel: {
+    fontSize: 9.5,
+    fontWeight: '700',
+    fontFamily: fontStack,
+    letterSpacing: 0.5,
+  },
+  aliasInput: {
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    fontSize: 13,
+    fontFamily: fontStack,
+  },
+  segmentedControl: {
+    flexDirection: 'row',
+    borderRadius: 14,
+    padding: 3,
+  },
+  segmentBtn: {
+    flex: 1,
+    paddingVertical: 6,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 11,
+  },
+  segmentBtnActive: {},
+  segmentText: {
+    fontSize: 12,
+    fontFamily: fontStack,
+  },
+  paletteScroll: {
+    gap: 8,
+    paddingVertical: 2,
+  },
+  paletteOptionPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    borderWidth: 1,
+    gap: 6,
   },
 
   actionSection: {

@@ -1,5 +1,17 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { HeatMapModel } from '../types/heatmap';
+import { HeatMapModel, PaletteId } from '../types/heatmap';
+
+export interface WidgetConfig {
+  habitId: string;
+  customName?: string;
+  theme?: 'system' | 'dark' | 'light';
+  paletteId?: PaletteId;
+}
+
+export interface ResolvedWidgetData {
+  habit?: HeatMapModel;
+  config?: WidgetConfig;
+}
 
 export async function getWidgetHabits(): Promise<HeatMapModel[]> {
   try {
@@ -44,44 +56,74 @@ export async function getWidgetHabits(): Promise<HeatMapModel[]> {
   return [];
 }
 
-export async function getHabitForWidget(widgetId?: number): Promise<HeatMapModel | undefined> {
-  const habits = await getWidgetHabits();
-  if (habits.length === 0) return undefined;
-
-  // 1. Check if this specific widget instance has an assigned habit
+export async function getWidgetConfig(widgetId?: number): Promise<WidgetConfig | undefined> {
   if (widgetId !== undefined) {
     try {
-      const specificHabitId = await AsyncStorage.getItem(`@trackheat_widget_habit_${widgetId}`);
-      if (specificHabitId) {
-        const found = habits.find((h) => h.id === specificHabitId);
-        if (found) return found;
+      const raw = await AsyncStorage.getItem(`@trackheat_widget_config_${widgetId}`);
+      if (raw) {
+        return JSON.parse(raw);
+      }
+      const legacyHabitId = await AsyncStorage.getItem(`@trackheat_widget_habit_${widgetId}`);
+      if (legacyHabitId) {
+        return { habitId: legacyHabitId };
       }
     } catch {
-      // Ignore reading error
+      // Ignore
     }
   }
 
-  // 2. Check global active widget habit selection from Widget Studio
   try {
+    const rawActive = await AsyncStorage.getItem('@trackheat_active_widget_config');
+    if (rawActive) {
+      return JSON.parse(rawActive);
+    }
     const activeHabitId = await AsyncStorage.getItem('@trackheat_active_widget_habit_id');
     if (activeHabitId) {
-      const found = habits.find((h) => h.id === activeHabitId);
-      if (found) return found;
+      return { habitId: activeHabitId };
     }
   } catch {
-    // Ignore reading error
+    // Ignore
   }
 
-  // 3. Fallback to first habit
-  return habits[0];
+  return undefined;
+}
+
+export async function setWidgetConfig(widgetId: number, config: WidgetConfig): Promise<void> {
+  await AsyncStorage.setItem(`@trackheat_widget_config_${widgetId}`, JSON.stringify(config));
+  await AsyncStorage.setItem(`@trackheat_widget_habit_${widgetId}`, config.habitId);
+}
+
+export async function setActiveWidgetConfig(config: WidgetConfig): Promise<void> {
+  await AsyncStorage.setItem('@trackheat_active_widget_config', JSON.stringify(config));
+  await AsyncStorage.setItem('@trackheat_active_widget_habit_id', config.habitId);
+}
+
+export async function getResolvedWidgetData(widgetId?: number): Promise<ResolvedWidgetData> {
+  const habits = await getWidgetHabits();
+  if (habits.length === 0) return {};
+
+  const config = await getWidgetConfig(widgetId);
+  if (config) {
+    const found = habits.find((h) => h.id === config.habitId);
+    if (found) {
+      return { habit: found, config };
+    }
+  }
+
+  return { habit: habits[0], config: { habitId: habits[0].id } };
+}
+
+export async function getHabitForWidget(widgetId?: number): Promise<HeatMapModel | undefined> {
+  const { habit } = await getResolvedWidgetData(widgetId);
+  return habit;
 }
 
 export async function setHabitForWidget(widgetId: number, habitId: string): Promise<void> {
-  await AsyncStorage.setItem(`@trackheat_widget_habit_${widgetId}`, habitId);
+  await setWidgetConfig(widgetId, { habitId });
 }
 
 export async function setActiveWidgetHabit(habitId: string): Promise<void> {
-  await AsyncStorage.setItem('@trackheat_active_widget_habit_id', habitId);
+  await setActiveWidgetConfig({ habitId });
 }
 
 export async function getActiveWidgetHabitId(): Promise<string | null> {

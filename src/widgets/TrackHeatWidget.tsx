@@ -1,21 +1,26 @@
 import React from 'react';
 import { FlexWidget, TextWidget } from 'react-native-android-widget';
-import { HeatMapModel } from '../types/heatmap';
+import { HeatMapModel, PaletteId } from '../types/heatmap';
 import { PALETTES } from '../constants/palettes';
+import { WidgetConfig } from './widgetStorage';
 
 interface TrackHeatWidgetProps {
   map?: HeatMapModel;
+  config?: WidgetConfig;
   width: number;
   height: number;
   isDark?: boolean;
 }
 
-export function TrackHeatWidget({ map, width, height, isDark = true }: TrackHeatWidgetProps) {
-  const bg = isDark ? '#0D1117' : '#FFFFFF';
-  const border = isDark ? '#30363D' : '#E1E4E8';
-  const textPrimary = isDark ? '#F0F3F6' : '#1F2328';
-  const textMuted = isDark ? '#8B949E' : '#656D76';
-  const cellEmpty = isDark ? '#161B22' : '#EBEDF0';
+export function TrackHeatWidget({ map, config, width, height, isDark = true }: TrackHeatWidgetProps) {
+  let effectiveDark = isDark;
+  if (config?.theme === 'dark') effectiveDark = true;
+  if (config?.theme === 'light') effectiveDark = false;
+
+  const bg = effectiveDark ? '#0D1117' : '#FFFFFF';
+  const border = effectiveDark ? '#30363D' : '#E1E4E8';
+  const textPrimary = effectiveDark ? '#F0F3F6' : '#1F2328';
+  const cellEmpty = effectiveDark ? '#161B22' : '#EBEDF0';
 
   if (!map) {
     return (
@@ -46,41 +51,49 @@ export function TrackHeatWidget({ map, width, height, isDark = true }: TrackHeat
           text="Tap to open app & select habit"
           style={{
             fontSize: 11,
-            color: textMuted,
+            color: effectiveDark ? '#8B949E' : '#656D76',
           }}
         />
       </FlexWidget>
     );
   }
 
-  const palette = PALETTES[map.paletteId] || PALETTES.emerald;
-  const activeColor = isDark
+  // Display Name: alias if set, otherwise original title
+  const displayTitle = config?.customName?.trim() || map.title;
+
+  // Palette: custom palette if set, otherwise map palette
+  const activePaletteId = (config?.paletteId || map.paletteId) as PaletteId;
+  const palette = PALETTES[activePaletteId] || PALETTES.emerald;
+  const activeColor = effectiveDark
     ? ((palette.levels[3] || palette.accent) as `#${string}`)
     : ((palette.lightLevels?.[3] || palette.accent) as `#${string}`);
 
-  // Responsive scaling based on dimensions
+  // Layout sizing
   const isSingleRow = height < 95;
-  const paddingV = isSingleRow ? 7 : 10;
-  const paddingH = isSingleRow ? 9 : 12;
-  const headerMargin = isSingleRow ? 3 : 6;
+  const isCompactWidth = width < 260; // 2 or 3 wide
+  
+  // Tight padding to maximize matrix area
+  const paddingV = isSingleRow ? 4 : 8;
+  const paddingH = isSingleRow ? 6 : 10;
+  const headerMargin = isSingleRow ? 3 : 5;
 
-  // Habit title font size adjusts with width and height
+  // Habit title font size
   const titleFontSize = isSingleRow
-    ? Math.min(12, Math.max(9, Math.floor(width / 26)))
-    : Math.min(15, Math.max(11, Math.floor(width / 22)));
+    ? Math.min(13, Math.max(10, Math.floor(width / 22)))
+    : Math.min(16, Math.max(12, Math.floor(width / 18)));
 
-  // Matrix cell size adjusts dynamically with height
-  const cellGap = isSingleRow ? 1.5 : 2.5;
+  // Available vertical space for 7 matrix rows - stretched to fullest
   const availableGridHeight = Math.max(28, height - paddingV * 2 - headerMargin - titleFontSize - 3);
-  const rawCellSize = (availableGridHeight - cellGap * 6) / 7;
+  const minGapY = isSingleRow ? 1.5 : 2;
+  const rawCellSize = Math.floor((availableGridHeight - minGapY * 6) / 7);
   const cellSize = isSingleRow
-    ? Math.min(7, Math.max(4, rawCellSize))
-    : Math.min(12.5, Math.max(7.5, rawCellSize));
+    ? Math.min(7.5, Math.max(4.5, rawCellSize))
+    : Math.min(14, Math.max(8.5, rawCellSize));
 
-  // Week columns dynamically adjust to fill width
+  // Available horizontal space for week columns - stretched edge-to-edge
   const availableWidth = width - paddingH * 2;
-  const stepX = cellSize + cellGap;
-  const numWeeks = Math.max(4, Math.min(30, Math.floor((availableWidth + cellGap) / stepX)));
+  const minGapX = isSingleRow ? 1.5 : 2.5;
+  const numWeeks = Math.max(5, Math.floor((availableWidth + minGapX) / (cellSize + minGapX)));
 
   const today = new Date();
   const dayOfWeek = (today.getDay() + 6) % 7; // Mon = 0, Sun = 6
@@ -88,23 +101,27 @@ export function TrackHeatWidget({ map, width, height, isDark = true }: TrackHeat
   const startDate = new Date(today);
   startDate.setDate(today.getDate() - (totalDays - 1 - (6 - dayOfWeek)));
 
-  const columns: Array<Array<{ key: string; color: `#${string}` }>> = [];
+  const columns: Array<Array<{ key: string; color: string }>> = [];
   let cur = new Date(startDate);
+  const todayMidnight = new Date(today.getFullYear(), today.getMonth(), today.getDate());
 
   for (let w = 0; w < numWeeks; w++) {
-    const col: Array<{ key: string; color: `#${string}` }> = [];
+    const col: Array<{ key: string; color: string }> = [];
     for (let d = 0; d < 7; d++) {
+      const curMidnight = new Date(cur.getFullYear(), cur.getMonth(), cur.getDate());
+      const isFuture = curMidnight > todayMidnight;
+
       const year = cur.getFullYear();
       const month = String(cur.getMonth() + 1).padStart(2, '0');
       const day = String(cur.getDate()).padStart(2, '0');
       const key = `${year}-${month}-${day}`;
       const entry = map.entries?.[key];
-      const isFuture = cur > today;
       const isCompleted = !isFuture && Boolean(entry?.completed);
 
+      // Future days do NOT display an empty box (transparent placeholder)
       col.push({
         key,
-        color: isCompleted ? activeColor : (cellEmpty as `#${string}`),
+        color: isFuture ? 'transparent' : (isCompleted ? activeColor : cellEmpty),
       });
       cur.setDate(cur.getDate() + 1);
     }
@@ -113,6 +130,11 @@ export function TrackHeatWidget({ map, width, height, isDark = true }: TrackHeat
 
   const todayKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
   const isTodayDone = Boolean(map.entries?.[todayKey]?.completed);
+
+  // In small layout (2, 3 wide), show only '+' or '✓' to leave max space for habit name
+  const logButtonText = isCompactWidth
+    ? (isTodayDone ? '✓' : '+')
+    : (isTodayDone ? '✓ Done' : '+ Log');
 
   return (
     <FlexWidget
@@ -131,7 +153,7 @@ export function TrackHeatWidget({ map, width, height, isDark = true }: TrackHeat
       }}
       clickAction="OPEN_APP"
     >
-      {/* Top Header: Habit title + Today toggle action */}
+      {/* Top Header: Habit Title + Today Toggle Button */}
       <FlexWidget
         style={{
           flexDirection: 'row',
@@ -148,7 +170,7 @@ export function TrackHeatWidget({ map, width, height, isDark = true }: TrackHeat
           }}
         >
           <TextWidget
-            text={map.title}
+            text={displayTitle}
             maxLines={1}
             truncate="END"
             style={{
@@ -159,26 +181,31 @@ export function TrackHeatWidget({ map, width, height, isDark = true }: TrackHeat
           />
         </FlexWidget>
 
+        {/* Small Log Today Button */}
         <FlexWidget
           style={{
             flexDirection: 'row',
             alignItems: 'center',
             justifyContent: 'center',
-            paddingHorizontal: isSingleRow ? 6 : 8,
-            paddingVertical: isSingleRow ? 2 : 3,
-            borderRadius: isSingleRow ? 6 : 8,
-            backgroundColor: isTodayDone ? (isDark ? '#238636' : '#2EA043') : (isDark ? '#21262D' : '#F0F2F5'),
-            borderColor: isTodayDone ? (isDark ? '#2EA043' : '#238636') : (isDark ? '#30363D' : '#D0D7DE'),
+            paddingHorizontal: isCompactWidth ? 6 : 8,
+            paddingVertical: isSingleRow ? 1.5 : 3,
+            borderRadius: isCompactWidth ? 10 : 8,
+            backgroundColor: isTodayDone
+              ? (effectiveDark ? '#238636' : '#2EA043')
+              : (effectiveDark ? '#21262D' : '#F0F2F5'),
+            borderColor: isTodayDone
+              ? (effectiveDark ? '#2EA043' : '#238636')
+              : (effectiveDark ? '#30363D' : '#D0D7DE'),
             borderWidth: 1,
           }}
           clickAction="TOGGLE_TODAY"
           clickActionData={{ habitId: map.id }}
-          accessibilityLabel={isTodayDone ? `Mark ${map.title} not done` : `Mark ${map.title} done today`}
+          accessibilityLabel={isTodayDone ? `Mark ${displayTitle} not done` : `Mark ${displayTitle} done today`}
         >
           <TextWidget
-            text={isTodayDone ? '✓ Done' : '+ Log'}
+            text={logButtonText}
             style={{
-              fontSize: isSingleRow ? 9 : 10,
+              fontSize: isSingleRow ? (isCompactWidth ? 11 : 9) : (isCompactWidth ? 12 : 10),
               fontWeight: 'bold',
               color: isTodayDone ? '#FFFFFF' : textPrimary,
             }}
@@ -186,11 +213,11 @@ export function TrackHeatWidget({ map, width, height, isDark = true }: TrackHeat
         </FlexWidget>
       </FlexWidget>
 
-      {/* Contribution Grid: dynamic cell size and dynamic week columns */}
+      {/* Contribution Grid: Stretched edge-to-edge horizontally and vertically */}
       <FlexWidget
         style={{
           flexDirection: 'row',
-          justifyContent: 'center',
+          justifyContent: 'space-between',
           alignItems: 'center',
           width: 'match_parent',
         }}
@@ -200,7 +227,6 @@ export function TrackHeatWidget({ map, width, height, isDark = true }: TrackHeat
             key={`col-${colIdx}`}
             style={{
               flexDirection: 'column',
-              marginHorizontal: cellGap / 2,
             }}
           >
             {col.map((cell) => (
@@ -210,8 +236,8 @@ export function TrackHeatWidget({ map, width, height, isDark = true }: TrackHeat
                   width: cellSize,
                   height: cellSize,
                   borderRadius: isSingleRow ? 1 : 2,
-                  backgroundColor: cell.color,
-                  marginVertical: cellGap / 2,
+                  backgroundColor: cell.color as any,
+                  marginVertical: minGapY / 2,
                 }}
               />
             ))}

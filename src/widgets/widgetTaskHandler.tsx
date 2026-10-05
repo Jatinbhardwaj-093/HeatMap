@@ -1,7 +1,7 @@
 import React from 'react';
 import type { WidgetTaskHandlerProps } from 'react-native-android-widget';
 import { TrackHeatWidget } from './TrackHeatWidget';
-import { getHabitForWidget, toggleHabitToday } from './widgetStorage';
+import { getResolvedWidgetData, toggleHabitToday } from './widgetStorage';
 
 export async function widgetTaskHandler(props: WidgetTaskHandlerProps): Promise<void> {
   const { widgetInfo, widgetAction, renderWidget, clickAction, clickActionData } = props;
@@ -10,12 +10,13 @@ export async function widgetTaskHandler(props: WidgetTaskHandlerProps): Promise<
     case 'WIDGET_ADDED':
     case 'WIDGET_UPDATE':
     case 'WIDGET_RESIZED': {
-      const habit = await getHabitForWidget(widgetInfo.widgetId);
+      const { habit, config } = await getResolvedWidgetData(widgetInfo.widgetId);
 
       renderWidget({
         light: (
           <TrackHeatWidget
             map={habit}
+            config={config}
             width={widgetInfo.width}
             height={widgetInfo.height}
             isDark={false}
@@ -24,6 +25,7 @@ export async function widgetTaskHandler(props: WidgetTaskHandlerProps): Promise<
         dark: (
           <TrackHeatWidget
             map={habit}
+            config={config}
             width={widgetInfo.width}
             height={widgetInfo.height}
             isDark={true}
@@ -37,11 +39,12 @@ export async function widgetTaskHandler(props: WidgetTaskHandlerProps): Promise<
         const habitId = clickActionData?.habitId as string;
         if (habitId) {
           await toggleHabitToday(habitId);
-          const habit = await getHabitForWidget(widgetInfo.widgetId);
+          const { habit, config } = await getResolvedWidgetData(widgetInfo.widgetId);
           renderWidget({
             light: (
               <TrackHeatWidget
                 map={habit}
+                config={config}
                 width={widgetInfo.width}
                 height={widgetInfo.height}
                 isDark={false}
@@ -50,6 +53,7 @@ export async function widgetTaskHandler(props: WidgetTaskHandlerProps): Promise<
             dark: (
               <TrackHeatWidget
                 map={habit}
+                config={config}
                 width={widgetInfo.width}
                 height={widgetInfo.height}
                 isDark={true}

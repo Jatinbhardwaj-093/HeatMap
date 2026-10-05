@@ -1,7 +1,7 @@
 import React from 'react';
 import { Platform } from 'react-native';
 import { TrackHeatWidget } from './TrackHeatWidget';
-import { getHabitForWidget } from './widgetStorage';
+import { getResolvedWidgetData } from './widgetStorage';
 
 export async function updateAndroidWidgets(): Promise<void> {
   if (Platform.OS !== 'android') return;
@@ -12,11 +12,12 @@ export async function updateAndroidWidgets(): Promise<void> {
     await requestWidgetUpdate({
       widgetName: 'TrackHeatWidget',
       renderWidget: async (widgetInfo: any) => {
-        const habit = await getHabitForWidget(widgetInfo.widgetId);
+        const { habit, config } = await getResolvedWidgetData(widgetInfo.widgetId);
         return {
           light: (
             <TrackHeatWidget
               map={habit}
+              config={config}
               width={widgetInfo.width}
               height={widgetInfo.height}
               isDark={false}
@@ -25,6 +26,7 @@ export async function updateAndroidWidgets(): Promise<void> {
           dark: (
             <TrackHeatWidget
               map={habit}
+              config={config}
               width={widgetInfo.width}
               height={widgetInfo.height}
               isDark={true}
