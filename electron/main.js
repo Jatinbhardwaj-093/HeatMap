@@ -1,10 +1,23 @@
-const { app, BrowserWindow } = require('electron');
+const { app, BrowserWindow, protocol, net } = require('electron');
 const path = require('path');
 const url = require('url');
 
+// Register privileged custom protocol before app is ready
+protocol.registerSchemesAsPrivileged([
+  {
+    scheme: 'app',
+    privileges: {
+      standard: true,
+      secure: true,
+      supportFetchAPI: true,
+      corsEnabled: true,
+    },
+  },
+]);
+
 function createWindow() {
   const iconPath = path.join(__dirname, '../assets/icon.png');
-  
+
   if (process.platform === 'darwin') {
     app.dock.setIcon(iconPath);
   }
@@ -21,6 +34,7 @@ function createWindow() {
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
+      webSecurity: false,
     },
   });
 
@@ -35,18 +49,38 @@ function createWindow() {
       }, 1000);
     });
   } else {
-    // In production (packaged), load the exported web build index.html
-    win.loadURL(
-      url.format({
-        pathname: path.join(__dirname, '../dist/index.html'),
-        protocol: 'file:',
-        slashes: true
-      })
-    );
+    // In production, load via custom 'app' protocol which maps to the dist directory
+    win.loadURL('app://./index.html').catch(() => {
+      // Fallback to direct file path
+      const filePath = path.join(__dirname, '../dist/index.html');
+      win.loadURL(url.pathToFileURL(filePath).toString());
+    });
   }
+
+  win.webContents.on('did-fail-load', (event, errorCode, errorDescription) => {
+    console.warn('Page failed to load:', errorCode, errorDescription);
+  });
 }
 
 app.whenReady().then(() => {
+  const distDir = path.join(__dirname, '../dist');
+
+  protocol.handle('app', (request) => {
+    try {
+      const parsedUrl = new URL(request.url);
+      let pathname = decodeURIComponent(parsedUrl.pathname);
+      if (pathname === '/' || !pathname) {
+        pathname = '/index.html';
+      }
+      const filePath = path.join(distDir, pathname);
+      return net.fetch(url.pathToFileURL(filePath).toString());
+    } catch (err) {
+      console.warn('Protocol fetch error, serving index.html fallback:', err);
+      const fallback = path.join(distDir, 'index.html');
+      return net.fetch(url.pathToFileURL(fallback).toString());
+    }
+  });
+
   createWindow();
 
   app.on('activate', () => {

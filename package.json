@@ -12,7 +12,7 @@
     "web": "expo start --web",
     "desktop": "npm run dev:desktop",
     "dev:desktop": "concurrently -k \"npx expo start --web --port 8081\" \"wait-on http://localhost:8081 && electron electron/main.js\"",
-    "build:mac": "npx expo export -p web && electron-builder --mac",
+    "build:mac": "npx expo export -p web && node -e \"const fs=require('fs'); let h=fs.readFileSync('dist/index.html','utf8'); h=h.replace(/src=\\\"/g, 'src=\\\"./').replace(/href=\\\"/g, 'href=\\\"./'); fs.writeFileSync('dist/index.html', h);\" && electron-builder --mac",
     "build:apk": "npx eas-cli build -p android --profile preview",
     "deploy:web": "npx expo export -p web && echo 'trackheat.surge.sh' > dist/CNAME && npx surge ./dist trackheat.surge.sh"
   },
