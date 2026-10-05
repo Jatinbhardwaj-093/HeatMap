@@ -8,7 +8,7 @@ import { YearlyView } from './YearlyView';
 import { MonthlyView } from './MonthlyView';
 import { ViewSwitcher } from './ViewSwitcher';
 import { Check, Plus, Trash2, Flame } from 'lucide-react-native';
-import { useAppTheme } from '../theme/theme';
+import { useAppTheme, useIsDark } from '../theme/theme';
 
 interface HeatmapCardProps {
   heatmap: HeatMapModel;
@@ -34,6 +34,7 @@ export const HeatmapCard: React.FC<HeatmapCardProps> = ({
   onUpdateViewMode,
 }) => {
   const theme = useAppTheme();
+  const isDark = useIsDark();
   const [cardViewMode, setCardViewMode] = useState<ViewMode>(
     heatmap.defaultView || propViewMode || 'yearly'
   );
@@ -85,10 +86,13 @@ export const HeatmapCard: React.FC<HeatmapCardProps> = ({
               setDeleteInput('');
               setShowDeleteModal(true);
             }}
-            style={[styles.deleteButton, { backgroundColor: theme.surfaceHighlight, borderColor: theme.borderSubtle }]}
+            style={[
+              styles.deleteButton,
+              { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)' },
+            ]}
             accessibilityLabel="Delete habit"
           >
-            <Trash2 size={13} color={theme.textMuted} />
+            <Trash2 size={12} color={theme.textSecondary} />
           </TouchableOpacity>
         </View>
       </View>
@@ -272,10 +276,9 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   deleteButton: {
-    width: 28,
-    height: 28,
-    borderRadius: 6,
-    borderWidth: 1,
+    width: 25,
+    height: 25,
+    borderRadius: 13,
     justifyContent: 'center',
     alignItems: 'center',
   },

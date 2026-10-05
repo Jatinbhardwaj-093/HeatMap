@@ -1,7 +1,7 @@
 import React from 'react';
 import { StyleSheet, View, Text, TouchableOpacity, Platform } from 'react-native';
 import { ViewMode } from '../types/heatmap';
-import { useAppTheme } from '../theme/theme';
+import { useAppTheme, useIsDark } from '../theme/theme';
 
 interface ViewSwitcherProps {
   currentView: ViewMode;
@@ -15,15 +15,19 @@ export const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
   size = 'default',
 }) => {
   const theme = useAppTheme();
+  const isDark = useIsDark();
   const modes: ViewMode[] = ['monthly', 'yearly'];
   const isSmall = size === 'small';
+
+  const trackBg = isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)';
+  const activeBg = isDark ? '#21262D' : '#FFFFFF';
 
   return (
     <View
       style={[
         styles.container,
         isSmall && styles.containerSmall,
-        { backgroundColor: theme.surfaceHighlight, borderColor: theme.borderSubtle },
+        { backgroundColor: trackBg },
       ]}
     >
       {modes.map((mode) => {
@@ -43,8 +47,24 @@ export const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
             style={[
               styles.segment,
               isSmall && styles.segmentSmall,
-              isActive && { backgroundColor: theme.surface, borderColor: theme.border },
-              !isActive && { borderColor: 'transparent' },
+              isActive && [
+                styles.segmentActive,
+                { backgroundColor: activeBg },
+                Platform.select({
+                  web: {
+                    boxShadow: isDark
+                      ? '0 1px 3px rgba(0, 0, 0, 0.35)'
+                      : '0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06)',
+                  } as any,
+                  default: {
+                    shadowColor: '#000000',
+                    shadowOffset: { width: 0, height: 1 },
+                    shadowOpacity: 0.12,
+                    shadowRadius: 2,
+                    elevation: 1,
+                  },
+                }),
+              ],
             ]}
             onPress={() => onViewChange(mode)}
           >
@@ -74,26 +94,29 @@ const fontStack = Platform.select({
 const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
-    borderWidth: 1,
-    borderRadius: 8,
-    padding: 3,
+    borderRadius: 20,
+    padding: 2.5,
     alignSelf: 'flex-start',
   },
   containerSmall: {
-    borderRadius: 7,
+    borderRadius: 16,
     padding: 2,
   },
   segment: {
-    paddingHorizontal: 12,
-    paddingVertical: 5,
-    borderRadius: 6,
-    borderWidth: 1,
+    paddingHorizontal: 13,
+    paddingVertical: 4.5,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   segmentSmall: {
-    paddingHorizontal: 8,
-    paddingVertical: 3.5,
-    borderRadius: 5,
+    paddingHorizontal: 9,
+    paddingVertical: 3,
+    borderRadius: 13,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
+  segmentActive: {},
   segmentText: {
     fontSize: 12,
     fontWeight: '500',

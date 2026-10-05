@@ -181,7 +181,7 @@ export const WidgetStudioModal: React.FC<WidgetStudioModalProps> = ({
             {/* Minimalist Size Switcher (2x2, 4x2, 4x4) */}
             <View style={styles.sizeControlSection}>
               <Text style={[styles.sectionLabel, { color: theme.textMuted }]}>PREVIEW SIZE</Text>
-              <View style={[styles.sizeSwitcher, { backgroundColor: theme.surfaceHighlight, borderColor: theme.borderSubtle }]}>
+              <View style={[styles.sizeSwitcher, { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)' }]}>
                 {(['small', 'medium', 'large'] as WidgetSize[]).map((sz) => {
                   const isActive = widgetSize === sz;
                   const label = sz === 'small' ? '2×2' : sz === 'medium' ? '4×2' : '4×4';
@@ -190,7 +190,24 @@ export const WidgetStudioModal: React.FC<WidgetStudioModalProps> = ({
                       key={sz}
                       style={[
                         styles.sizeOption,
-                        isActive && { backgroundColor: theme.surface, borderColor: theme.borderSubtle },
+                        isActive && [
+                          styles.sizeOptionActive,
+                          { backgroundColor: isDark ? '#21262D' : '#FFFFFF' },
+                          Platform.select({
+                            web: {
+                              boxShadow: isDark
+                                ? '0 1px 3px rgba(0, 0, 0, 0.4)'
+                                : '0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06)',
+                            } as any,
+                            default: {
+                              shadowColor: '#000000',
+                              shadowOffset: { width: 0, height: 1 },
+                              shadowOpacity: 0.12,
+                              shadowRadius: 2,
+                              elevation: 1,
+                            },
+                          }),
+                        ],
                       ]}
                       onPress={() => setWidgetSize(sz)}
                       activeOpacity={0.7}
@@ -335,9 +352,9 @@ const styles = StyleSheet.create({
   habitPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 12,
+    paddingHorizontal: 13,
     paddingVertical: 6,
-    borderRadius: 12,
+    borderRadius: 20,
     borderWidth: 1,
     gap: 6,
   },
@@ -365,22 +382,21 @@ const styles = StyleSheet.create({
   },
   sizeSwitcher: {
     flexDirection: 'row',
-    borderWidth: 1,
-    borderRadius: 8,
-    padding: 2.5,
+    borderRadius: 20,
+    padding: 3,
   },
   sizeOption: {
     flex: 1,
     paddingVertical: 6,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: 'transparent',
+    borderRadius: 16,
   },
+  sizeOptionActive: {},
   sizeOptionText: {
     fontSize: 11.5,
     fontFamily: fontStack,
+    letterSpacing: 0.2,
   },
   canvasBox: {
     borderWidth: 1,
