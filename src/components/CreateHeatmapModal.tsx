@@ -13,7 +13,7 @@ import {
 import { HeatMapModel, PaletteId } from '../types/heatmap';
 import { PALETTES, DEFAULT_PALETTE_ID } from '../constants/palettes';
 import { X, Check } from 'lucide-react-native';
-import { useAppTheme } from '../theme/theme';
+import { useAppTheme, useIsDark } from '../theme/theme';
 
 interface CreateHeatmapModalProps {
   visible: boolean;
@@ -135,12 +135,16 @@ export const CreateHeatmapModal: React.FC<CreateHeatmapModalProps> = ({
                           </View>
 
                           <View style={styles.swatchRow}>
-                            {pal.levels.map((color, idx) => (
+                            {(!isDark && pal.lightLevels ? pal.lightLevels : pal.levels).map((color, idx) => (
                               <View
                                 key={idx}
                                 style={[
                                   styles.swatch,
-                                  { backgroundColor: color },
+                                  {
+                                    backgroundColor: color,
+                                    borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)',
+                                    borderWidth: idx === 0 ? 1 : 0,
+                                  },
                                 ]}
                               />
                             ))}

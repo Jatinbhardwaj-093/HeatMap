@@ -5,23 +5,37 @@ export const PALETTES: Record<PaletteId, ColorPalette> = {
     id: 'emerald',
     name: 'Emerald Matrix',
     levels: [
-      '#161B22', // empty
-      '#0E4429', // level 1
-      '#006D32', // level 2
-      '#26A641', // level 3
+      'rgba(255, 255, 255, 0.04)', // empty (ultra-light, no dark block)
+      '#196127', // level 1 (clear distinct green)
+      '#238636', // level 2
+      '#2EA043', // level 3
       '#39D353', // level 4
     ],
-    accent: '#26A641',
+    lightLevels: [
+      'rgba(0, 0, 0, 0.035)', // empty (ultra-light whisper)
+      '#9BE9A8', // level 1 (crisp light green)
+      '#40C463', // level 2
+      '#30A14E', // level 3
+      '#216E39', // level 4
+    ],
+    accent: '#2EA043',
   },
   amber: {
     id: 'amber',
     name: 'Industrial Amber',
     levels: [
-      '#1A1713', // empty
-      '#43280B', // level 1
-      '#78470E', // level 2
+      'rgba(255, 255, 255, 0.04)', // empty
+      '#5E3008', // level 1
+      '#854D0E', // level 2
       '#B45309', // level 3
       '#F59E0B', // level 4
+    ],
+    lightLevels: [
+      'rgba(0, 0, 0, 0.035)', // empty
+      '#FDE68A', // level 1
+      '#FBBF24', // level 2
+      '#D97706', // level 3
+      '#92400E', // level 4
     ],
     accent: '#F59E0B',
   },
@@ -29,11 +43,18 @@ export const PALETTES: Record<PaletteId, ColorPalette> = {
     id: 'obsidian',
     name: 'Obsidian Mono',
     levels: [
-      '#18191D', // empty
-      '#2D3139', // level 1
+      'rgba(255, 255, 255, 0.04)', // empty
+      '#30363D', // level 1
       '#4F5666', // level 2
       '#8B949E', // level 3
       '#F0F3F6', // level 4
+    ],
+    lightLevels: [
+      'rgba(0, 0, 0, 0.035)', // empty
+      '#D0D7DE', // level 1
+      '#8C959F', // level 2
+      '#57606A', // level 3
+      '#24292F', // level 4
     ],
     accent: '#F0F3F6',
   },
@@ -41,11 +62,18 @@ export const PALETTES: Record<PaletteId, ColorPalette> = {
     id: 'cyan',
     name: 'Cold Cyan',
     levels: [
-      '#111923', // empty
-      '#0C384D', // level 1
-      '#0E5D7F', // level 2
+      'rgba(255, 255, 255, 0.04)', // empty
+      '#0E4E6B', // level 1
+      '#0369A1', // level 2
       '#0284C7', // level 3
       '#38BDF8', // level 4
+    ],
+    lightLevels: [
+      'rgba(0, 0, 0, 0.035)', // empty
+      '#BAE6FD', // level 1
+      '#38BDF8', // level 2
+      '#0284C7', // level 3
+      '#0369A1', // level 4
     ],
     accent: '#38BDF8',
   },
@@ -53,11 +81,18 @@ export const PALETTES: Record<PaletteId, ColorPalette> = {
     id: 'crimson',
     name: 'Oxide Crimson',
     levels: [
-      '#1D1214', // empty
-      '#4C131A', // level 1
-      '#7F1D1D', // level 2
+      'rgba(255, 255, 255, 0.04)', // empty
+      '#5C151F', // level 1
+      '#991B1B', // level 2
       '#DC2626', // level 3
       '#F87171', // level 4
+    ],
+    lightLevels: [
+      'rgba(0, 0, 0, 0.035)', // empty
+      '#FECACA', // level 1
+      '#F87171', // level 2
+      '#DC2626', // level 3
+      '#991B1B', // level 4
     ],
     accent: '#DC2626',
   },

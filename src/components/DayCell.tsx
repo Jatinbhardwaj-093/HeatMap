@@ -33,14 +33,19 @@ export const DayCell: React.FC<DayCellProps> = ({
   const theme = useAppTheme();
   const isDark = useIsDark();
   
-  let cellColor = palette.levels[level];
-  if (!isDark && level === 0) {
-    cellColor = theme.surfaceHighlight; // light gray for empty cell in light mode
-  }
+  const levels = !isDark && palette.lightLevels ? palette.lightLevels : palette.levels;
+  const cellColor = levels[level] || palette.accent;
 
-  let borderColor = isDark ? '#22272E' : theme.borderSubtle;
+  let borderColor = 'transparent';
+  let borderWidth = 0;
+
   if (isToday) {
-    borderColor = isDark ? '#FFFFFF' : '#000000';
+    borderColor = isDark ? '#FFFFFF' : '#090A0C';
+    borderWidth = 1.5;
+  } else if (level === 0) {
+    // Ultra-light, whisper-quiet boundary for empty cells so the grid structure is preserved without high shade
+    borderColor = isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.05)';
+    borderWidth = size < 8 ? 0.5 : 1;
   }
 
   const handlePress = () => {
@@ -63,7 +68,7 @@ export const DayCell: React.FC<DayCellProps> = ({
           backgroundColor: cellColor,
           opacity: dimmed ? 0.35 : 1,
           borderColor: borderColor,
-          borderWidth: isToday ? 1.5 : (size < 8 ? 0.5 : 1),
+          borderWidth: borderWidth,
         },
       ]}
     >

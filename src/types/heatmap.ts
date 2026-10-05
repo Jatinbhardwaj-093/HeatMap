@@ -19,7 +19,8 @@ export interface ColorTheme {
 export interface ColorPalette {
   id: PaletteId;
   name: string;
-  levels: [string, string, string, string, string]; // 0 (empty), 1-4 based on streak
+  levels: [string, string, string, string, string]; // 0 (empty), 1-4 based on streak (dark mode)
+  lightLevels?: [string, string, string, string, string]; // light mode levels
   accent: string;
 }
 

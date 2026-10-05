@@ -146,14 +146,15 @@ export const YearlyView: React.FC<YearlyViewProps> = ({ heatmap, streakMap, onSe
           <View style={styles.legendRow}>
             <Text style={[styles.legendLabel, { color: theme.textMuted }]}>Less</Text>
             <View style={styles.legendSwatches}>
-              {palette.levels.map((color, idx) => (
+              {(!isDark && palette.lightLevels ? palette.lightLevels : palette.levels).map((color, idx) => (
                 <View
                   key={`legend-${idx}`}
                   style={[
                     styles.legendSwatchMobile,
                     {
-                      backgroundColor: !isDark && idx === 0 ? theme.surfaceHighlight : color,
-                      borderColor: isDark ? '#22272E' : theme.borderSubtle,
+                      backgroundColor: color,
+                      borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.08)',
+                      borderWidth: idx === 0 ? 1 : 0,
                     },
                   ]}
                 />
@@ -224,14 +225,15 @@ export const YearlyView: React.FC<YearlyViewProps> = ({ heatmap, streakMap, onSe
             <View style={styles.legendRow}>
               <Text style={[styles.legendLabel, { color: theme.textMuted }]}>Less</Text>
               <View style={styles.legendSwatches}>
-                {palette.levels.map((color, idx) => (
+                {(!isDark && palette.lightLevels ? palette.lightLevels : palette.levels).map((color, idx) => (
                   <View
                     key={`legend-${idx}`}
                     style={[
                       styles.legendSwatch,
                       {
-                        backgroundColor: !isDark && idx === 0 ? theme.surfaceHighlight : color,
-                        borderColor: isDark ? '#22272E' : theme.borderSubtle,
+                        backgroundColor: color,
+                        borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.08)',
+                        borderWidth: idx === 0 ? 1 : 0,
                       },
                     ]}
                   />
