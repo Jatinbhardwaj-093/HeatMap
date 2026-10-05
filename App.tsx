@@ -55,7 +55,7 @@ function AppContent() {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   
   const [heatmaps, setHeatmaps] = useState<HeatMapModel[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(shouldSkipLanding);
   const [searchQuery, setSearchQuery] = useState<string>('');
 
   const [selectedDayInfo, setSelectedDayInfo] = useState<{ mapId: string; dateKey: string } | null>(null);
@@ -88,6 +88,8 @@ function AppContent() {
         }
       } catch (e) {
         // ignore cache read errors
+      } finally {
+        setLoading(false);
       }
 
       // 2. Validate / Hydrate session from Supabase

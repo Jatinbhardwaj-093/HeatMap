@@ -50,23 +50,21 @@ const ThemeContext = createContext<ThemeContextType>({
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const systemScheme = useSystemColorScheme();
   const [themeMode, setThemeModeState] = useState<ThemeMode>('system');
-  const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
-    AsyncStorage.getItem('theme_preference').then((savedMode) => {
-      if (savedMode === 'light' || savedMode === 'dark' || savedMode === 'system') {
-        setThemeModeState(savedMode);
-      }
-      setIsReady(true);
-    });
+    AsyncStorage.getItem('theme_preference')
+      .then((savedMode) => {
+        if (savedMode === 'light' || savedMode === 'dark' || savedMode === 'system') {
+          setThemeModeState(savedMode);
+        }
+      })
+      .catch(() => {});
   }, []);
 
   const setThemeMode = (mode: ThemeMode) => {
     setThemeModeState(mode);
-    AsyncStorage.setItem('theme_preference', mode);
+    AsyncStorage.setItem('theme_preference', mode).catch(() => {});
   };
-
-  if (!isReady) return null; // Wait for async storage
 
   const effectiveIsDark = 
     themeMode === 'system' ? systemScheme === 'dark' : themeMode === 'dark';
