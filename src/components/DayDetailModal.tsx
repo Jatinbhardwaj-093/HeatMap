@@ -1,17 +1,17 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import {
   StyleSheet,
   View,
   Text,
   Modal,
   TouchableOpacity,
-  TextInput,
   TouchableWithoutFeedback,
   Platform,
 } from 'react-native';
 import { HeatMapModel } from '../types/heatmap';
 import { PALETTES } from '../constants/palettes';
-import { X, Check, Trash2 } from 'lucide-react-native';
+import { X, Check } from 'lucide-react-native';
+import { useAppTheme, useIsDark } from '../theme/theme';
 
 interface DayDetailModalProps {
   visible: boolean;
@@ -22,133 +22,191 @@ interface DayDetailModalProps {
   onDelete: (dateKey: string) => void;
 }
 
+function formatDisplayDate(dateStr: string): string {
+  try {
+    const [year, month, day] = dateStr.split('-').map(Number);
+    const d = new Date(year, month - 1, day);
+    return d.toLocaleDateString('en-US', {
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    });
+  } catch {
+    return dateStr;
+  }
+}
+
 export const DayDetailModal: React.FC<DayDetailModalProps> = ({
   visible,
   dateKey,
   heatmap,
   onClose,
   onSave,
-  onDelete,
 }) => {
+  const theme = useAppTheme();
+  const isDark = useIsDark();
+
   if (!visible || !dateKey || !heatmap) return null;
 
   const existingEntry = heatmap.entries[dateKey];
-  const [completed, setCompleted] = useState<boolean>(!!existingEntry?.completed);
-  const [notes, setNotes] = useState<string>(existingEntry?.notes || '');
-
-  useEffect(() => {
-    if (heatmap && dateKey) {
-      const entry = heatmap.entries[dateKey];
-      setCompleted(!!entry?.completed);
-      setNotes(entry?.notes || '');
-    }
-  }, [dateKey, heatmap]);
-
+  const isCompleted = !!existingEntry?.completed;
   const palette = PALETTES[heatmap.paletteId] || PALETTES.emerald;
 
-  const handleSave = () => {
-    onSave(dateKey, completed, notes.trim() || undefined);
-    onClose();
+  const handleToggle = (completed: boolean) => {
+    onSave(dateKey, completed);
   };
 
-  const handleClear = () => {
-    onDelete(dateKey);
-    onClose();
-  };
-
-  const handleToggle = () => {
-    setCompleted((prev) => !prev);
-  };
+  const trackBg = isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)';
+  const inactivePillBg = isDark ? '#21262D' : '#FFFFFF';
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <TouchableWithoutFeedback onPress={onClose}>
         <View style={styles.overlay}>
           <TouchableWithoutFeedback>
-            <View style={styles.modalBox}>
+            <View
+              style={[
+                styles.modalBox,
+                {
+                  backgroundColor: theme.surface,
+                  borderColor: theme.borderSubtle,
+                },
+                Platform.select({
+                  web: {
+                    boxShadow: isDark
+                      ? '0 16px 40px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.06)'
+                      : '0 16px 40px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(0, 0, 0, 0.04)',
+                  } as any,
+                  default: {
+                    shadowColor: '#000000',
+                    shadowOffset: { width: 0, height: 8 },
+                    shadowOpacity: 0.25,
+                    shadowRadius: 16,
+                    elevation: 10,
+                  },
+                }),
+              ]}
+            >
+              {/* Header */}
               <View style={styles.modalHeader}>
-                <View>
-                  <Text style={styles.modalSubtitle}>{heatmap.title.toUpperCase()}</Text>
-                  <Text style={styles.modalDate}>{dateKey}</Text>
+                <View style={styles.headerLeft}>
+                  <View style={styles.habitBadge}>
+                    <View style={[styles.habitDot, { backgroundColor: palette.accent }]} />
+                    <Text style={[styles.habitTitle, { color: theme.textSecondary }]} numberOfLines={1}>
+                      {heatmap.title.toUpperCase()}
+                    </Text>
+                  </View>
+                  <Text style={[styles.modalDate, { color: theme.text }]}>
+                    {formatDisplayDate(dateKey)}
+                  </Text>
                 </View>
-                <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
-                  <X size={16} color="#8B949E" />
+
+                <TouchableOpacity
+                  onPress={onClose}
+                  style={[
+                    styles.closeBtn,
+                    { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)' },
+                  ]}
+                  activeOpacity={0.7}
+                  accessibilityLabel="Close"
+                >
+                  <X size={15} color={theme.textSecondary} />
                 </TouchableOpacity>
               </View>
 
-              <View style={styles.body}>
-                <View style={styles.booleanRow}>
-                  <TouchableOpacity
-                    activeOpacity={0.8}
-                    onPress={handleToggle}
+              {/* Minimal Capsule Toggler */}
+              <View style={[styles.toggleTrack, { backgroundColor: trackBg }]}>
+                {/* Not Done Option */}
+                <TouchableOpacity
+                  activeOpacity={0.7}
+                  style={[
+                    styles.segment,
+                    !isCompleted && [
+                      styles.segmentActive,
+                      { backgroundColor: inactivePillBg },
+                      Platform.select({
+                        web: {
+                          boxShadow: isDark
+                            ? '0 1px 3px rgba(0, 0, 0, 0.4)'
+                            : '0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06)',
+                        } as any,
+                        default: {
+                          shadowColor: '#000000',
+                          shadowOffset: { width: 0, height: 1 },
+                          shadowOpacity: 0.12,
+                          shadowRadius: 2,
+                          elevation: 1,
+                        },
+                      }),
+                    ],
+                  ]}
+                  onPress={() => handleToggle(false)}
+                >
+                  <View style={[styles.circleDot, { borderColor: !isCompleted ? theme.textSecondary : theme.textMuted }]} />
+                  <Text
                     style={[
-                      styles.toggleButton,
-                      completed
-                        ? { backgroundColor: palette.levels[3], borderColor: palette.accent }
-                        : styles.toggleUnchecked,
+                      styles.segmentText,
+                      { color: !isCompleted ? theme.text : theme.textSecondary },
+                      !isCompleted && { fontWeight: '700' },
                     ]}
                   >
-                    <Check
-                      size={18}
-                      color={completed ? '#FFFFFF' : '#484F58'}
-                      strokeWidth={2.5}
-                    />
-                    <Text
-                      style={[
-                        styles.toggleText,
-                        { color: completed ? '#FFFFFF' : '#8B949E' },
-                      ]}
-                    >
-                      {completed ? 'COMPLETED' : 'MARK AS COMPLETED'}
-                    </Text>
-                  </TouchableOpacity>
-                </View>
+                    Not Done
+                  </Text>
+                </TouchableOpacity>
 
-                <View style={styles.notesSection}>
-                  <Text style={styles.notesLabel}>LOG NOTES</Text>
-                  <TextInput
-                    style={styles.notesInput}
-                    placeholder="Brief detail or milestone..."
-                    placeholderTextColor="#484F58"
-                    value={notes}
-                    onChangeText={setNotes}
-                    multiline
+                {/* Completed Option */}
+                <TouchableOpacity
+                  activeOpacity={0.7}
+                  style={[
+                    styles.segment,
+                    isCompleted && [
+                      styles.segmentActive,
+                      { backgroundColor: palette.levels[3] || palette.accent },
+                      Platform.select({
+                        web: {
+                          boxShadow: '0 2px 6px rgba(0, 0, 0, 0.25)',
+                        } as any,
+                        default: {
+                          shadowColor: '#000000',
+                          shadowOffset: { width: 0, height: 1 },
+                          shadowOpacity: 0.18,
+                          shadowRadius: 3,
+                          elevation: 2,
+                        },
+                      }),
+                    ],
+                  ]}
+                  onPress={() => handleToggle(true)}
+                >
+                  <Check
+                    size={14}
+                    color={isCompleted ? '#FFFFFF' : theme.textSecondary}
+                    strokeWidth={2.5}
                   />
-                </View>
+                  <Text
+                    style={[
+                      styles.segmentText,
+                      { color: isCompleted ? '#FFFFFF' : theme.textSecondary },
+                      isCompleted && { fontWeight: '700' },
+                    ]}
+                  >
+                    Completed
+                  </Text>
+                </TouchableOpacity>
               </View>
 
-              <View style={styles.modalFooter}>
-                {existingEntry?.completed ? (
-                  <TouchableOpacity
-                    onPress={handleClear}
-                    style={styles.clearButton}
-                    activeOpacity={0.7}
-                  >
-                    <Trash2 size={14} color="#F85149" />
-                    <Text style={styles.clearText}>Clear</Text>
-                  </TouchableOpacity>
-                ) : (
-                  <View />
-                )}
-
-                <View style={styles.rightButtons}>
-                  <TouchableOpacity
-                    onPress={onClose}
-                    style={styles.cancelButton}
-                    activeOpacity={0.7}
-                  >
-                    <Text style={styles.cancelText}>Cancel</Text>
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                    onPress={handleSave}
-                    style={[styles.saveButton, { backgroundColor: palette.accent }]}
-                    activeOpacity={0.7}
-                  >
-                    <Text style={styles.saveText}>Save Entry</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
+              {/* Close Button */}
+              <TouchableOpacity
+                onPress={onClose}
+                style={[
+                  styles.doneBtn,
+                  { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)' },
+                ]}
+                activeOpacity={0.7}
+              >
+                <Text style={[styles.doneBtnText, { color: theme.text }]}>Done</Text>
+              </TouchableOpacity>
             </View>
           </TouchableWithoutFeedback>
         </View>
@@ -157,144 +215,104 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
   );
 };
 
+const fontStack = Platform.select({
+  web: '"SF Pro Rounded", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+  ios: 'System',
+  default: 'sans-serif',
+});
+
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.75)',
+    backgroundColor: 'rgba(0, 0, 0, 0.65)',
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
   },
   modalBox: {
     width: '100%',
-    maxWidth: 420,
-    backgroundColor: '#0D1117',
-    borderColor: '#30363D',
+    maxWidth: 340,
     borderWidth: 1,
-    borderRadius: 4,
+    borderRadius: 20,
     padding: 20,
   },
   modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#21262D',
-    paddingBottom: 12,
+    marginBottom: 18,
   },
-  modalSubtitle: {
-    color: '#8B949E',
-    fontSize: 10,
+  headerLeft: {
+    flex: 1,
+    marginRight: 10,
+  },
+  habitBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 4,
+  },
+  habitDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  habitTitle: {
+    fontSize: 10.5,
     fontWeight: '700',
-    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
+    fontFamily: fontStack,
     letterSpacing: 0.5,
   },
   modalDate: {
-    color: '#F0F6FC',
-    fontSize: 16,
-    fontWeight: '600',
-    marginTop: 2,
-    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
+    fontSize: 17,
+    fontWeight: '700',
+    fontFamily: fontStack,
+    letterSpacing: -0.2,
   },
   closeBtn: {
-    padding: 4,
-  },
-  body: {
-    gap: 16,
-    marginBottom: 20,
-  },
-  booleanRow: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    justifyContent: 'center',
     alignItems: 'center',
   },
-  toggleButton: {
-    width: '100%',
+  toggleTrack: {
+    flexDirection: 'row',
+    borderRadius: 20,
+    padding: 3,
+    marginBottom: 16,
+  },
+  segment: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
-    paddingVertical: 12,
-    borderRadius: 3,
-    borderWidth: 1,
-  },
-  toggleUnchecked: {
-    backgroundColor: '#161B22',
-    borderColor: '#30363D',
-  },
-  toggleText: {
-    fontSize: 12,
-    fontWeight: '700',
-    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
-    letterSpacing: 0.5,
-  },
-  notesSection: {
+    paddingVertical: 9,
+    borderRadius: 16,
     gap: 6,
   },
-  notesLabel: {
-    color: '#8B949E',
-    fontSize: 10,
-    fontWeight: '600',
-    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
+  segmentActive: {},
+  circleDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    borderWidth: 1.5,
   },
-  notesInput: {
-    backgroundColor: '#161B22',
-    borderColor: '#30363D',
-    borderWidth: 1,
-    borderRadius: 3,
-    color: '#F0F6FC',
+  segmentText: {
+    fontSize: 12.5,
+    fontWeight: '500',
+    fontFamily: fontStack,
+    letterSpacing: 0.1,
+  },
+  doneBtn: {
+    paddingVertical: 10,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  doneBtnText: {
     fontSize: 13,
-    padding: 10,
-    minHeight: 60,
-    textAlignVertical: 'top',
-  },
-  modalFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    borderTopWidth: 1,
-    borderTopColor: '#21262D',
-    paddingTop: 14,
-  },
-  clearButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingVertical: 6,
-    paddingHorizontal: 8,
-  },
-  clearText: {
-    color: '#F85149',
-    fontSize: 12,
-    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
-  },
-  rightButtons: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  cancelButton: {
-    paddingVertical: 7,
-    paddingHorizontal: 12,
-    borderRadius: 3,
-    borderWidth: 1,
-    borderColor: '#30363D',
-    backgroundColor: '#161B22',
-  },
-  cancelText: {
-    color: '#8B949E',
-    fontSize: 12,
     fontWeight: '600',
-    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
-  },
-  saveButton: {
-    paddingVertical: 7,
-    paddingHorizontal: 14,
-    borderRadius: 3,
-  },
-  saveText: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: '700',
-    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
+    fontFamily: fontStack,
   },
 });
