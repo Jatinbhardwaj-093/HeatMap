@@ -33,13 +33,16 @@
             {
               "name": "TrackHeatWidget",
               "label": "TrackHeat Matrix",
-              "minWidth": "160dp",
-              "minHeight": "110dp",
+              "minWidth": "125dp",
+              "minHeight": "55dp",
               "targetCellWidth": 4,
               "targetCellHeight": 2,
+              "maxResizeWidth": "380dp",
+              "maxResizeHeight": "135dp",
+              "resizeMode": "horizontal|vertical",
+              "widgetFeatures": "reconfigurable|configuration_optional",
               "description": "Daily habit contribution matrix",
               "previewImage": "./assets/icon.png",
-              "resizeMode": "horizontal|vertical",
               "updatePeriodMillis": 1800000
             }
           ]

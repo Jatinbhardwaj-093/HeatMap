@@ -1,7 +1,7 @@
 import React from 'react';
 import type { WidgetTaskHandlerProps } from 'react-native-android-widget';
 import { TrackHeatWidget } from './TrackHeatWidget';
-import { getWidgetHabits } from './widgetStorage';
+import { getHabitForWidget } from './widgetStorage';
 
 export async function widgetTaskHandler(props: WidgetTaskHandlerProps): Promise<void> {
   const { widgetInfo, widgetAction, renderWidget } = props;
@@ -10,13 +10,12 @@ export async function widgetTaskHandler(props: WidgetTaskHandlerProps): Promise<
     case 'WIDGET_ADDED':
     case 'WIDGET_UPDATE':
     case 'WIDGET_RESIZED': {
-      const habits = await getWidgetHabits();
-      const primaryHabit = habits[0];
+      const habit = await getHabitForWidget(widgetInfo.widgetId);
 
       renderWidget({
         light: (
           <TrackHeatWidget
-            map={primaryHabit}
+            map={habit}
             width={widgetInfo.width}
             height={widgetInfo.height}
             isDark={false}
@@ -24,7 +23,7 @@ export async function widgetTaskHandler(props: WidgetTaskHandlerProps): Promise<
         ),
         dark: (
           <TrackHeatWidget
-            map={primaryHabit}
+            map={habit}
             width={widgetInfo.width}
             height={widgetInfo.height}
             isDark={true}

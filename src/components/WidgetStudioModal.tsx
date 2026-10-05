@@ -1,19 +1,21 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
-  StyleSheet,
+  Modal,
   View,
   Text,
-  Modal,
   TouchableOpacity,
   ScrollView,
+  StyleSheet,
   Platform,
 } from 'react-native';
+import { X, Smartphone, Check, Plus } from 'lucide-react-native';
 import { HeatMapModel } from '../types/heatmap';
 import { PALETTES } from '../constants/palettes';
-import { getStreakIntensityLevel } from '../utils/streakUtils';
 import { DayCell } from './DayCell';
-import { X, Smartphone, Check } from 'lucide-react-native';
+import { getStreakIntensityLevel } from '../utils/streakUtils';
 import { useAppTheme, useIsDark } from '../theme/theme';
+import { setActiveWidgetHabit, getActiveWidgetHabitId } from '../widgets/widgetStorage';
+import { updateAndroidWidgets } from '../widgets/widgetSync';
 
 interface WidgetStudioModalProps {
   visible: boolean;
@@ -21,7 +23,7 @@ interface WidgetStudioModalProps {
   onClose: () => void;
 }
 
-type WidgetSize = 'small' | 'medium' | 'large';
+type WidgetPreset = '2x1' | '4x1' | '2x2' | '4x2' | '5x2';
 
 const fontStack = Platform.select({
   web: '"SF Pro Rounded", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
@@ -38,7 +40,18 @@ export const WidgetStudioModal: React.FC<WidgetStudioModalProps> = ({
   const isDark = useIsDark();
 
   const [selectedMapId, setSelectedMapId] = useState<string | null>(heatmaps[0]?.id || null);
-  const [widgetSize, setWidgetSize] = useState<WidgetSize>('medium');
+  const [preset, setPreset] = useState<WidgetPreset>('4x2');
+  const [pinStatus, setPinStatus] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (visible) {
+      getActiveWidgetHabitId().then((savedId) => {
+        if (savedId && heatmaps.some((h) => h.id === savedId)) {
+          setSelectedMapId(savedId);
+        }
+      });
+    }
+  }, [visible, heatmaps]);
 
   if (!visible) return null;
 
@@ -58,23 +71,33 @@ export const WidgetStudioModal: React.FC<WidgetStudioModalProps> = ({
     );
   }
 
-  // Weeks to display based on widget size:
-  // 2x2 Small: 8 weeks (fits 148px widget width)
-  // 4x2 Medium: 19 weeks (fills 300px widget width edge-to-edge)
-  // 4x4 Large: 19 weeks (fills 300px widget width edge-to-edge)
-  const numWeeks = widgetSize === 'small' ? 8 : 19;
-  const cellSize = widgetSize === 'small' ? 12 : 11.5;
-  const cellGap = widgetSize === 'small' ? 3 : 3;
+  // Dimensions based on preset:
+  // Height: 1 row (2x1, 4x1) or 2 rows (2x2, 4x2, 5x2)
+  // Width: 2 to 5 columns wide
+  const isSingleRow = preset === '2x1' || preset === '4x1';
+  const numWeeks =
+    preset === '2x1' ? 10 :
+    preset === '4x1' ? 22 :
+    preset === '2x2' ? 8 :
+    preset === '4x2' ? 18 : 22;
+
+  const cellSize = isSingleRow ? 7 : 11;
+  const cellGap = isSingleRow ? 2 : 2.5;
+  const titleFontSize = isSingleRow ? 11 : 14;
+
+  const previewWidth =
+    preset === '2x1' || preset === '2x2' ? 148 :
+    preset === '4x1' || preset === '4x2' ? 310 : 364;
+
+  const previewMinHeight = isSingleRow ? 88 : 132;
 
   // Build grid of recent days organized by week columns (each column = 7 days, Mon to Sun)
   const generateWidgetGrid = () => {
     const today = new Date();
-    // Monday is 0, Sunday is 6
     const dayOfWeek = (today.getDay() + 6) % 7;
     const totalDays = numWeeks * 7;
     const gridWeeks: Array<Array<{ dateKey: string; level: 0 | 1 | 2 | 3 | 4 }>> = [];
 
-    // Start date such that the last column ends on this Sunday
     const startDate = new Date(today);
     startDate.setDate(today.getDate() - (totalDays - 1 - (6 - dayOfWeek)));
 
@@ -104,6 +127,35 @@ export const WidgetStudioModal: React.FC<WidgetStudioModalProps> = ({
 
   const widgetGrid = generateWidgetGrid();
   const palette = PALETTES[currentMap.paletteId] || PALETTES.emerald;
+
+  const handleApplyToHomeScreen = async () => {
+    try {
+      await setActiveWidgetHabit(currentMap.id);
+      await updateAndroidWidgets();
+
+      if (Platform.OS === 'android') {
+        try {
+          const { requestPinWidget } = require('react-native-android-widget');
+          const pinned = await requestPinWidget({ widgetName: 'TrackHeatWidget' });
+          if (pinned) {
+            setPinStatus('Prompt opened! Confirm on your home screen.');
+          } else {
+            setPinStatus(`Active widget set to "${currentMap.title}"`);
+          }
+        } catch {
+          setPinStatus(`Active widget set to "${currentMap.title}"`);
+        }
+      } else {
+        setPinStatus(`Active widget set to "${currentMap.title}"`);
+      }
+    } catch {
+      setPinStatus('Error saving widget habit');
+    }
+
+    setTimeout(() => {
+      setPinStatus(null);
+    }, 4000);
+  };
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
@@ -178,16 +230,19 @@ export const WidgetStudioModal: React.FC<WidgetStudioModalProps> = ({
             showsVerticalScrollIndicator={false}
             contentContainerStyle={styles.scrollBody}
           >
-            {/* Minimalist Size Switcher (2x2, 4x2, 4x4) */}
+            {/* Minimalist Size Switcher (Height: 1 or 2 rows; Width: 2 to 5 columns) */}
             <View style={styles.sizeControlSection}>
-              <Text style={[styles.sectionLabel, { color: theme.textMuted }]}>PREVIEW SIZE</Text>
+              <View style={styles.sizeSectionHeader}>
+                <Text style={[styles.sectionLabel, { color: theme.textMuted }]}>PREVIEW SIZE</Text>
+                <Text style={[styles.sizeHint, { color: theme.textSecondary }]}>Height: 1 or 2 rows • Width: 2 to 5</Text>
+              </View>
               <View style={[styles.sizeSwitcher, { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)' }]}>
-                {(['small', 'medium', 'large'] as WidgetSize[]).map((sz) => {
-                  const isActive = widgetSize === sz;
-                  const label = sz === 'small' ? '2×2' : sz === 'medium' ? '4×2' : '4×4';
+                {(['2x1', '4x1', '2x2', '4x2', '5x2'] as WidgetPreset[]).map((p) => {
+                  const isActive = preset === p;
+                  const label = p.replace('x', '×');
                   return (
                     <TouchableOpacity
-                      key={sz}
+                      key={p}
                       style={[
                         styles.sizeOption,
                         isActive && [
@@ -209,7 +264,7 @@ export const WidgetStudioModal: React.FC<WidgetStudioModalProps> = ({
                           }),
                         ],
                       ]}
-                      onPress={() => setWidgetSize(sz)}
+                      onPress={() => setPreset(p)}
                       activeOpacity={0.7}
                     >
                       <Text
@@ -229,14 +284,16 @@ export const WidgetStudioModal: React.FC<WidgetStudioModalProps> = ({
 
             {/* Widget Preview Canvas */}
             <View style={[styles.canvasBox, { backgroundColor: theme.surfaceHighlight, borderColor: theme.borderSubtle }]}>
-              {/* Native Home Screen Widget: Habit Name in Top Left, Pure Matrix Everywhere Else */}
+              {/* Native Home Screen Widget: Habit Name Only, Pure Contribution Matrix */}
               <View
                 style={[
                   styles.nativeWidget,
-                  widgetSize === 'small' ? styles.nativeWidgetSmall : styles.nativeWidgetWide,
                   {
+                    width: previewWidth,
+                    minHeight: previewMinHeight,
                     backgroundColor: isDark ? '#161B22' : '#FFFFFF',
                     borderColor: isDark ? '#30363D' : '#D0D7DE',
+                    padding: isSingleRow ? 8 : 12,
                     ...(Platform.OS === 'web'
                       ? {
                           boxShadow: isDark
@@ -247,14 +304,23 @@ export const WidgetStudioModal: React.FC<WidgetStudioModalProps> = ({
                   },
                 ]}
               >
-                {/* Top Left: Habit Name Only */}
-                <View style={styles.widgetHeader}>
-                  <Text style={[styles.widgetHabitTitle, { color: isDark ? '#F0F6FC' : '#1F2328' }]} numberOfLines={1}>
+                {/* Top: Habit Name Only (No streak count) */}
+                <View style={[styles.widgetHeader, { marginBottom: isSingleRow ? 4 : 8 }]}>
+                  <Text
+                    style={[
+                      styles.widgetHabitTitle,
+                      {
+                        color: isDark ? '#F0F6FC' : '#1F2328',
+                        fontSize: titleFontSize,
+                      },
+                    ]}
+                    numberOfLines={1}
+                  >
                     {currentMap.title}
                   </Text>
                 </View>
 
-                {/* Pure Contribution Matrix - Fills Edge to Edge */}
+                {/* Pure Contribution Matrix - Scaled to size */}
                 <View style={[styles.matrixColumns, { gap: cellGap }]}>
                   {widgetGrid.map((week, wIdx) => (
                     <View key={`ww-${wIdx}`} style={[styles.matrixColumn, { gap: cellGap }]}>
@@ -274,19 +340,46 @@ export const WidgetStudioModal: React.FC<WidgetStudioModalProps> = ({
               </View>
             </View>
 
+            {/* In-App Direct Widget Pin Action */}
+            <View style={styles.actionSection}>
+              <TouchableOpacity
+                style={[styles.applyBtn, { backgroundColor: palette.accent }]}
+                onPress={handleApplyToHomeScreen}
+                activeOpacity={0.8}
+              >
+                <Plus size={16} color="#FFFFFF" strokeWidth={2.5} />
+                <Text style={styles.applyBtnText}>Add Widget to Home Screen</Text>
+              </TouchableOpacity>
+
+              {pinStatus ? (
+                <View style={[styles.statusPill, { backgroundColor: isDark ? '#21262D' : '#E6FFED' }]}>
+                  <Check size={13} color={isDark ? '#39D353' : '#1A7F37'} />
+                  <Text style={[styles.statusText, { color: isDark ? '#39D353' : '#1A7F37' }]}>
+                    {pinStatus}
+                  </Text>
+                </View>
+              ) : null}
+            </View>
+
             {/* Brief, Minimalist Home Screen Guide */}
             <View style={[styles.guideCard, { backgroundColor: theme.surfaceHighlight, borderColor: theme.borderSubtle }]}>
               <View style={styles.guideHeader}>
                 <Smartphone size={14} color={theme.text} />
-                <Text style={[styles.guideTitle, { color: theme.text }]}>Add to Home Screen</Text>
+                <Text style={[styles.guideTitle, { color: theme.text }]}>How to Use Widgets</Text>
               </View>
 
               <View style={styles.guideSteps}>
                 <Text style={[styles.stepText, { color: theme.textSecondary }]}>
-                  • Long-press Home Screen → <Text style={{ fontWeight: '700', color: theme.text }}>Widgets</Text> → <Text style={{ fontWeight: '700', color: theme.text }}>TrackHeat</Text>
+                  • Tap <Text style={{ fontWeight: '700', color: theme.text }}>Add Widget to Home Screen</Text> above to pin this habit directly from the app.
                 </Text>
                 <Text style={[styles.stepText, { color: theme.textSecondary }]}>
-                  • Place widget, then drag borders to resize (<Text style={{ fontWeight: '600', color: theme.text }}>2×2, 4×2, 4×4</Text>)
+                  • Or long-press Home Screen → <Text style={{ fontWeight: '700', color: theme.text }}>Widgets</Text> → <Text style={{ fontWeight: '700', color: theme.text }}>TrackHeat Matrix</Text>.
+                </Text>
+                <Text style={[styles.stepText, { color: theme.textSecondary }]}>
+                  • Resize height between <Text style={{ fontWeight: '600', color: theme.text }}>1 or 2 rows</Text>, and width between <Text style={{ fontWeight: '600', color: theme.text }}>2 to 5 columns</Text>.
+                </Text>
+                <Text style={[styles.stepText, { color: theme.textSecondary }]}>
+                  • Long-press the widget on your home screen and tap <Text style={{ fontWeight: '600', color: theme.text }}>Edit</Text> anytime to switch habits.
                 </Text>
               </View>
             </View>
@@ -374,11 +467,20 @@ const styles = StyleSheet.create({
   sizeControlSection: {
     gap: 6,
   },
+  sizeSectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
   sectionLabel: {
     fontSize: 10,
     fontWeight: '700',
     fontFamily: fontStack,
     letterSpacing: 0.5,
+  },
+  sizeHint: {
+    fontSize: 10,
+    fontFamily: fontStack,
   },
   sizeSwitcher: {
     flexDirection: 'row',
@@ -404,14 +506,12 @@ const styles = StyleSheet.create({
     padding: 18,
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 180,
+    minHeight: 160,
   },
 
-  // Native Widget Container (Mimicking iOS & Android system widget chrome)
   nativeWidget: {
     borderRadius: 18,
     borderWidth: 1,
-    padding: 14,
     alignItems: 'flex-start',
     alignSelf: 'center',
     ...Platform.select({
@@ -426,21 +526,11 @@ const styles = StyleSheet.create({
       },
     }),
   },
-  nativeWidgetSmall: {
-    width: 148,
-    minHeight: 148,
-  },
-  nativeWidgetWide: {
-    width: 304,
-    minHeight: 126,
-  },
 
   widgetHeader: {
     width: '100%',
-    marginBottom: 10,
   },
   widgetHabitTitle: {
-    fontSize: 13,
     fontWeight: '700',
     fontFamily: fontStack,
     letterSpacing: -0.1,
@@ -453,7 +543,39 @@ const styles = StyleSheet.create({
     flexDirection: 'column',
   },
 
-  // Minimalist Guide Card
+  actionSection: {
+    gap: 8,
+    alignItems: 'center',
+  },
+  applyBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    width: '100%',
+    paddingVertical: 12,
+    borderRadius: 12,
+  },
+  applyBtnText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '700',
+    fontFamily: fontStack,
+  },
+  statusPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+  },
+  statusText: {
+    fontSize: 12,
+    fontWeight: '600',
+    fontFamily: fontStack,
+  },
+
   guideCard: {
     borderWidth: 1,
     borderRadius: 12,

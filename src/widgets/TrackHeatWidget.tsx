@@ -2,7 +2,6 @@ import React from 'react';
 import { FlexWidget, TextWidget } from 'react-native-android-widget';
 import { HeatMapModel } from '../types/heatmap';
 import { PALETTES } from '../constants/palettes';
-import { calculateStats } from '../utils/streakUtils';
 
 interface TrackHeatWidgetProps {
   map?: HeatMapModel;
@@ -28,7 +27,7 @@ export function TrackHeatWidget({ map, width, height, isDark = true }: TrackHeat
           borderRadius: 18,
           borderColor: border,
           borderWidth: 1,
-          padding: 16,
+          padding: 12,
           justifyContent: 'center',
           alignItems: 'center',
         }}
@@ -37,16 +36,16 @@ export function TrackHeatWidget({ map, width, height, isDark = true }: TrackHeat
         <TextWidget
           text="TrackHeat"
           style={{
-            fontSize: 15,
+            fontSize: 14,
             fontWeight: 'bold',
             color: textPrimary,
-            marginBottom: 6,
+            marginBottom: 4,
           }}
         />
         <TextWidget
-          text="Tap to open app & create habit"
+          text="Tap to open app & select habit"
           style={{
-            fontSize: 12,
+            fontSize: 11,
             color: textMuted,
           }}
         />
@@ -54,20 +53,37 @@ export function TrackHeatWidget({ map, width, height, isDark = true }: TrackHeat
     );
   }
 
-  const { stats } = calculateStats(map);
   const palette = PALETTES[map.paletteId] || PALETTES.emerald;
   const activeColor = isDark
     ? ((palette.levels[3] || palette.accent) as `#${string}`)
     : ((palette.lightLevels?.[3] || palette.accent) as `#${string}`);
 
-  const isSmall = width < 230;
-  const numWeeks = isSmall ? 8 : width < 310 ? 14 : 19;
-  const isCompactHeight = height < 125;
-  const cellSize = isSmall ? (isCompactHeight ? 9 : 11) : (isCompactHeight ? 9 : 10.5);
-  const cellGap = 2.5;
+  // Responsive scaling based on dimensions
+  const isSingleRow = height < 95;
+  const paddingV = isSingleRow ? 7 : 10;
+  const paddingH = isSingleRow ? 9 : 12;
+  const headerMargin = isSingleRow ? 3 : 6;
+
+  // Habit title font size adjusts with width and height
+  const titleFontSize = isSingleRow
+    ? Math.min(12, Math.max(9, Math.floor(width / 26)))
+    : Math.min(15, Math.max(11, Math.floor(width / 22)));
+
+  // Matrix cell size adjusts dynamically with height
+  const cellGap = isSingleRow ? 1.5 : 2.5;
+  const availableGridHeight = Math.max(28, height - paddingV * 2 - headerMargin - titleFontSize - 3);
+  const rawCellSize = (availableGridHeight - cellGap * 6) / 7;
+  const cellSize = isSingleRow
+    ? Math.min(7, Math.max(4, rawCellSize))
+    : Math.min(12.5, Math.max(7.5, rawCellSize));
+
+  // Week columns dynamically adjust to fill width
+  const availableWidth = width - paddingH * 2;
+  const stepX = cellSize + cellGap;
+  const numWeeks = Math.max(4, Math.min(30, Math.floor((availableWidth + cellGap) / stepX)));
 
   const today = new Date();
-  const dayOfWeek = (today.getDay() + 6) % 7;
+  const dayOfWeek = (today.getDay() + 6) % 7; // Mon = 0, Sun = 6
   const totalDays = numWeeks * 7;
   const startDate = new Date(today);
   startDate.setDate(today.getDate() - (totalDays - 1 - (6 - dayOfWeek)));
@@ -95,8 +111,6 @@ export function TrackHeatWidget({ map, width, height, isDark = true }: TrackHeat
     columns.push(col);
   }
 
-  const streakText = stats.currentStreak > 0 ? `${stats.currentStreak}d streak` : 'TrackHeat';
-
   return (
     <FlexWidget
       style={{
@@ -106,18 +120,22 @@ export function TrackHeatWidget({ map, width, height, isDark = true }: TrackHeat
         borderRadius: 18,
         borderColor: border,
         borderWidth: 1,
-        padding: 12,
+        paddingTop: paddingV,
+        paddingBottom: paddingV,
+        paddingLeft: paddingH,
+        paddingRight: paddingH,
         justifyContent: 'space-between',
       }}
       clickAction="OPEN_APP"
     >
+      {/* Top Header: Habit title only (streak count removed) */}
       <FlexWidget
         style={{
           flexDirection: 'row',
-          justifyContent: 'space-between',
+          justifyContent: 'flex-start',
           alignItems: 'center',
           width: 'match_parent',
-          marginBottom: 8,
+          marginBottom: headerMargin,
         }}
       >
         <TextWidget
@@ -125,20 +143,14 @@ export function TrackHeatWidget({ map, width, height, isDark = true }: TrackHeat
           maxLines={1}
           truncate="END"
           style={{
-            fontSize: 13,
+            fontSize: titleFontSize,
             fontWeight: 'bold',
             color: textPrimary,
           }}
         />
-        <TextWidget
-          text={streakText}
-          style={{
-            fontSize: 11,
-            color: textMuted,
-          }}
-        />
       </FlexWidget>
 
+      {/* Contribution Grid: dynamic cell size and dynamic week columns */}
       <FlexWidget
         style={{
           flexDirection: 'row',
@@ -161,7 +173,7 @@ export function TrackHeatWidget({ map, width, height, isDark = true }: TrackHeat
                 style={{
                   width: cellSize,
                   height: cellSize,
-                  borderRadius: 2,
+                  borderRadius: isSingleRow ? 1 : 2,
                   backgroundColor: cell.color,
                   marginVertical: cellGap / 2,
                 }}
