@@ -29,7 +29,7 @@ export function TrackHeatWidget({ map, config, width, height, isDark = true }: T
           height: 'match_parent',
           width: 'match_parent',
           backgroundColor: bg,
-          borderRadius: 18,
+          borderRadius: 12,
           borderColor: border,
           borderWidth: 1,
           padding: 12,
@@ -73,8 +73,8 @@ export function TrackHeatWidget({ map, config, width, height, isDark = true }: T
   const isCompactWidth = width < 260; // 2 or 3 wide
   
   // Compact padding to give maximum room for the 7 rows
-  const paddingV = isSingleRow ? 4 : 6;
-  const paddingH = isSingleRow ? 6 : 8;
+  const paddingV = isSingleRow ? 5 : 7;
+  const paddingH = isSingleRow ? 8 : 10;
   const headerMargin = isSingleRow ? 2 : 4;
 
   // Circular button dimensions
@@ -162,7 +162,7 @@ export function TrackHeatWidget({ map, config, width, height, isDark = true }: T
         height: 'match_parent',
         width: 'match_parent',
         backgroundColor: bg,
-        borderRadius: 18,
+        borderRadius: 12,
         borderColor: border,
         borderWidth: 1,
         paddingTop: paddingV,
@@ -212,6 +212,7 @@ export function TrackHeatWidget({ map, config, width, height, isDark = true }: T
             backgroundColor: toggleBtnBg as `#${string}`,
             borderColor: toggleBtnBorder as `#${string}`,
             borderWidth: 1,
+            marginRight: 2,
           }}
           clickAction="TOGGLE_TODAY"
           clickActionData={{ habitId: map.id }}
@@ -220,7 +221,9 @@ export function TrackHeatWidget({ map, config, width, height, isDark = true }: T
           <TextWidget
             text={isTodayDone ? '✓' : '+'}
             style={{
-              fontSize: isSingleRow ? 9 : 11,
+              width: btnSize,
+              textAlign: 'center',
+              fontSize: isSingleRow ? 10 : 12,
               fontWeight: 'bold',
               color: toggleBtnTextColor as `#${string}`,
             }}

@@ -40,6 +40,70 @@ export function WidgetConfigurationScreen({ widgetInfo, renderWidget, setResult 
 
   const currentHabit = habits.find((h) => h.id === selectedHabitId) || habits[0];
 
+  const isPreviewDark = themeChoice === 'dark' ? true : themeChoice === 'light' ? false : true;
+  const isPaletteObsidian = paletteChoice === 'obsidian';
+  const previewPalette = PALETTES[paletteChoice] || PALETTES.emerald;
+  const previewActiveColor = isPreviewDark
+    ? (previewPalette.levels[3] || previewPalette.accent)
+    : (previewPalette.lightLevels?.[3] || previewPalette.accent);
+  const previewTitle = customName.trim() || currentHabit?.title || 'Habit';
+  const today = new Date();
+  const todayKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+  const isTodayDone = Boolean(currentHabit?.entries?.[todayKey]?.completed);
+
+  const previewBtnBg = isTodayDone
+    ? (isPreviewDark
+        ? (isPaletteObsidian ? '#F0F3F6' : (previewPalette.levels[3] || previewPalette.accent))
+        : (isPaletteObsidian ? '#24292F' : (previewPalette.lightLevels?.[3] || previewPalette.accent)))
+    : (isPreviewDark ? '#21262D' : '#F0F2F5');
+
+  const previewBtnBorder = isTodayDone
+    ? (isPreviewDark
+        ? (isPaletteObsidian ? '#F0F3F6' : (previewPalette.levels[4] || previewPalette.accent))
+        : (isPaletteObsidian ? '#24292F' : (previewPalette.lightLevels?.[4] || previewPalette.accent)))
+    : (isPreviewDark ? '#30363D' : '#D0D7DE');
+
+  const previewBtnTextColor = isTodayDone
+    ? (isPreviewDark && isPaletteObsidian ? '#090A0C' : '#FFFFFF')
+    : (isPreviewDark ? '#F0F3F6' : '#1F2328');
+
+  // Build grid of recent 8 weeks for live preview
+  const generatePreviewGrid = () => {
+    const numWeeks = 8;
+    const todayMidnight = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    const dayOfWeek = (today.getDay() + 6) % 7;
+    const totalDays = numWeeks * 7;
+    const startDate = new Date(today);
+    startDate.setDate(today.getDate() - (totalDays - 1 - (6 - dayOfWeek)));
+
+    const gridWeeks = [];
+    let curDate = new Date(startDate);
+    for (let w = 0; w < numWeeks; w++) {
+      const weekDays = [];
+      for (let d = 0; d < 7; d++) {
+        const curMidnight = new Date(curDate.getFullYear(), curDate.getMonth(), curDate.getDate());
+        const isFuture = curMidnight > todayMidnight;
+        const year = curDate.getFullYear();
+        const month = String(curDate.getMonth() + 1).padStart(2, '0');
+        const day = String(curDate.getDate()).padStart(2, '0');
+        const key = `${year}-${month}-${day}`;
+        const entry = currentHabit?.entries?.[key];
+        const isCompleted = !isFuture && Boolean(entry?.completed);
+
+        weekDays.push({
+          dateKey: key,
+          isCompleted,
+          isFuture,
+        });
+        curDate.setDate(curDate.getDate() + 1);
+      }
+      gridWeeks.push(weekDays);
+    }
+    return gridWeeks;
+  };
+
+  const previewGrid = generatePreviewGrid();
+
   const handleApply = async () => {
     if (!currentHabit) {
       setResult('cancel');
@@ -195,6 +259,89 @@ export function WidgetConfigurationScreen({ widgetInfo, renderWidget, setResult 
                 })}
               </ScrollView>
             </View>
+
+            {/* Section 5: Live Preview */}
+            <View style={styles.section}>
+              <Text style={styles.sectionLabel}>LIVE PREVIEW</Text>
+              <View style={styles.previewCanvas}>
+                <View
+                  style={[
+                    styles.previewCard,
+                    {
+                      backgroundColor: isPreviewDark ? '#0D1117' : '#FFFFFF',
+                      borderColor: isPreviewDark ? '#21262D' : '#D0D7DE',
+                    },
+                  ]}
+                >
+                  <View style={styles.previewHeader}>
+                    <Text
+                      style={[
+                        styles.previewTitle,
+                        { color: isPreviewDark ? '#F0F3F6' : '#1F2328' },
+                      ]}
+                      numberOfLines={1}
+                    >
+                      {previewTitle}
+                    </Text>
+                    <View
+                      style={[
+                        styles.previewActionBtn,
+                        {
+                          backgroundColor: previewBtnBg,
+                          borderColor: previewBtnBorder,
+                        },
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.previewActionText,
+                          { color: previewBtnTextColor },
+                        ]}
+                      >
+                        {isTodayDone ? '✓' : '+'}
+                      </Text>
+                    </View>
+                  </View>
+
+                  {/* 7-row matrix */}
+                  <View style={styles.previewMatrix}>
+                    {previewGrid.map((week, wIdx) => (
+                      <View key={wIdx} style={styles.previewCol}>
+                        {week.map((cell, dIdx) => {
+                          const cellBg = cell.isFuture
+                            ? 'transparent'
+                            : cell.isCompleted
+                            ? isPreviewDark
+                              ? isPaletteObsidian
+                                ? '#F0F3F6'
+                                : previewPalette.levels[3] || previewPalette.accent
+                              : isPaletteObsidian
+                              ? '#24292F'
+                              : previewPalette.lightLevels?.[3] || previewPalette.accent
+                            : isPreviewDark
+                            ? '#161B22'
+                            : '#EBEDF0';
+
+                          return (
+                            <View
+                              key={dIdx}
+                              style={[
+                                styles.previewCell,
+                                {
+                                  backgroundColor: cellBg,
+                                  borderColor: isPreviewDark ? '#21262D' : '#D0D7DE',
+                                  borderWidth: cell.isFuture ? 0 : 0.5,
+                                },
+                              ]}
+                            />
+                          );
+                        })}
+                      </View>
+                    ))}
+                  </View>
+                </View>
+              </View>
+            </View>
           </>
         )}
       </ScrollView>
@@ -210,7 +357,7 @@ export function WidgetConfigurationScreen({ widgetInfo, renderWidget, setResult 
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={[styles.saveBtn, { backgroundColor: PALETTES[paletteChoice]?.accent || '#238636' }]}
+          style={styles.saveBtn}
           onPress={handleApply}
           activeOpacity={0.8}
         >
@@ -296,6 +443,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     fontSize: 14,
     color: '#F0F3F6',
+    textAlignVertical: 'center',
   },
   helperText: {
     fontSize: 11,
@@ -349,6 +497,60 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#8B949E',
   },
+  previewCanvas: {
+    backgroundColor: '#161B22',
+    borderRadius: 14,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#30363D',
+    alignItems: 'center',
+  },
+  previewCard: {
+    width: '100%',
+    maxWidth: 280,
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 12,
+  },
+  previewHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  previewTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    flex: 1,
+    marginRight: 8,
+  },
+  previewActionBtn: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  previewActionText: {
+    fontSize: 12,
+    fontWeight: '700',
+    lineHeight: 14,
+    textAlign: 'center',
+  },
+  previewMatrix: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 4,
+  },
+  previewCol: {
+    flexDirection: 'column',
+    gap: 4,
+  },
+  previewCell: {
+    width: 13,
+    height: 13,
+    borderRadius: 3,
+  },
   footer: {
     flexDirection: 'row',
     paddingHorizontal: 20,
@@ -375,6 +577,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     alignItems: 'center',
     borderRadius: 12,
+    backgroundColor: '#238636',
   },
   saveText: {
     color: '#FFFFFF',
