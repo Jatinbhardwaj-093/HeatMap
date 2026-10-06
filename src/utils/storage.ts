@@ -69,6 +69,51 @@ export async function recordDeletedMapId(mapId: string, userId?: string): Promis
 }
 
 /**
+ * Retrieves the authoritative user object from Supabase, refreshing session tokens if expired.
+ */
+export async function getFreshAuthenticatedUser(): Promise<any | null> {
+  try {
+    let { data: { session } } = await supabase.auth.getSession();
+    const nowSec = Math.floor(Date.now() / 1000);
+
+    // If session is missing or expiring within 60 seconds, refresh it
+    if (!session || !session.expires_at || session.expires_at < nowSec + 60) {
+      const { data: refreshed, error: refErr } = await supabase.auth.refreshSession();
+      if (!refErr && refreshed?.session) {
+        session = refreshed.session;
+      }
+    }
+
+    if (!session?.access_token) {
+      return null;
+    }
+
+    // Always fetch fresh metadata from server
+    const { data: userData, error: userErr } = await supabase.auth.getUser();
+    if (!userErr && userData?.user) {
+      return userData.user;
+    }
+
+    // If getUser failed, try one more refresh
+    const { data: refreshed2 } = await supabase.auth.refreshSession();
+    if (refreshed2?.session?.user) {
+      const { data: retryUser } = await supabase.auth.getUser();
+      return retryUser?.user || refreshed2.session.user;
+    }
+
+    return session?.user || null;
+  } catch (err) {
+    console.warn('getFreshAuthenticatedUser error:', err);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      return session?.user || null;
+    } catch {
+      return null;
+    }
+  }
+}
+
+/**
  * Pushes habit data to Supabase user_metadata with session refresh and retry support.
  */
 export async function syncHabitsToCloud(maps: HeatMapModel[], userId?: string): Promise<boolean> {
@@ -76,23 +121,32 @@ export async function syncHabitsToCloud(maps: HeatMapModel[], userId?: string): 
   if (!resolvedId) return false;
 
   try {
-    let { data: { session } } = await supabase.auth.getSession();
-    if (!session?.user) {
-      const { data: refreshed } = await supabase.auth.refreshSession();
-      session = refreshed?.session;
-    }
-    if (!session?.user) return false;
+    let user = await getFreshAuthenticatedUser();
+    if (!user) return false;
 
     const deletedIds = await getDeletedMapIds(resolvedId);
     const cleanMaps = maps.filter((m) => m && m.id && !deletedIds.has(m.id));
 
-    const { error } = await supabase.auth.updateUser({
+    let { error } = await supabase.auth.updateUser({
       data: {
         habits: cleanMaps,
         habits_updated_at: new Date().toISOString(),
         deleted_habit_ids: Array.from(deletedIds),
       },
     });
+
+    if (error) {
+      console.warn('First updateUser attempt failed, refreshing session:', error.message);
+      await supabase.auth.refreshSession();
+      const retryResult = await supabase.auth.updateUser({
+        data: {
+          habits: cleanMaps,
+          habits_updated_at: new Date().toISOString(),
+          deleted_habit_ids: Array.from(deletedIds),
+        },
+      });
+      error = retryResult.error;
+    }
 
     if (error) {
       console.warn('Supabase updateUser error:', error.message);
@@ -141,12 +195,7 @@ export async function loadHeatMaps(userId?: string): Promise<HeatMapModel[]> {
   // If user is authenticated, sync with Supabase cloud user_metadata
   if (resolvedId) {
     try {
-      let { data: { session } } = await supabase.auth.getSession();
-      let user = session?.user || null;
-      if (!user) {
-        const { data: userData } = await supabase.auth.getUser();
-        user = userData?.user || null;
-      }
+      const user = await getFreshAuthenticatedUser();
 
       // Ingest any cloud deleted_habit_ids from metadata into local tombstones
       const cloudDeletedIds = user?.user_metadata?.deleted_habit_ids;
@@ -318,12 +367,7 @@ export async function forceSyncFromCloud(userId?: string): Promise<HeatMapModel[
   if (!resolvedId) return null;
 
   try {
-    let { data: { session } } = await supabase.auth.getSession();
-    let user = session?.user || null;
-    if (!user) {
-      const { data: userData } = await supabase.auth.getUser();
-      user = userData?.user || null;
-    }
+    const user = await getFreshAuthenticatedUser();
 
     const deletedIds = await getDeletedMapIds(resolvedId);
 

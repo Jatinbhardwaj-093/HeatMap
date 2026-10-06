@@ -23,6 +23,7 @@ import { CreateHeatmapModal } from './src/components/CreateHeatmapModal';
 import { WidgetStudioModal } from './src/components/WidgetStudioModal';
 import { LandingPage } from './src/components/LandingPage';
 import { LoginScreen } from './src/components/LoginScreen';
+import { ReleasesScreen } from './src/components/ReleasesScreen';
 import { AccountModal } from './src/components/AccountModal';
 import { DesktopWidgetView } from './src/components/DesktopWidgetView';
 import { getCurrentUserProfile, UserProfile } from './src/services/accountService';
@@ -32,7 +33,7 @@ import { supabase } from './src/utils/supabase';
 import { useAppTheme, useIsDark, ThemeProvider } from './src/theme/theme';
 import { shouldSkipLanding } from './src/utils/platform';
 
-type ScreenState = 'landing' | 'login' | 'dashboard';
+type ScreenState = 'landing' | 'login' | 'dashboard' | 'releases';
 
 const SAVED_USER_KEY = '@trackheat_saved_user';
 
@@ -48,8 +49,10 @@ function AppContent() {
     return <DesktopWidgetView />;
   }
 
+  const isReleasesInitial = typeof window !== 'undefined' && (window.location?.hash === '#releases' || window.location?.search?.includes('page=releases'));
+
   const [currentScreen, setCurrentScreen] = useState<ScreenState>(
-    shouldSkipLanding ? 'login' : 'landing'
+    isReleasesInitial ? 'releases' : shouldSkipLanding ? 'login' : 'landing'
   );
   const [userEmail, setUserEmail] = useState<string | undefined>(undefined);
   const [userId, setUserId] = useState<string | undefined>(undefined);
@@ -205,7 +208,21 @@ function AppContent() {
       window.addEventListener('focus', handleWindowFocus);
     }
 
-    // 5. Periodic background sync every 30s
+    // 5. Hash router listener for #releases
+    const handleHashChange = () => {
+      if (typeof window !== 'undefined') {
+        if (window.location.hash === '#releases' || window.location.search?.includes('page=releases')) {
+          setCurrentScreen('releases');
+        } else if (!window.location.hash) {
+          setCurrentScreen((prev) => (prev === 'releases' ? (userEmail ? 'dashboard' : 'landing') : prev));
+        }
+      }
+    };
+    if (typeof window !== 'undefined' && window.addEventListener) {
+      window.addEventListener('hashchange', handleHashChange);
+    }
+
+    // 6. Periodic background sync every 30s
     const syncInterval = setInterval(() => {
       refreshHabits(false);
     }, 30000);
@@ -215,10 +232,11 @@ function AppContent() {
       appStateSub.remove();
       if (typeof window !== 'undefined' && window.removeEventListener) {
         window.removeEventListener('focus', handleWindowFocus);
+        window.removeEventListener('hashchange', handleHashChange);
       }
       clearInterval(syncInterval);
     };
-  }, [userId]);
+  }, [userId, userEmail]);
 
   const handleLogout = async () => {
     await AsyncStorage.removeItem(SAVED_USER_KEY);
@@ -328,6 +346,35 @@ function AppContent() {
     );
   }
 
+  if (currentScreen === 'releases') {
+    return (
+      <SafeAreaView style={{ flex: 1, backgroundColor: theme.background }}>
+        <ExpoStatusBar style={isDark ? "light" : "dark"} />
+        <ReleasesScreen
+          onBack={() => {
+            if (typeof window !== 'undefined') {
+              window.location.hash = '';
+            }
+            setCurrentScreen(userEmail ? 'dashboard' : 'landing');
+          }}
+          onOpenDashboard={() => {
+            if (typeof window !== 'undefined') {
+              window.location.hash = '';
+            }
+            setCurrentScreen('dashboard');
+          }}
+          onLogin={() => {
+            if (typeof window !== 'undefined') {
+              window.location.hash = '';
+            }
+            setCurrentScreen('login');
+          }}
+          isLoggedIn={!!userEmail}
+        />
+      </SafeAreaView>
+    );
+  }
+
   if (currentScreen === 'landing') {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: theme.background }}>
@@ -340,6 +387,12 @@ function AppContent() {
             } else {
               setCurrentScreen('login');
             }
+          }}
+          onOpenReleases={() => {
+            if (typeof window !== 'undefined') {
+              window.location.hash = '#releases';
+            }
+            setCurrentScreen('releases');
           }}
           isLoggedIn={!!userEmail}
         />

@@ -1,4 +1,4 @@
-const { app, BrowserWindow, protocol, net, shell } = require('electron');
+const { app, BrowserWindow, protocol, net, shell, session } = require('electron');
 const path = require('path');
 const url = require('url');
 
@@ -37,7 +37,7 @@ function createWindow() {
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
-      webSecurity: true,
+      webSecurity: false,
       allowRunningInsecureContent: false,
       devTools: isDev,
     },
@@ -65,7 +65,7 @@ function createWindow() {
           webPreferences: {
             nodeIntegration: false,
             contextIsolation: true,
-            webSecurity: true,
+            webSecurity: false,
             allowRunningInsecureContent: false,
             devTools: isDev,
           },
@@ -122,6 +122,28 @@ function createWindow() {
 
 app.whenReady().then(() => {
   const distDir = path.resolve(__dirname, '../dist');
+
+  // Allow Supabase cloud API requests to authenticate and sync seamlessly without CORS blocks
+  if (session && session.defaultSession) {
+    session.defaultSession.webRequest.onBeforeSendHeaders((details, callback) => {
+      const requestHeaders = { ...details.requestHeaders };
+      if (details.url && details.url.includes('supabase.co')) {
+        requestHeaders['Origin'] = 'https://trackheat.surge.sh';
+        requestHeaders['Referer'] = 'https://trackheat.surge.sh/';
+      }
+      callback({ requestHeaders });
+    });
+
+    session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
+      const responseHeaders = { ...details.responseHeaders };
+      if (details.url && details.url.includes('supabase.co')) {
+        responseHeaders['access-control-allow-origin'] = ['*'];
+        responseHeaders['access-control-allow-headers'] = ['*'];
+        responseHeaders['access-control-allow-methods'] = ['*'];
+      }
+      callback({ responseHeaders });
+    });
+  }
 
   // Secure custom protocol handler with directory traversal prevention
   protocol.handle('app', (request) => {

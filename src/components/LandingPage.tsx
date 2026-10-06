@@ -34,6 +34,7 @@ import { isMacDesktop, dragRegion, noDragRegion } from '../utils/platform';
 interface LandingPageProps {
   onLogin: () => void;
   onDashboard: () => void;
+  onOpenReleases: () => void;
   isLoggedIn?: boolean;
 }
 
@@ -136,6 +137,7 @@ function generateFullYearData(): number[][] {
 export const LandingPage: React.FC<LandingPageProps> = ({
   onLogin,
   onDashboard,
+  onOpenReleases,
   isLoggedIn = false,
 }) => {
   const { width } = useWindowDimensions();
@@ -335,7 +337,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                       borderColor: isDark ? 'rgba(57, 211, 83, 0.4)' : 'rgba(26, 127, 55, 0.3)',
                     },
                   ]}
-                  onPress={handleScrollToReleases}
+                  onPress={onOpenReleases}
                   activeOpacity={0.7}
                 >
                   <View style={[styles.statusDot, { backgroundColor: theme.success }]} />
@@ -363,7 +365,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           {!isMobile && (
             <TouchableOpacity
               style={[styles.navGithubBtn, { borderColor: theme.borderSubtle, backgroundColor: theme.surface }]}
-              onPress={handleScrollToReleases}
+              onPress={onOpenReleases}
               activeOpacity={0.7}
             >
               <History size={13} color={theme.textSecondary} />
@@ -1185,138 +1187,95 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         )}
       </View>
 
-      {/* ─── RELEASE HISTORY & CHANGELOG ─────────────────────────── */}
-      <View
-        style={[styles.sectionWrapper, isMobile && styles.sectionWrapperMobile]}
-        onLayout={(e) => setReleasesY(e.nativeEvent.layout.y)}
-      >
-        <View style={styles.sectionHeaderCol}>
-          <Text style={[styles.sectionOverline, { color: isDark ? '#39D353' : '#1A7F37' }]}>
-            VERSION LOG
-          </Text>
-          <Text style={[styles.sectionTitle, isMobile && styles.sectionTitleMobile, { color: theme.text }]}>
-            Release History & Changelog
-          </Text>
-          <Text style={[styles.sectionDescription, { color: theme.textSecondary }]}>
-            TrackHeat evolves continuously with offline-first reliability, high-density matrix visualizations, and native OS integrations.
-          </Text>
-        </View>
-
-        <View style={styles.releasesContainer}>
-          {RELEASES_DATA.map((rel) => (
-            <View
-              key={rel.version}
-              style={[
-                styles.releaseCard,
-                {
-                  backgroundColor: theme.surface,
-                  borderColor: rel.isLatest
-                    ? (isDark ? 'rgba(57, 211, 83, 0.4)' : 'rgba(26, 127, 55, 0.35)')
-                    : theme.border,
-                },
-              ]}
-            >
-              <View style={[styles.releaseHeader, isMobile && styles.releaseHeaderMobile]}>
-                <View style={styles.releaseVersionRow}>
-                  <Text style={[styles.releaseVersion, { color: theme.text }]}>{rel.version}</Text>
-                  <View
-                    style={[
-                      styles.releaseBadge,
-                      {
-                        backgroundColor: rel.isLatest
-                          ? (isDark ? 'rgba(57, 211, 83, 0.15)' : 'rgba(26, 127, 55, 0.12)')
-                          : theme.surfaceHighlight,
-                        borderColor: rel.isLatest
-                          ? (isDark ? 'rgba(57, 211, 83, 0.4)' : 'rgba(26, 127, 55, 0.3)')
-                          : theme.borderSubtle,
-                      },
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        styles.releaseBadgeText,
-                        {
-                          color: rel.isLatest
-                            ? (isDark ? '#39D353' : '#1A7F37')
-                            : theme.textSecondary,
-                        },
-                      ]}
-                    >
-                      {rel.tag.toUpperCase()}
-                    </Text>
-                  </View>
-                </View>
-                <Text style={[styles.releaseDate, { color: theme.textMuted }]}>{rel.date}</Text>
+      {/* ─── RELEASE ARCHIVE & CHANGELOG CARD ────────────────────── */}
+      <View style={[styles.sectionWrapper, isMobile && styles.sectionWrapperMobile]}>
+        <View
+          style={[
+            styles.releaseTeaserCard,
+            {
+              backgroundColor: theme.surface,
+              borderColor: isDark ? 'rgba(57, 211, 83, 0.35)' : 'rgba(26, 127, 55, 0.25)',
+            },
+          ]}
+        >
+          <View style={[styles.releaseTeaserLeft, isMobile && styles.releaseTeaserLeftMobile]}>
+            <View style={styles.releaseTeaserBadgeRow}>
+              <View
+                style={[
+                  styles.releaseTeaserBadge,
+                  {
+                    backgroundColor: isDark ? 'rgba(57, 211, 83, 0.15)' : 'rgba(26, 127, 55, 0.12)',
+                    borderColor: isDark ? 'rgba(57, 211, 83, 0.4)' : 'rgba(26, 127, 55, 0.3)',
+                  },
+                ]}
+              >
+                <Text style={[styles.releaseTeaserBadgeText, { color: theme.success }]}>
+                  LATEST RELEASE · v1.2.2
+                </Text>
               </View>
-
-              <Text style={[styles.releaseSummary, { color: theme.textSecondary }]}>
-                {rel.summary}
+              <Text style={[styles.releaseTeaserDate, { color: theme.textMuted }]}>
+                October 2026
               </Text>
-
-              <View style={styles.highlightsContainer}>
-                {rel.highlights.map((item, idx) => (
-                  <View key={idx} style={styles.highlightRow}>
-                    <View
-                      style={[
-                        styles.highlightBullet,
-                        { backgroundColor: rel.isLatest ? (isDark ? '#39D353' : '#1A7F37') : theme.textMuted },
-                      ]}
-                    />
-                    <Text style={[styles.highlightText, { color: theme.textSecondary }]}>
-                      {item}
-                    </Text>
-                  </View>
-                ))}
-              </View>
-
-              <View style={styles.releaseActionsRow}>
-                {rel.links.map((link, lIdx) => (
-                  <TouchableOpacity
-                    key={lIdx}
-                    style={[
-                      styles.releaseActionBtn,
-                      link.primary
-                        ? {
-                            backgroundColor: isDark ? 'rgba(57, 211, 83, 0.12)' : 'rgba(26, 127, 55, 0.08)',
-                            borderColor: isDark ? 'rgba(57, 211, 83, 0.35)' : 'rgba(26, 127, 55, 0.3)',
-                          }
-                        : {
-                            backgroundColor: theme.surfaceHighlight,
-                            borderColor: theme.borderSubtle,
-                          },
-                    ]}
-                    onPress={() => Linking.openURL(link.url)}
-                    activeOpacity={0.7}
-                  >
-                    {link.label.includes('Download') ? (
-                      <Download
-                        size={12}
-                        color={link.primary ? (isDark ? '#39D353' : '#1A7F37') : theme.textSecondary}
-                      />
-                    ) : (
-                      <ExternalLink
-                        size={12}
-                        color={link.primary ? (isDark ? '#39D353' : '#1A7F37') : theme.textSecondary}
-                      />
-                    )}
-                    <Text
-                      style={[
-                        styles.releaseActionText,
-                        {
-                          color: link.primary
-                            ? (isDark ? '#39D353' : '#1A7F37')
-                            : theme.textSecondary,
-                          fontWeight: link.primary ? '600' : '500',
-                        },
-                      ]}
-                    >
-                      {link.label}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
             </View>
-          ))}
+
+            <Text style={[styles.releaseTeaserTitle, isMobile && styles.releaseTeaserTitleMobile, { color: theme.text }]}>
+              Release History & Distribution Archive
+            </Text>
+            <Text style={[styles.releaseTeaserDesc, { color: theme.textSecondary }]}>
+              Explore complete version notes, architecture changelogs, and download production binaries for macOS DMG, Android standalone APK, and Web.
+            </Text>
+
+            <View style={[styles.releaseTeaserLinksRow, isMobile && styles.releaseTeaserLinksRowMobile]}>
+              <TouchableOpacity
+                style={[
+                  styles.releaseTeaserBtn,
+                  {
+                    backgroundColor: isDark ? '#39D353' : '#1A7F37',
+                    borderColor: isDark ? '#39D353' : '#1A7F37',
+                  },
+                ]}
+                onPress={onOpenReleases}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.releaseTeaserBtnText}>VIEW ALL RELEASES & CHANGELOG</Text>
+                <ArrowRight size={13} color="#FFFFFF" strokeWidth={2.5} />
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  styles.releaseTeaserSecondaryBtn,
+                  {
+                    backgroundColor: theme.surfaceHighlight,
+                    borderColor: theme.borderSubtle,
+                  },
+                ]}
+                onPress={handleDownloadMac}
+                activeOpacity={0.7}
+              >
+                <Download size={12} color={theme.text} />
+                <Text style={[styles.releaseTeaserSecondaryText, { color: theme.text }]}>
+                  macOS .dmg
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  styles.releaseTeaserSecondaryBtn,
+                  {
+                    backgroundColor: theme.surfaceHighlight,
+                    borderColor: theme.borderSubtle,
+                  },
+                ]}
+                onPress={handleDownloadAndroid}
+                activeOpacity={0.7}
+              >
+                <Download size={12} color={theme.text} />
+                <Text style={[styles.releaseTeaserSecondaryText, { color: theme.text }]}>
+                  Android .apk
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
         </View>
       </View>
 
@@ -2522,6 +2481,102 @@ const styles = StyleSheet.create({
   releaseActionText: {
     fontSize: 11,
     letterSpacing: 0.3,
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
+  },
+
+  // Release Archive Teaser Card
+  releaseTeaserCard: {
+    width: '100%',
+    borderWidth: 1,
+    borderRadius: 8,
+    padding: 24,
+  },
+  releaseTeaserLeft: {
+    width: '100%',
+  },
+  releaseTeaserLeftMobile: {
+    width: '100%',
+  },
+  releaseTeaserBadgeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 10,
+  },
+  releaseTeaserBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 4,
+    borderWidth: 1,
+  },
+  releaseTeaserBadgeText: {
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 0.8,
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
+  },
+  releaseTeaserDate: {
+    fontSize: 12,
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
+  },
+  releaseTeaserTitle: {
+    fontSize: 20,
+    fontWeight: '800',
+    letterSpacing: -0.3,
+    marginBottom: 6,
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
+  },
+  releaseTeaserTitleMobile: {
+    fontSize: 17,
+  },
+  releaseTeaserDesc: {
+    fontSize: 13.5,
+    lineHeight: 20,
+    marginBottom: 16,
+    maxWidth: 720,
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
+  },
+  releaseTeaserLinksRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  releaseTeaserLinksRowMobile: {
+    flexDirection: 'column',
+    alignItems: 'stretch',
+    gap: 8,
+  },
+  releaseTeaserBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 6,
+    borderWidth: 1,
+  },
+  releaseTeaserBtnText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
+  },
+  releaseTeaserSecondaryBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    borderRadius: 6,
+    borderWidth: 1,
+  },
+  releaseTeaserSecondaryText: {
+    fontSize: 12,
+    fontWeight: '600',
     fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
   },
 });
