@@ -73,17 +73,19 @@ export function TrackHeatWidget({ map, config, width, height, isDark = true }: T
   // height >= 95 means 2 rows or more (~110-135dp)
   const isSingleRow = height < 95;
 
-  // Single row sizing (height 1: no header title, vertical button on right)
+  // Single row sizing (height 1: no header title, slim vertical button on right)
   const paddingV = isSingleRow ? 6 : 8;
   const paddingH = isSingleRow ? 8 : 10;
-  const btnWidth = 22;
-  const btnMarginLeft = 8;
+  const btnWidth = 18;
+  const btnMarginLeft = 6;
+  const btnMarginRight = 2;
 
   // Height 2 sizing (header with top-left button + habit title, full-width matrix below)
   const btnSize = 20;
-  const headerMarginBottom = 6;
-  const headerHeight = btnSize;
-  const titleFontSize = Math.min(14, Math.max(11, Math.floor(width / 22)));
+  const headerMarginBottom = 8;
+  const headerHeight = 22;
+  // Scaled-down title font size so descenders never get cut off
+  const titleFontSize = Math.min(12, Math.max(10, Math.floor(width / 26)));
 
   // Available vertical space for 7 matrix rows (Monday to Sunday)
   const availableGridHeight = isSingleRow
@@ -99,9 +101,9 @@ export function TrackHeatWidget({ map, config, width, height, isDark = true }: T
   // The exact grid height of the 7 rows
   const gridHeight = cellSize * 7 + gapY * 6;
 
-  // Available horizontal space for week columns
+  // Available horizontal space for week columns with safety margin
   const availableWidth = isSingleRow
-    ? Math.max(40, width - paddingH * 2 - btnWidth - btnMarginLeft)
+    ? Math.max(30, width - paddingH * 2 - btnWidth - btnMarginLeft - btnMarginRight - 4)
     : Math.max(40, width - paddingH * 2);
 
   const gapX = isSingleRow ? 1.5 : 2;
@@ -165,7 +167,7 @@ export function TrackHeatWidget({ map, config, width, height, isDark = true }: T
     ? (effectiveDark && isObsidian ? '#090A0C' : '#FFFFFF')
     : textPrimary;
 
-  // Height 1 layout: No title, 7-row matrix on left, vertical toggle pill on right
+  // Height 1 layout: No title, 7-row matrix on left, slim vertical toggle pill on right
   if (isSingleRow) {
     return (
       <FlexWidget
@@ -192,7 +194,6 @@ export function TrackHeatWidget({ map, config, width, height, isDark = true }: T
             flexDirection: 'row',
             alignItems: 'center',
             height: gridHeight,
-            flex: 1,
           }}
         >
           {columns.map((col, colIdx) => (
@@ -219,7 +220,7 @@ export function TrackHeatWidget({ map, config, width, height, isDark = true }: T
           ))}
         </FlexWidget>
 
-        {/* 2. Vertical Action / Log Today Button on Very Right */}
+        {/* 2. Vertical Action / Log Today Button on Very Right (slim & unclipped) */}
         <FlexWidget
           style={{
             width: btnWidth,
@@ -231,6 +232,7 @@ export function TrackHeatWidget({ map, config, width, height, isDark = true }: T
             borderColor: toggleBtnBorder as `#${string}`,
             borderWidth: 1,
             marginLeft: btnMarginLeft,
+            marginRight: btnMarginRight,
           }}
           clickAction="TOGGLE_TODAY"
           clickActionData={{ habitId: map.id }}
@@ -240,9 +242,10 @@ export function TrackHeatWidget({ map, config, width, height, isDark = true }: T
             text={isTodayDone ? '✓' : '+'}
             maxLines={1}
             style={{
-              width: btnWidth,
+              width: 'match_parent',
+              height: 'match_parent',
               textAlign: 'center',
-              fontSize: 11,
+              fontSize: 10,
               fontWeight: 'bold',
               color: toggleBtnTextColor as `#${string}`,
             }}
@@ -281,7 +284,7 @@ export function TrackHeatWidget({ map, config, width, height, isDark = true }: T
           marginBottom: headerMarginBottom,
         }}
       >
-        {/* Log Today Button on Left Top */}
+        {/* Log Today Button on Left Top (perfectly centered icon) */}
         <FlexWidget
           style={{
             width: btnSize,
@@ -302,7 +305,8 @@ export function TrackHeatWidget({ map, config, width, height, isDark = true }: T
             text={isTodayDone ? '✓' : '+'}
             maxLines={1}
             style={{
-              width: btnSize,
+              width: 'match_parent',
+              height: 'match_parent',
               textAlign: 'center',
               fontSize: 11,
               fontWeight: 'bold',
@@ -311,12 +315,13 @@ export function TrackHeatWidget({ map, config, width, height, isDark = true }: T
           />
         </FlexWidget>
 
-        {/* Habit Name right next to button */}
+        {/* Habit Name right next to button with ample height so descenders don't get cut */}
         <FlexWidget
           style={{
             flex: 1,
             flexDirection: 'row',
             alignItems: 'center',
+            height: headerHeight,
           }}
         >
           <TextWidget
@@ -327,6 +332,8 @@ export function TrackHeatWidget({ map, config, width, height, isDark = true }: T
               fontSize: titleFontSize,
               fontWeight: 'bold',
               color: textPrimary,
+              height: headerHeight,
+              textAlign: 'left',
             }}
           />
         </FlexWidget>

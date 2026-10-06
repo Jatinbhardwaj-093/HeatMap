@@ -98,7 +98,7 @@ export const WidgetStudioModal: React.FC<WidgetStudioModalProps> = ({
   const cellSize = isSingleRow ? 7 : 11;
   const cellGap = isSingleRow ? 2 : 2.5;
   const gridHeight = cellSize * 7 + cellGap * 6;
-  const btnWidth = isSingleRow ? 22 : 26;
+  const btnWidth = isSingleRow ? 18 : 22;
 
   const previewWidth =
     preset === '2x1' || preset === '2x2' ? 160 :
@@ -444,12 +444,13 @@ export const WidgetStudioModal: React.FC<WidgetStudioModalProps> = ({
                         backgroundColor: previewBtnBg,
                         borderColor: previewBtnBorder,
                         borderWidth: 1,
-                        marginLeft: 8,
+                        marginLeft: 6,
+                        marginRight: 2,
                       }}
                     >
                       <Text
                         style={{
-                          fontSize: 11,
+                          fontSize: 10,
                           fontWeight: 'bold',
                           color: previewBtnTextColor,
                           fontFamily: fontStack,
@@ -474,9 +475,9 @@ export const WidgetStudioModal: React.FC<WidgetStudioModalProps> = ({
                       {/* Log Button on Top Left */}
                       <View
                         style={{
-                          width: 22,
-                          height: 22,
-                          borderRadius: 11,
+                          width: 20,
+                          height: 20,
+                          borderRadius: 10,
                           alignItems: 'center',
                           justifyContent: 'center',
                           backgroundColor: previewBtnBg,
@@ -487,7 +488,7 @@ export const WidgetStudioModal: React.FC<WidgetStudioModalProps> = ({
                       >
                         <Text
                           style={{
-                            fontSize: 12,
+                            fontSize: 11,
                             fontWeight: 'bold',
                             color: previewBtnTextColor,
                             fontFamily: fontStack,
@@ -501,7 +502,7 @@ export const WidgetStudioModal: React.FC<WidgetStudioModalProps> = ({
                       {/* Habit Name */}
                       <Text
                         style={{
-                          fontSize: 13,
+                          fontSize: 12,
                           fontWeight: '700',
                           color: isWidgetDark ? '#F0F3F6' : '#1F2328',
                           fontFamily: fontStack,
