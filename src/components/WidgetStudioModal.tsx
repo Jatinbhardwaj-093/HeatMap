@@ -378,7 +378,7 @@ export const WidgetStudioModal: React.FC<WidgetStudioModalProps> = ({
 
             {/* Widget Preview Canvas */}
             <View style={[styles.canvasBox, { backgroundColor: theme.surfaceHighlight, borderColor: theme.borderSubtle }]}>
-              {/* Native Home Screen Widget: 7-Row Matrix on Left + Vertical Action Button on Right */}
+              {/* Native Home Screen Widget */}
               <View
                 style={[
                   styles.nativeWidget,
@@ -388,6 +388,9 @@ export const WidgetStudioModal: React.FC<WidgetStudioModalProps> = ({
                     borderColor: isWidgetDark ? '#30363D' : '#D0D7DE',
                     paddingVertical: isSingleRow ? 8 : 10,
                     paddingHorizontal: isSingleRow ? 10 : 12,
+                    flexDirection: isSingleRow ? 'row' : 'column',
+                    alignItems: isSingleRow ? 'center' : 'stretch',
+                    justifyContent: isSingleRow ? 'space-between' : 'flex-start',
                     ...(Platform.OS === 'web'
                       ? {
                           boxShadow: isWidgetDark
@@ -398,62 +401,149 @@ export const WidgetStudioModal: React.FC<WidgetStudioModalProps> = ({
                   },
                 ]}
               >
-                {/* 1. Contribution Matrix */}
-                <View style={[styles.matrixColumns, { gap: cellGap, flex: 1 }]}>
-                  {widgetGrid.map((week, wIdx) => (
-                    <View key={`ww-${wIdx}`} style={[styles.matrixColumn, { gap: cellGap }]}>
-                      {week.map((day) =>
-                        day.isFuture ? (
-                          <View
-                            key={`wd-${day.dateKey}`}
-                            style={{
-                              width: cellSize,
-                              height: cellSize,
-                              backgroundColor: 'transparent',
-                            }}
-                          />
-                        ) : (
-                          <DayCell
-                            key={`wd-${day.dateKey}`}
-                            dateKey={day.dateKey}
-                            level={day.level}
-                            paletteId={selectedPalette}
-                            size={cellSize}
-                            disabled={true}
-                            isDark={isWidgetDark}
-                          />
-                        )
-                      )}
+                {isSingleRow ? (
+                  <>
+                    {/* 1. Contribution Matrix */}
+                    <View style={[styles.matrixColumns, { gap: cellGap, flex: 1 }]}>
+                      {widgetGrid.map((week, wIdx) => (
+                        <View key={`ww-${wIdx}`} style={[styles.matrixColumn, { gap: cellGap }]}>
+                          {week.map((day) =>
+                            day.isFuture ? (
+                              <View
+                                key={`wd-${day.dateKey}`}
+                                style={{
+                                  width: cellSize,
+                                  height: cellSize,
+                                  backgroundColor: 'transparent',
+                                }}
+                              />
+                            ) : (
+                              <DayCell
+                                key={`wd-${day.dateKey}`}
+                                dateKey={day.dateKey}
+                                level={day.level}
+                                paletteId={selectedPalette}
+                                size={cellSize}
+                                disabled={true}
+                                isDark={isWidgetDark}
+                              />
+                            )
+                          )}
+                        </View>
+                      ))}
                     </View>
-                  ))}
-                </View>
 
-                {/* 2. Vertical Action / Log Today Button on Right */}
-                <View
-                  style={{
-                    width: btnWidth,
-                    height: gridHeight,
-                    borderRadius: Math.floor(btnWidth / 2),
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    backgroundColor: previewBtnBg,
-                    borderColor: previewBtnBorder,
-                    borderWidth: 1,
-                    marginLeft: isSingleRow ? 8 : 10,
-                  }}
-                >
-                  <Text
-                    style={{
-                      fontSize: isSingleRow ? 11 : 13,
-                      fontWeight: 'bold',
-                      color: previewBtnTextColor,
-                      fontFamily: fontStack,
-                      textAlign: 'center',
-                    }}
-                  >
-                    {isTodayDone ? '✓' : '+'}
-                  </Text>
-                </View>
+                    {/* 2. Vertical Action / Log Today Button on Right */}
+                    <View
+                      style={{
+                        width: btnWidth,
+                        height: gridHeight,
+                        borderRadius: Math.floor(btnWidth / 2),
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        backgroundColor: previewBtnBg,
+                        borderColor: previewBtnBorder,
+                        borderWidth: 1,
+                        marginLeft: 8,
+                      }}
+                    >
+                      <Text
+                        style={{
+                          fontSize: 11,
+                          fontWeight: 'bold',
+                          color: previewBtnTextColor,
+                          fontFamily: fontStack,
+                          textAlign: 'center',
+                        }}
+                      >
+                        {isTodayDone ? '✓' : '+'}
+                      </Text>
+                    </View>
+                  </>
+                ) : (
+                  <>
+                    {/* Header Row: Log Button on Top Left + Habit Name */}
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        marginBottom: 8,
+                        width: '100%',
+                      }}
+                    >
+                      {/* Log Button on Top Left */}
+                      <View
+                        style={{
+                          width: 22,
+                          height: 22,
+                          borderRadius: 11,
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          backgroundColor: previewBtnBg,
+                          borderColor: previewBtnBorder,
+                          borderWidth: 1,
+                          marginRight: 8,
+                        }}
+                      >
+                        <Text
+                          style={{
+                            fontSize: 12,
+                            fontWeight: 'bold',
+                            color: previewBtnTextColor,
+                            fontFamily: fontStack,
+                            textAlign: 'center',
+                          }}
+                        >
+                          {isTodayDone ? '✓' : '+'}
+                        </Text>
+                      </View>
+
+                      {/* Habit Name */}
+                      <Text
+                        style={{
+                          fontSize: 13,
+                          fontWeight: '700',
+                          color: isWidgetDark ? '#F0F3F6' : '#1F2328',
+                          fontFamily: fontStack,
+                          flex: 1,
+                        }}
+                        numberOfLines={1}
+                      >
+                        {displayTitle}
+                      </Text>
+                    </View>
+
+                    {/* Contribution Matrix below across full width */}
+                    <View style={[styles.matrixColumns, { gap: cellGap, width: '100%' }]}>
+                      {widgetGrid.map((week, wIdx) => (
+                        <View key={`ww-${wIdx}`} style={[styles.matrixColumn, { gap: cellGap }]}>
+                          {week.map((day) =>
+                            day.isFuture ? (
+                              <View
+                                key={`wd-${day.dateKey}`}
+                                style={{
+                                  width: cellSize,
+                                  height: cellSize,
+                                  backgroundColor: 'transparent',
+                                }}
+                              />
+                            ) : (
+                              <DayCell
+                                key={`wd-${day.dateKey}`}
+                                dateKey={day.dateKey}
+                                level={day.level}
+                                paletteId={selectedPalette}
+                                size={cellSize}
+                                disabled={true}
+                                isDark={isWidgetDark}
+                              />
+                            )
+                          )}
+                        </View>
+                      ))}
+                    </View>
+                  </>
+                )}
               </View>
             </View>
 

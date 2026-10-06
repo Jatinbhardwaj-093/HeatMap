@@ -39,6 +39,7 @@ export function WidgetConfigurationScreen({ widgetInfo, renderWidget, setResult 
   }, [widgetInfo.widgetId]);
 
   const currentHabit = habits.find((h) => h.id === selectedHabitId) || habits[0];
+  const isSingleRow = widgetInfo.height < 95;
 
   const isPreviewDark = themeChoice === 'dark' ? true : themeChoice === 'light' ? false : true;
   const isPaletteObsidian = paletteChoice === 'obsidian';
@@ -273,65 +274,137 @@ export function WidgetConfigurationScreen({ widgetInfo, renderWidget, setResult 
                     },
                   ]}
                 >
-                  {/* Clean widget preview: 7-row matrix on left, vertical toggle pill on right */}
-                  <View style={styles.previewContentRow}>
-                    <View style={styles.previewMatrix}>
-                      {previewGrid.map((week, wIdx) => (
-                        <View key={wIdx} style={styles.previewCol}>
-                          {week.map((cell, dIdx) => {
-                            const cellBg = cell.isFuture
-                              ? 'transparent'
-                              : cell.isCompleted
-                              ? isPreviewDark
-                                ? isPaletteObsidian
-                                  ? '#F0F3F6'
-                                  : previewPalette.levels[3] || previewPalette.accent
-                                : isPaletteObsidian
-                                ? '#24292F'
-                                : previewPalette.lightLevels?.[3] || previewPalette.accent
-                              : isPreviewDark
-                              ? '#161B22'
-                              : '#EBEDF0';
+                  {isSingleRow ? (
+                    /* Height 1 layout: 7-row matrix on left, vertical toggle pill on right */
+                    <View style={styles.previewContentRow}>
+                      <View style={styles.previewMatrix}>
+                        {previewGrid.map((week, wIdx) => (
+                          <View key={wIdx} style={styles.previewCol}>
+                            {week.map((cell, dIdx) => {
+                              const cellBg = cell.isFuture
+                                ? 'transparent'
+                                : cell.isCompleted
+                                ? isPreviewDark
+                                  ? isPaletteObsidian
+                                    ? '#F0F3F6'
+                                    : previewPalette.levels[3] || previewPalette.accent
+                                  : isPaletteObsidian
+                                  ? '#24292F'
+                                  : previewPalette.lightLevels?.[3] || previewPalette.accent
+                                : isPreviewDark
+                                ? '#161B22'
+                                : '#EBEDF0';
 
-                            return (
-                              <View
-                                key={dIdx}
-                                style={[
-                                  styles.previewCell,
-                                  {
-                                    backgroundColor: cellBg,
-                                    borderColor: isPreviewDark ? '#21262D' : '#D0D7DE',
-                                    borderWidth: cell.isFuture ? 0 : 0.5,
-                                  },
-                                ]}
-                              />
-                            );
-                          })}
-                        </View>
-                      ))}
-                    </View>
+                              return (
+                                <View
+                                  key={dIdx}
+                                  style={[
+                                    styles.previewCell,
+                                    {
+                                      backgroundColor: cellBg,
+                                      borderColor: isPreviewDark ? '#21262D' : '#D0D7DE',
+                                      borderWidth: cell.isFuture ? 0 : 0.5,
+                                    },
+                                  ]}
+                                />
+                              );
+                            })}
+                          </View>
+                        ))}
+                      </View>
 
-                    {/* Vertical Toggle Pill Button on right */}
-                    <View
-                      style={[
-                        styles.previewActionBtn,
-                        {
-                          backgroundColor: previewBtnBg,
-                          borderColor: previewBtnBorder,
-                          borderWidth: 1,
-                        },
-                      ]}
-                    >
-                      <Text
+                      {/* Vertical Toggle Pill Button on right */}
+                      <View
                         style={[
-                          styles.previewActionText,
-                          { color: previewBtnTextColor },
+                          styles.previewActionBtn,
+                          {
+                            backgroundColor: previewBtnBg,
+                            borderColor: previewBtnBorder,
+                            borderWidth: 1,
+                          },
                         ]}
                       >
-                        {isTodayDone ? '✓' : '+'}
-                      </Text>
+                        <Text
+                          style={[
+                            styles.previewActionText,
+                            { color: previewBtnTextColor },
+                          ]}
+                        >
+                          {isTodayDone ? '✓' : '+'}
+                        </Text>
+                      </View>
                     </View>
-                  </View>
+                  ) : (
+                    /* Height 2 layout: Top-left log button + habit title header, matrix below */
+                    <View style={styles.previewContentCol}>
+                      <View style={styles.previewHeaderRow}>
+                        <View
+                          style={[
+                            styles.previewHeaderBtn,
+                            {
+                              backgroundColor: previewBtnBg,
+                              borderColor: previewBtnBorder,
+                              borderWidth: 1,
+                            },
+                          ]}
+                        >
+                          <Text
+                            style={[
+                              styles.previewHeaderBtnText,
+                              { color: previewBtnTextColor },
+                            ]}
+                          >
+                            {isTodayDone ? '✓' : '+'}
+                          </Text>
+                        </View>
+                        <Text
+                          style={[
+                            styles.previewHeaderTitle,
+                            { color: isPreviewDark ? '#F0F3F6' : '#1F2328' },
+                          ]}
+                          numberOfLines={1}
+                        >
+                          {previewTitle}
+                        </Text>
+                      </View>
+
+                      <View style={styles.previewMatrixFull}>
+                        {previewGrid.map((week, wIdx) => (
+                          <View key={wIdx} style={styles.previewCol}>
+                            {week.map((cell, dIdx) => {
+                              const cellBg = cell.isFuture
+                                ? 'transparent'
+                                : cell.isCompleted
+                                ? isPreviewDark
+                                  ? isPaletteObsidian
+                                    ? '#F0F3F6'
+                                    : previewPalette.levels[3] || previewPalette.accent
+                                  : isPaletteObsidian
+                                  ? '#24292F'
+                                  : previewPalette.lightLevels?.[3] || previewPalette.accent
+                                : isPreviewDark
+                                ? '#161B22'
+                                : '#EBEDF0';
+
+                              return (
+                                <View
+                                  key={dIdx}
+                                  style={[
+                                    styles.previewCell,
+                                    {
+                                      backgroundColor: cellBg,
+                                      borderColor: isPreviewDark ? '#21262D' : '#D0D7DE',
+                                      borderWidth: cell.isFuture ? 0 : 0.5,
+                                    },
+                                  ]}
+                                />
+                              );
+                            })}
+                          </View>
+                        ))}
+                      </View>
+                    </View>
+                  )}
                 </View>
               </View>
             </View>
@@ -509,6 +582,40 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    width: '100%',
+  },
+  previewContentCol: {
+    flexDirection: 'column',
+    width: '100%',
+  },
+  previewHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 10,
+    width: '100%',
+  },
+  previewHeaderBtn: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 8,
+  },
+  previewHeaderBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
+    textAlign: 'center',
+  },
+  previewHeaderTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    flex: 1,
+  },
+  previewMatrixFull: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 4,
     width: '100%',
   },
   previewActionBtn: {
