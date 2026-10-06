@@ -46,7 +46,9 @@ Official binary releases for version 1.2.0:
 ---
 
 <p align="center">
-  <img src="assets/screenshots/web-dashboard-dark.png" width="94%" alt="TrackHeat Web Dashboard Overview" />
+  <a href="assets/screenshots/web-dashboard-dark.png">
+    <img src="assets/screenshots/web-dashboard-dark.png" width="760" alt="TrackHeat Web Dashboard Overview" />
+  </a>
 </p>
 
 ## Core Philosophy
@@ -105,51 +107,80 @@ Inspired by software version control commit momentum, TrackHeat translates human
 
 ## Screenshots
 
-### Android Home Screen Widgets & Configuration
-
-<div align="center">
-  <img src="assets/screenshots/android-widgets-homescreen.png" width="94%" alt="TrackHeat Android Home Screen Widgets" />
-  <p><em>Android home screen showcasing multi-size widgets (4x2, 2x2, 4x1, 2x1) in dark and light themes with instant 1-tap logging</em></p>
-</div>
-
-<br />
-
-<div align="center">
-  <img src="assets/screenshots/android-widget-configuration.png" width="70%" alt="TrackHeat Android Widget Configuration" />
-  <p><em>Native Android widget configuration screen with real-time interactive matrix preview and custom alias settings</em></p>
-</div>
-
----
-
 ### Web Desktop Experience
 
-<div align="center">
-  <img src="assets/screenshots/web-dashboard-dark.png" width="94%" alt="TrackHeat Web Desktop Dark Dashboard" />
-  <p><em>Desktop dashboard in dark mode featuring 52-week centered matrix grid, streak statistics, and action controls</em></p>
-</div>
+<table align="center">
+  <thead>
+    <tr>
+      <th align="center" width="50%">Dark Theme · Obsidian & Emerald</th>
+      <th align="center" width="50%">Light Theme · High-Contrast Charcoal</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td align="center">
+        <a href="assets/screenshots/web-dashboard-dark.png">
+          <img src="assets/screenshots/web-dashboard-dark.png" width="100%" alt="TrackHeat Web Desktop Dark Dashboard" />
+        </a>
+      </td>
+      <td align="center">
+        <a href="assets/screenshots/web-dashboard-light.png">
+          <img src="assets/screenshots/web-dashboard-light.png" width="100%" alt="TrackHeat Web Desktop Light Dashboard" />
+        </a>
+      </td>
+    </tr>
+  </tbody>
+</table>
 
-<br />
+### Android Home Screen Widgets
 
-<div align="center">
-  <img src="assets/screenshots/web-dashboard-light.png" width="94%" alt="TrackHeat Web Desktop Light Dashboard" />
-  <p><em>Desktop dashboard in light mode demonstrating high-contrast Emerald and Cold Cyan contribution matrices</em></p>
-</div>
-
----
+<table align="center">
+  <thead>
+    <tr>
+      <th align="center" width="50%">Home Screen Widgets (4x2, 2x2, 4x1, 2x1)</th>
+      <th align="center" width="50%">Configuration Studio & Live Preview</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td align="center">
+        <a href="assets/screenshots/android-widgets-homescreen.png">
+          <img src="assets/screenshots/android-widgets-homescreen.png" width="270" alt="TrackHeat Android Home Screen Widgets" />
+        </a>
+      </td>
+      <td align="center">
+        <a href="assets/screenshots/android-widget-configuration.png">
+          <img src="assets/screenshots/android-widget-configuration.png" width="270" alt="TrackHeat Android Widget Configuration" />
+        </a>
+      </td>
+    </tr>
+  </tbody>
+</table>
 
 ### Mobile Application Experience
 
-<div align="center">
-  <img src="assets/screenshots/mobile-dashboard-dark.png" width="70%" alt="TrackHeat Mobile Dashboard Annual View" />
-  <p><em>Mobile Android dashboard showing zero-scroll annual micro-matrix fitted 100% inside card boundaries</em></p>
-</div>
-
-<br />
-
-<div align="center">
-  <img src="assets/screenshots/mobile-dashboard-monthly.png" width="70%" alt="TrackHeat Mobile Dashboard Monthly View" />
-  <p><em>Mobile Android dashboard showing monthly calendar breakdown alongside yearly macro view</em></p>
-</div>
+<table align="center">
+  <thead>
+    <tr>
+      <th align="center" width="50%">Annual Macro Matrix (Zero-Scroll)</th>
+      <th align="center" width="50%">Monthly Calendar Breakdown</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td align="center">
+        <a href="assets/screenshots/mobile-dashboard-dark.png">
+          <img src="assets/screenshots/mobile-dashboard-dark.png" width="270" alt="TrackHeat Mobile Dashboard Annual View" />
+        </a>
+      </td>
+      <td align="center">
+        <a href="assets/screenshots/mobile-dashboard-monthly.png">
+          <img src="assets/screenshots/mobile-dashboard-monthly.png" width="270" alt="TrackHeat Mobile Dashboard Monthly View" />
+        </a>
+      </td>
+    </tr>
+  </tbody>
+</table>
 
 ---
 
