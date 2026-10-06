@@ -180,7 +180,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
 
         if (data.session) {
           if (rememberMe) {
-            await AsyncStorage.setItem('@trackheat_remembered_email', identifier);
+            await AsyncStorage.setItem('@trackheat_remembered_email', resolvedEmail);
           } else {
             await AsyncStorage.removeItem('@trackheat_remembered_email');
           }
@@ -188,6 +188,10 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
           const metaUsername = data.session.user?.user_metadata?.username;
           if (metaUsername && resolvedEmail) {
             await storeUsernameMapping(metaUsername, resolvedEmail);
+          }
+          if (resolvedEmail.includes('@')) {
+            const prefix = resolvedEmail.split('@')[0].toLowerCase();
+            await storeUsernameMapping(prefix, resolvedEmail);
           }
 
           onLoginSuccess();

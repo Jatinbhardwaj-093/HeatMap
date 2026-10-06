@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { HeatMapModel, PaletteId } from '../types/heatmap';
+import { syncHabitsToCloud } from '../utils/storage';
 
 export interface WidgetConfig {
   habitId: string;
@@ -170,6 +171,7 @@ export async function toggleHabitToday(habitId: string): Promise<HeatMapModel | 
 
     if (updatedHabit) {
       await AsyncStorage.setItem(targetKey, JSON.stringify(updatedHabits));
+      syncHabitsToCloud(updatedHabits).catch(() => {});
     }
 
     return updatedHabit;

@@ -1,6 +1,6 @@
 import React from 'react';
 import { StyleSheet, View, Text, TouchableOpacity, Platform, Image } from 'react-native';
-import { Smartphone, Sun, Moon, Monitor, User } from 'lucide-react-native';
+import { Smartphone, Sun, Moon, Monitor, User, RefreshCw } from 'lucide-react-native';
 import { useAppTheme, useThemeMode } from '../theme/theme';
 import { isMacDesktop, dragRegion, noDragRegion } from '../utils/platform';
 
@@ -11,6 +11,8 @@ interface HeaderProps {
   userEmail?: string;
   userName?: string;
   userHandle?: string;
+  onSync?: () => void;
+  syncStatus?: 'idle' | 'syncing' | 'synced' | 'offline';
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -20,6 +22,8 @@ export const Header: React.FC<HeaderProps> = ({
   userEmail,
   userName,
   userHandle,
+  onSync,
+  syncStatus = 'idle',
 }) => {
   const theme = useAppTheme();
   const { themeMode, setThemeMode } = useThemeMode();
@@ -72,6 +76,28 @@ export const Header: React.FC<HeaderProps> = ({
 
         {/* Right Actions */}
         <View style={[styles.actionButtons, noDragRegion]}>
+          {/* Cloud Sync Button */}
+          {userEmail && onSync && (
+            <TouchableOpacity
+              style={[
+                styles.actionBtn,
+                {
+                  backgroundColor: theme.surfaceHighlight,
+                  borderColor: syncStatus === 'synced' ? '#39D353' : theme.borderSubtle,
+                },
+              ]}
+              onPress={onSync}
+              activeOpacity={0.7}
+              accessibilityLabel="Sync habits across devices"
+            >
+              <RefreshCw
+                size={14}
+                color={syncStatus === 'synced' ? '#39D353' : theme.textSecondary}
+                strokeWidth={syncStatus === 'syncing' ? 2.5 : 2}
+              />
+            </TouchableOpacity>
+          )}
+
           {/* Theme Switcher */}
           <TouchableOpacity
             style={[styles.actionBtn, { backgroundColor: theme.surfaceHighlight, borderColor: theme.borderSubtle }]}

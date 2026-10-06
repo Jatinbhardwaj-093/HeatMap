@@ -9,11 +9,12 @@ import {
   TouchableOpacity,
   Platform,
   Image,
+  AppState,
 } from 'react-native';
 import { SafeAreaView, SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar as ExpoStatusBar } from 'expo-status-bar';
 import { HeatMapModel, ViewMode } from './src/types/heatmap';
-import { loadHeatMaps, saveHeatMaps } from './src/utils/storage';
+import { loadHeatMaps, saveHeatMaps, forceSyncFromCloud, getResolvedUserId } from './src/utils/storage';
 import { getTodayKey } from './src/utils/dateUtils';
 import { Header } from './src/components/Header';
 import { HeatmapCard } from './src/components/HeatmapCard';
@@ -57,6 +58,7 @@ function AppContent() {
   const [heatmaps, setHeatmaps] = useState<HeatMapModel[]>([]);
   const [loading, setLoading] = useState(shouldSkipLanding);
   const [searchQuery, setSearchQuery] = useState<string>('');
+  const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'synced' | 'offline'>('idle');
 
   const [selectedDayInfo, setSelectedDayInfo] = useState<{ mapId: string; dateKey: string } | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -66,9 +68,31 @@ function AppContent() {
   const theme = useAppTheme();
   const isDark = useIsDark();
 
+  const refreshHabits = async (forceCloud = false) => {
+    try {
+      setSyncStatus('syncing');
+      const activeId = userId || (await getResolvedUserId());
+      if (!activeId) {
+        setSyncStatus('idle');
+        return;
+      }
+      const data = forceCloud
+        ? (await forceSyncFromCloud(activeId)) || (await loadHeatMaps(activeId))
+        : await loadHeatMaps(activeId);
+      if (data && data.length > 0) {
+        setHeatmaps(data);
+      }
+      setSyncStatus('synced');
+      setTimeout(() => setSyncStatus('idle'), 2000);
+    } catch {
+      setSyncStatus('offline');
+      setTimeout(() => setSyncStatus('idle'), 3000);
+    }
+  };
+
   useEffect(() => {
     async function initAuthAndData() {
-      // 1. Immediately check cached user for zero-latency dashboard restore (no landing page flash)
+      // 1. Immediately check cached user for zero-latency dashboard restore
       try {
         let cachedUserStr = await AsyncStorage.getItem(SAVED_USER_KEY);
         if (!cachedUserStr) {
@@ -160,10 +184,35 @@ function AppContent() {
       }
     });
 
+    // 3. Listen for app foregrounding on mobile to auto-sync
+    const appStateSub = AppState.addEventListener('change', (nextState) => {
+      if (nextState === 'active') {
+        refreshHabits(false);
+      }
+    });
+
+    // 4. Listen for window focus on web and macOS desktop
+    const handleWindowFocus = () => {
+      refreshHabits(false);
+    };
+    if (typeof window !== 'undefined' && window.addEventListener) {
+      window.addEventListener('focus', handleWindowFocus);
+    }
+
+    // 5. Periodic background sync every 30s
+    const syncInterval = setInterval(() => {
+      refreshHabits(false);
+    }, 30000);
+
     return () => {
       authListener.subscription.unsubscribe();
+      appStateSub.remove();
+      if (typeof window !== 'undefined' && window.removeEventListener) {
+        window.removeEventListener('focus', handleWindowFocus);
+      }
+      clearInterval(syncInterval);
     };
-  }, []);
+  }, [userId]);
 
   const handleLogout = async () => {
     await AsyncStorage.removeItem(SAVED_USER_KEY);
@@ -295,7 +344,20 @@ function AppContent() {
         <ExpoStatusBar style={isDark ? "light" : "dark"} />
         <LoginScreen 
           onBack={shouldSkipLanding ? undefined : () => setCurrentScreen('landing')} 
-          onLoginSuccess={() => setCurrentScreen('dashboard')}
+          onLoginSuccess={async () => {
+            setCurrentScreen('dashboard');
+            const id = await getResolvedUserId();
+            if (id) {
+              setUserId(id);
+              const data = await loadHeatMaps(id);
+              if (data && data.length > 0) {
+                setHeatmaps(data);
+              }
+              getCurrentUserProfile().then((p) => {
+                if (p) setUserProfile(p);
+              });
+            }
+          }}
           onContinueAsGuest={handleContinueAsGuest}
         />
       </SafeAreaView>
@@ -313,6 +375,8 @@ function AppContent() {
         userEmail={userEmail}
         userName={userProfile?.displayName}
         userHandle={userProfile?.username}
+        onSync={() => refreshHabits(true)}
+        syncStatus={syncStatus}
       />
 
       <View style={styles.mainContent}>
@@ -406,6 +470,8 @@ function AppContent() {
         userEmail={userEmail}
         userId={userId}
         userProfile={userProfile}
+        onSync={() => refreshHabits(true)}
+        syncStatus={syncStatus}
       />
     </SafeAreaView>
   );

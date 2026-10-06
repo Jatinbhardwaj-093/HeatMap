@@ -88,11 +88,28 @@ export async function resolveEmailFromIdentifier(identifier: string): Promise<st
   }
   const cleanUsername = clean.replace(/^@/, '').toLowerCase();
 
-  // Check local device mapping
+  // 1. Direct match for primary user
+  if (cleanUsername === 'jatin') {
+    return 'bhardwajjatin093@gmail.com';
+  }
+
+  // 2. Check local device mapping
   const map = await getStoredUsernameMap();
   if (map[cleanUsername]) {
     return map[cleanUsername];
   }
+
+  // 3. Check remembered email on device
+  try {
+    const remembered = await AsyncStorage.getItem('@trackheat_remembered_email');
+    if (remembered && remembered.includes('@')) {
+      const rememberedPrefix = remembered.split('@')[0].toLowerCase();
+      if (rememberedPrefix === cleanUsername) {
+        return remembered;
+      }
+    }
+  } catch {}
+
   return clean;
 }
 
