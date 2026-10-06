@@ -1,6 +1,6 @@
 {
   "name": "trackheat",
-  "version": "1.2.1",
+  "version": "1.2.2",
   "description": "High-density binary habit matrix engine inspired by GitHub contribution graphs",
   "author": "Jatin Bhardwaj",
   "license": "MIT",

@@ -1,5 +1,5 @@
 import React from 'react';
-import { FlexWidget, TextWidget } from 'react-native-android-widget';
+import { FlexWidget, TextWidget, SvgWidget } from 'react-native-android-widget';
 import { HeatMapModel, PaletteId } from '../types/heatmap';
 import { PALETTES } from '../constants/palettes';
 import { WidgetConfig } from './widgetStorage';
@@ -167,6 +167,10 @@ export function TrackHeatWidget({ map, config, width, height, isDark = true }: T
     ? (effectiveDark && isObsidian ? '#090A0C' : '#FFFFFF')
     : textPrimary;
 
+  // Centered vector SVGs eliminate font baseline and Android includeFontPadding shifts
+  const plusSvg = `<svg viewBox="0 0 24 24" fill="none" stroke="${toggleBtnTextColor}" stroke-width="3" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>`;
+  const checkSvg = `<svg viewBox="0 0 24 24" fill="none" stroke="${toggleBtnTextColor}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`;
+
   // Height 1 layout: No title, 7-row matrix on left, slim vertical toggle pill on right
   if (isSingleRow) {
     return (
@@ -238,16 +242,11 @@ export function TrackHeatWidget({ map, config, width, height, isDark = true }: T
           clickActionData={{ habitId: map.id }}
           accessibilityLabel={isTodayDone ? `Mark ${displayTitle} not done` : `Mark ${displayTitle} done today`}
         >
-          <TextWidget
-            text={isTodayDone ? '✓' : '+'}
-            maxLines={1}
+          <SvgWidget
+            svg={isTodayDone ? checkSvg : plusSvg}
             style={{
-              width: 'match_parent',
-              height: 'match_parent',
-              textAlign: 'center',
-              fontSize: 10,
-              fontWeight: 'bold',
-              color: toggleBtnTextColor as `#${string}`,
+              width: 10,
+              height: 10,
             }}
           />
         </FlexWidget>
@@ -301,16 +300,11 @@ export function TrackHeatWidget({ map, config, width, height, isDark = true }: T
           clickActionData={{ habitId: map.id }}
           accessibilityLabel={isTodayDone ? `Mark ${displayTitle} not done` : `Mark ${displayTitle} done today`}
         >
-          <TextWidget
-            text={isTodayDone ? '✓' : '+'}
-            maxLines={1}
+          <SvgWidget
+            svg={isTodayDone ? checkSvg : plusSvg}
             style={{
-              width: 'match_parent',
-              height: 'match_parent',
-              textAlign: 'center',
-              fontSize: 11,
-              fontWeight: 'bold',
-              color: toggleBtnTextColor as `#${string}`,
+              width: 11,
+              height: 11,
             }}
           />
         </FlexWidget>

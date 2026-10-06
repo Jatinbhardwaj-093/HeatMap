@@ -384,8 +384,6 @@ function AppContent() {
         userEmail={userEmail}
         userName={userProfile?.displayName}
         userHandle={userProfile?.username}
-        onSync={() => refreshHabits(true)}
-        syncStatus={syncStatus}
       />
 
       <View style={styles.mainContent}>
@@ -479,8 +477,6 @@ function AppContent() {
         userEmail={userEmail}
         userId={userId}
         userProfile={userProfile}
-        onSync={() => refreshHabits(true)}
-        syncStatus={syncStatus}
       />
     </SafeAreaView>
   );

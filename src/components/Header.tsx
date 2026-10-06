@@ -1,6 +1,6 @@
 import React from 'react';
 import { StyleSheet, View, Text, TouchableOpacity, Platform, Image } from 'react-native';
-import { Smartphone, Sun, Moon, Monitor, User, RefreshCw } from 'lucide-react-native';
+import { Smartphone, Sun, Moon, Monitor, User } from 'lucide-react-native';
 import { useAppTheme, useThemeMode } from '../theme/theme';
 import { isMacDesktop, dragRegion, noDragRegion } from '../utils/platform';
 
@@ -49,7 +49,7 @@ export const Header: React.FC<HeaderProps> = ({
         {
           backgroundColor: theme.surface,
           borderBottomColor: theme.borderSubtle,
-          paddingTop: isMacDesktop ? 38 : 12,
+          paddingTop: isMacDesktop ? 48 : 12,
         },
         dragRegion,
       ]}
@@ -76,27 +76,6 @@ export const Header: React.FC<HeaderProps> = ({
 
         {/* Right Actions */}
         <View style={[styles.actionButtons, noDragRegion]}>
-          {/* Cloud Sync Button */}
-          {userEmail && onSync && (
-            <TouchableOpacity
-              style={[
-                styles.actionBtn,
-                {
-                  backgroundColor: theme.surfaceHighlight,
-                  borderColor: syncStatus === 'synced' ? '#39D353' : theme.borderSubtle,
-                },
-              ]}
-              onPress={onSync}
-              activeOpacity={0.7}
-              accessibilityLabel="Sync habits across devices"
-            >
-              <RefreshCw
-                size={14}
-                color={syncStatus === 'synced' ? '#39D353' : theme.textSecondary}
-                strokeWidth={syncStatus === 'syncing' ? 2.5 : 2}
-              />
-            </TouchableOpacity>
-          )}
 
           {/* Theme Switcher */}
           <TouchableOpacity

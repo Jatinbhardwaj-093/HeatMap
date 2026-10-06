@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, Platform } from 'react-native';
 import type { WidgetConfigurationScreenProps } from 'react-native-android-widget';
+import { Plus, Check } from 'lucide-react-native';
 import { HeatMapModel, PaletteId } from '../types/heatmap';
 import { getWidgetHabits, getWidgetConfig, setWidgetConfig, WidgetConfig } from './widgetStorage';
 import { TrackHeatWidget } from './TrackHeatWidget';
@@ -68,9 +69,9 @@ export function WidgetConfigurationScreen({ widgetInfo, renderWidget, setResult 
     ? (isPreviewDark && isPaletteObsidian ? '#090A0C' : '#FFFFFF')
     : (isPreviewDark ? '#F0F3F6' : '#1F2328');
 
-  // Build grid of recent 8 weeks for live preview
+  // Build realistic matrix grid for live preview matching widget dimensions
   const generatePreviewGrid = () => {
-    const numWeeks = 8;
+    const numWeeks = isSingleRow ? 20 : 18;
     const todayMidnight = new Date(today.getFullYear(), today.getMonth(), today.getDate());
     const dayOfWeek = (today.getDay() + 6) % 7;
     const totalDays = numWeeks * 7;
@@ -324,14 +325,11 @@ export function WidgetConfigurationScreen({ widgetInfo, renderWidget, setResult 
                           },
                         ]}
                       >
-                        <Text
-                          style={[
-                            styles.previewActionText,
-                            { color: previewBtnTextColor },
-                          ]}
-                        >
-                          {isTodayDone ? '✓' : '+'}
-                        </Text>
+                        {isTodayDone ? (
+                          <Check size={11} color={previewBtnTextColor} strokeWidth={3} />
+                        ) : (
+                          <Plus size={11} color={previewBtnTextColor} strokeWidth={3} />
+                        )}
                       </View>
                     </View>
                   ) : (
@@ -348,14 +346,11 @@ export function WidgetConfigurationScreen({ widgetInfo, renderWidget, setResult 
                             },
                           ]}
                         >
-                          <Text
-                            style={[
-                              styles.previewHeaderBtnText,
-                              { color: previewBtnTextColor },
-                            ]}
-                          >
-                            {isTodayDone ? '✓' : '+'}
-                          </Text>
+                          {isTodayDone ? (
+                            <Check size={11} color={previewBtnTextColor} strokeWidth={3} />
+                          ) : (
+                            <Plus size={11} color={previewBtnTextColor} strokeWidth={3} />
+                          )}
                         </View>
                         <Text
                           style={[
@@ -378,12 +373,12 @@ export function WidgetConfigurationScreen({ widgetInfo, renderWidget, setResult 
                                 ? isPreviewDark
                                   ? isPaletteObsidian
                                     ? '#F0F3F6'
-                                    : previewPalette.levels[3] || previewPalette.accent
+                                    : (previewPalette.levels[3] || previewPalette.accent)
                                   : isPaletteObsidian
                                   ? '#24292F'
-                                  : previewPalette.lightLevels?.[3] || previewPalette.accent
+                                  : (previewPalette.lightLevels?.[3] || previewPalette.accent)
                                 : isPreviewDark
-                                ? '#161B22'
+                                ? 'rgba(255, 255, 255, 0.04)'
                                 : '#EBEDF0';
 
                               return (
@@ -393,7 +388,11 @@ export function WidgetConfigurationScreen({ widgetInfo, renderWidget, setResult 
                                     styles.previewCell,
                                     {
                                       backgroundColor: cellBg,
-                                      borderColor: isPreviewDark ? '#21262D' : '#D0D7DE',
+                                      borderColor: cell.isFuture
+                                        ? 'transparent'
+                                        : isPreviewDark
+                                        ? 'rgba(255, 255, 255, 0.06)'
+                                        : 'rgba(0, 0, 0, 0.06)',
                                       borderWidth: cell.isFuture ? 0 : 0.5,
                                     },
                                   ]}
@@ -442,7 +441,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: 20,
-    paddingTop: 36,
+    paddingTop: Platform.OS === 'android' ? 58 : 44,
     paddingBottom: 24,
   },
   header: {
@@ -573,37 +572,40 @@ const styles = StyleSheet.create({
   },
   previewCard: {
     width: '100%',
-    maxWidth: 280,
+    maxWidth: 290,
     borderWidth: 1,
     borderRadius: 12,
     padding: 12,
+    alignItems: 'center',
   },
   previewContentRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
     width: '100%',
+    gap: 8,
   },
   previewContentCol: {
     flexDirection: 'column',
     width: '100%',
+    alignItems: 'center',
   },
   previewHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 10,
+    marginBottom: 8,
     width: '100%',
   },
   previewHeaderBtn: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 8,
   },
   previewHeaderBtnText: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '700',
     textAlign: 'center',
   },
@@ -614,37 +616,35 @@ const styles = StyleSheet.create({
   },
   previewMatrixFull: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: 4,
+    justifyContent: 'center',
+    gap: 2.5,
     width: '100%',
   },
   previewActionBtn: {
     width: 20,
-    height: 115,
+    height: 82,
     borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
-    marginLeft: 8,
-    marginRight: 2,
   },
   previewActionText: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '700',
     textAlign: 'center',
   },
   previewMatrix: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: 4,
+    justifyContent: 'center',
+    gap: 2.5,
   },
   previewCol: {
     flexDirection: 'column',
-    gap: 4,
+    gap: 2.5,
   },
   previewCell: {
-    width: 13,
-    height: 13,
-    borderRadius: 3,
+    width: 9.5,
+    height: 9.5,
+    borderRadius: 2,
   },
   footer: {
     flexDirection: 'row',

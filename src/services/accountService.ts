@@ -141,6 +141,26 @@ export async function getCurrentUserProfile(
 
     if (!user) return null;
 
+    const targetId = user.id || fallbackId || 'user';
+
+    // 4. Check device profile cache as authoritative source for custom names on this device
+    let cachedProfile: Partial<UserProfile> | null = null;
+    try {
+      const rawUserProf = await AsyncStorage.getItem(`@trackheat_profile_${targetId}`);
+      if (rawUserProf) {
+        cachedProfile = JSON.parse(rawUserProf);
+      }
+      if (!cachedProfile) {
+        const rawSaved = await AsyncStorage.getItem('@trackheat_saved_user');
+        if (rawSaved) {
+          const parsed = JSON.parse(rawSaved);
+          if (parsed?.displayName || parsed?.username) {
+            cachedProfile = parsed;
+          }
+        }
+      }
+    } catch {}
+
     const meta = user.user_metadata || {};
     const rawEmail = user.email || fallbackEmail || '';
     const emailPrefix = rawEmail ? rawEmail.split('@')[0] : '';
@@ -149,17 +169,19 @@ export async function getCurrentUserProfile(
       : 'TrackHeat Member';
 
     const displayName =
+      cachedProfile?.displayName ||
       meta.display_name ||
       meta.full_name ||
       formattedPrefix ||
       'TrackHeat Member';
 
     const username =
+      cachedProfile?.username ||
       meta.username ||
       (emailPrefix ? emailPrefix.toLowerCase() : 'member');
 
     const profile: UserProfile = {
-      id: user.id || fallbackId || 'user',
+      id: targetId,
       email: rawEmail,
       displayName,
       username,
@@ -218,7 +240,41 @@ export async function updateUserProfile(params: {
       return { success: false, error: availability.error || 'Username is invalid.' };
     }
 
-    // 2. Update Supabase user_metadata with 5-second timeout protection
+    // 2. Immediately persist locally so device never loses changes
+    const targetId = user.id || 'user';
+    const profile: UserProfile = {
+      id: targetId,
+      email: user.email || '',
+      displayName: cleanDisplayName,
+      username: cleanUsername,
+      createdAt: user.created_at,
+    };
+
+    try {
+      await AsyncStorage.setItem(`@trackheat_profile_${targetId}`, JSON.stringify(profile));
+      const rawSaved = await AsyncStorage.getItem('@trackheat_saved_user');
+      const prevSaved = rawSaved ? JSON.parse(rawSaved) : {};
+      await AsyncStorage.setItem('@trackheat_saved_user', JSON.stringify({
+        ...prevSaved,
+        id: targetId,
+        email: user.email || prevSaved.email || '',
+        displayName: cleanDisplayName,
+        username: cleanUsername,
+        user_metadata: {
+          ...(prevSaved.user_metadata || {}),
+          display_name: cleanDisplayName,
+          full_name: cleanDisplayName,
+          username: cleanUsername,
+        },
+      }));
+      if (user.email) {
+        await storeUsernameMapping(cleanUsername, user.email);
+      }
+    } catch (persistErr) {
+      console.warn('Local profile cache write error:', persistErr);
+    }
+
+    // 3. Update Supabase user_metadata in background with 5-second timeout protection
     try {
       const updatePromise = supabase.auth.updateUser({
         data: {
@@ -236,38 +292,14 @@ export async function updateUserProfile(params: {
       const { error: metaError } = await Promise.race([updatePromise, timeoutPromise]);
       if (metaError) {
         console.warn('Supabase updateUser warning:', metaError.message);
+      } else {
+        try {
+          await supabase.auth.refreshSession();
+        } catch {}
       }
     } catch (err: any) {
       console.warn('Supabase profile update timed out or offline:', err?.message);
     }
-
-    // 3. Immediately persist locally so device never waits or loses changes
-    if (user.email) {
-      await storeUsernameMapping(cleanUsername, user.email);
-    }
-
-    const updatedCachedUser = {
-      ...user,
-      id: user.id,
-      email: user.email || '',
-      displayName: cleanDisplayName,
-      username: cleanUsername,
-      user_metadata: {
-        ...(user.user_metadata || {}),
-        display_name: cleanDisplayName,
-        full_name: cleanDisplayName,
-        username: cleanUsername,
-      },
-    };
-    await AsyncStorage.setItem('@trackheat_saved_user', JSON.stringify(updatedCachedUser));
-
-    const profile: UserProfile = {
-      id: user.id,
-      email: user.email || '',
-      displayName: cleanDisplayName,
-      username: cleanUsername,
-      createdAt: user.created_at,
-    };
 
     return { success: true, profile };
   } catch (err: any) {

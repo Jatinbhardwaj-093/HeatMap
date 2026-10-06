@@ -10,7 +10,7 @@ import {
   ActivityIndicator,
   ScrollView,
 } from 'react-native';
-import { X, User, Lock, Mail, Shield, Check, Eye, EyeOff, LogOut, RefreshCw } from 'lucide-react-native';
+import { X, User, Lock, Mail, Shield, Check, Eye, EyeOff, LogOut } from 'lucide-react-native';
 import { useAppTheme, useIsDark } from '../theme/theme';
 import {
   getCurrentUserProfile,
@@ -18,7 +18,6 @@ import {
   changeUserPassword,
   UserProfile,
 } from '../services/accountService';
-import { getLastSyncedTime } from '../utils/storage';
 
 interface AccountModalProps {
   visible: boolean;
@@ -28,8 +27,6 @@ interface AccountModalProps {
   userEmail?: string;
   userId?: string;
   userProfile?: UserProfile | null;
-  onSync?: () => void;
-  syncStatus?: 'idle' | 'syncing' | 'synced' | 'offline';
 }
 
 const fontStack = Platform.select({
@@ -46,8 +43,6 @@ export const AccountModal: React.FC<AccountModalProps> = ({
   userEmail,
   userId,
   userProfile,
-  onSync,
-  syncStatus = 'idle',
 }) => {
   const theme = useAppTheme();
   const isDark = useIsDark();
@@ -55,22 +50,7 @@ export const AccountModal: React.FC<AccountModalProps> = ({
   const [activeTab, setActiveTab] = useState<'profile' | 'security'>('profile');
   const [profile, setProfile] = useState<UserProfile | null>(userProfile || null);
   const [loadingProfile, setLoadingProfile] = useState(false);
-  const [lastSyncStr, setLastSyncStr] = useState<string>('Just now');
-
-  useEffect(() => {
-    if (visible && userId) {
-      getLastSyncedTime(userId).then((t) => {
-        if (t) {
-          try {
-            const date = new Date(t);
-            setLastSyncStr(date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
-          } catch {
-            setLastSyncStr('Recently');
-          }
-        }
-      });
-    }
-  }, [visible, userId, syncStatus]);
+  const prevVisibleRef = React.useRef(false);
 
   // Profile form defaults
   const initialEmail = userEmail || userProfile?.email || '';
@@ -97,7 +77,7 @@ export const AccountModal: React.FC<AccountModalProps> = ({
   const [passwordStatus, setPasswordStatus] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   useEffect(() => {
-    if (visible) {
+    if (visible && !prevVisibleRef.current) {
       setProfileStatus(null);
       setPasswordStatus(null);
       setCurrentPassword('');
@@ -129,7 +109,8 @@ export const AccountModal: React.FC<AccountModalProps> = ({
         setLoadingProfile(false);
       });
     }
-  }, [visible, userEmail, userId, userProfile]);
+    prevVisibleRef.current = visible;
+  }, [visible, userEmail, userId]);
 
   const handleSaveProfile = async () => {
     setSavingProfile(true);
@@ -144,6 +125,8 @@ export const AccountModal: React.FC<AccountModalProps> = ({
 
     if (result.success && result.profile) {
       setProfile(result.profile);
+      setDisplayName(result.profile.displayName);
+      setUsername(result.profile.username);
       setProfileStatus({ type: 'success', text: 'Profile updated successfully.' });
       if (onProfileUpdated) {
         onProfileUpdated(result.profile);
@@ -179,6 +162,9 @@ export const AccountModal: React.FC<AccountModalProps> = ({
 
   if (!visible) return null;
 
+  const trackBg = isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)';
+  const activePillBg = isDark ? '#21262D' : '#FFFFFF';
+
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <View style={styles.overlay}>
@@ -198,14 +184,14 @@ export const AccountModal: React.FC<AccountModalProps> = ({
             </TouchableOpacity>
           </View>
 
-          {/* Segmented Tabs */}
-          <View style={[styles.tabBar, { backgroundColor: theme.surfaceHighlight, borderColor: theme.borderSubtle }]}>
+          {/* Borderless Segmented Capsule Switcher */}
+          <View style={[styles.tabBar, { backgroundColor: trackBg }]}>
             <TouchableOpacity
               style={[
                 styles.tabBtn,
                 activeTab === 'profile' && [
                   styles.tabBtnActive,
-                  { backgroundColor: theme.surface, borderColor: theme.borderSubtle },
+                  { backgroundColor: activePillBg },
                 ],
               ]}
               onPress={() => setActiveTab('profile')}
@@ -216,9 +202,10 @@ export const AccountModal: React.FC<AccountModalProps> = ({
                 style={[
                   styles.tabBtnText,
                   { color: activeTab === 'profile' ? theme.text : theme.textSecondary },
+                  activeTab === 'profile' && { fontWeight: '700' },
                 ]}
               >
-                Profile & Name
+                Profile
               </Text>
             </TouchableOpacity>
 
@@ -227,7 +214,7 @@ export const AccountModal: React.FC<AccountModalProps> = ({
                 styles.tabBtn,
                 activeTab === 'security' && [
                   styles.tabBtnActive,
-                  { backgroundColor: theme.surface, borderColor: theme.borderSubtle },
+                  { backgroundColor: activePillBg },
                 ],
               ]}
               onPress={() => setActiveTab('security')}
@@ -238,9 +225,10 @@ export const AccountModal: React.FC<AccountModalProps> = ({
                 style={[
                   styles.tabBtnText,
                   { color: activeTab === 'security' ? theme.text : theme.textSecondary },
+                  activeTab === 'security' && { fontWeight: '700' },
                 ]}
               >
-                Security & Password
+                Security
               </Text>
             </TouchableOpacity>
           </View>
@@ -339,7 +327,11 @@ export const AccountModal: React.FC<AccountModalProps> = ({
                     ]}
                   >
                     <Mail size={14} color={theme.textMuted} />
-                    <Text style={[styles.readonlyText, { color: theme.textSecondary }]}>
+                    <Text
+                      style={[styles.readonlyText, { color: theme.textSecondary }]}
+                      numberOfLines={1}
+                      ellipsizeMode="middle"
+                    >
                       {profile?.email || userEmail || 'Offline Local Mode'}
                     </Text>
                     {(profile?.email || userEmail) ? (
@@ -374,55 +366,6 @@ export const AccountModal: React.FC<AccountModalProps> = ({
                     </>
                   )}
                 </TouchableOpacity>
-
-                {/* Cloud Synchronization Card */}
-                {userEmail ? (
-                  <View
-                    style={[
-                      styles.syncCard,
-                      {
-                        backgroundColor: theme.surfaceHighlight,
-                        borderColor: theme.borderSubtle,
-                      },
-                    ]}
-                  >
-                    <View style={styles.syncCardHeader}>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7 }}>
-                        <RefreshCw
-                          size={13}
-                          color={syncStatus === 'synced' ? '#39D353' : theme.textSecondary}
-                          strokeWidth={syncStatus === 'syncing' ? 2.5 : 2}
-                        />
-                        <Text style={[styles.syncCardTitle, { color: theme.text }]}>Cloud Synchronization</Text>
-                      </View>
-                      {onSync ? (
-                        <TouchableOpacity
-                          style={[
-                            styles.syncNowBtn,
-                            {
-                              backgroundColor: isDark ? '#21262D' : '#FFFFFF',
-                              borderColor: theme.borderSubtle,
-                            },
-                          ]}
-                          onPress={onSync}
-                          disabled={syncStatus === 'syncing'}
-                          activeOpacity={0.7}
-                        >
-                          {syncStatus === 'syncing' ? (
-                            <ActivityIndicator size="small" color={theme.text} />
-                          ) : (
-                            <Text style={[styles.syncNowText, { color: theme.text }]}>
-                              {syncStatus === 'synced' ? 'Synced ✓' : 'Sync Now'}
-                            </Text>
-                          )}
-                        </TouchableOpacity>
-                      ) : null}
-                    </View>
-                    <Text style={[styles.syncCardDesc, { color: theme.textMuted }]}>
-                      Your habits, logs, and streaks are backed up to Supabase and synchronized across Web, Mobile, and macOS. Last synced: {lastSyncStr}.
-                    </Text>
-                  </View>
-                ) : null}
               </View>
             ) : (
               <View style={styles.sectionWrap}>
@@ -649,12 +592,11 @@ const styles = StyleSheet.create({
   },
   tabBar: {
     flexDirection: 'row',
-    padding: 4,
+    padding: 3,
     marginHorizontal: 20,
     marginTop: 14,
-    borderRadius: 8,
-    borderWidth: 1,
-    gap: 4,
+    borderRadius: 20,
+    gap: 3,
   },
   tabBtn: {
     flex: 1,
@@ -662,20 +604,25 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    paddingVertical: 8,
-    borderRadius: 6,
+    paddingVertical: 7,
+    borderRadius: 16,
   },
   tabBtnActive: {
-    borderWidth: 1,
     ...(Platform.OS === 'web'
       ? {
-          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.15)',
         }
-      : {}),
+      : {
+          shadowColor: '#000000',
+          shadowOffset: { width: 0, height: 1 },
+          shadowOpacity: 0.12,
+          shadowRadius: 2,
+          elevation: 1,
+        }),
   },
   tabBtnText: {
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: '500',
     fontFamily: fontStack,
   },
   bodyScroll: {
@@ -768,16 +715,18 @@ const styles = StyleSheet.create({
   },
   readonlyText: {
     flex: 1,
-    fontSize: 13,
+    minWidth: 0,
+    fontSize: 12,
     fontFamily: fontStack,
   },
   verifiedTag: {
+    flexShrink: 0,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
     backgroundColor: 'rgba(57, 211, 83, 0.15)',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
     borderRadius: 4,
   },
   verifiedText: {
@@ -821,39 +770,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '700',
     fontFamily: fontStack,
-  },
-  syncCard: {
-    marginTop: 14,
-    borderRadius: 8,
-    borderWidth: 1,
-    padding: 12,
-    gap: 6,
-  },
-  syncCardHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  syncCardTitle: {
-    fontSize: 12,
-    fontWeight: '700',
-    fontFamily: fontStack,
-  },
-  syncNowBtn: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 6,
-    borderWidth: 1,
-  },
-  syncNowText: {
-    fontSize: 11,
-    fontWeight: '700',
-    fontFamily: fontStack,
-  },
-  syncCardDesc: {
-    fontSize: 11,
-    fontFamily: fontStack,
-    lineHeight: 15,
   },
   logoutSection: {
     marginTop: 22,
