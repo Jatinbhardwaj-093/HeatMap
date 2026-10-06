@@ -96,10 +96,52 @@ export async function resolveEmailFromIdentifier(identifier: string): Promise<st
   return clean;
 }
 
-export async function getCurrentUserProfile(): Promise<UserProfile | null> {
+export async function getCurrentUserProfile(
+  fallbackEmail?: string,
+  fallbackId?: string
+): Promise<UserProfile | null> {
   try {
-    const { data: { user }, error } = await supabase.auth.getUser();
-    if (error || !user) return null;
+    let user: any = null;
+
+    try {
+      const { data } = await supabase.auth.getUser();
+      user = data?.user;
+    } catch {}
+
+    if (!user) {
+      try {
+        const { data } = await supabase.auth.getSession();
+        user = data?.session?.user;
+      } catch {}
+    }
+
+    if (!user) {
+      try {
+        const rawCached = await AsyncStorage.getItem('@trackheat_saved_user');
+        if (rawCached) {
+          const parsed = JSON.parse(rawCached);
+          if (parsed?.id) {
+            user = {
+              id: parsed.id,
+              email: parsed.email || fallbackEmail || '',
+              user_metadata: parsed.user_metadata || {},
+              created_at: parsed.created_at || new Date().toISOString(),
+            };
+          }
+        }
+      } catch {}
+    }
+
+    if (!user && (fallbackEmail || fallbackId)) {
+      user = {
+        id: fallbackId || 'guest',
+        email: fallbackEmail || '',
+        user_metadata: {},
+        created_at: new Date().toISOString(),
+      };
+    }
+
+    if (!user) return null;
 
     // Check database profiles table first
     let dbProfile: any = null;
@@ -115,12 +157,27 @@ export async function getCurrentUserProfile(): Promise<UserProfile | null> {
     }
 
     const meta = user.user_metadata || {};
-    const displayName = dbProfile?.display_name || meta.full_name || meta.display_name || user.email?.split('@')[0] || 'User';
-    const username = dbProfile?.username || meta.username || user.email?.split('@')[0] || 'user';
+    const rawEmail = user.email || fallbackEmail || '';
+    const emailPrefix = rawEmail ? rawEmail.split('@')[0] : '';
+    const formattedPrefix = emailPrefix
+      ? emailPrefix.charAt(0).toUpperCase() + emailPrefix.slice(1).replace(/[._-]/g, ' ')
+      : 'TrackHeat Member';
+
+    const displayName =
+      dbProfile?.display_name ||
+      meta.display_name ||
+      meta.full_name ||
+      formattedPrefix ||
+      'TrackHeat Member';
+
+    const username =
+      dbProfile?.username ||
+      meta.username ||
+      (emailPrefix ? emailPrefix.toLowerCase() : 'member');
 
     const profile: UserProfile = {
-      id: user.id,
-      email: user.email || '',
+      id: user.id || fallbackId || 'user',
+      email: rawEmail,
       displayName,
       username,
       createdAt: user.created_at,
@@ -141,7 +198,17 @@ export async function updateUserProfile(params: {
   username: string;
 }): Promise<{ success: boolean; error?: string; profile?: UserProfile }> {
   try {
-    const { data: { user } } = await supabase.auth.getUser();
+    let user: any = null;
+    try {
+      const { data } = await supabase.auth.getUser();
+      user = data?.user;
+    } catch {}
+    if (!user) {
+      try {
+        const { data } = await supabase.auth.getSession();
+        user = data?.session?.user;
+      } catch {}
+    }
     if (!user) {
       return { success: false, error: 'No active session found.' };
     }

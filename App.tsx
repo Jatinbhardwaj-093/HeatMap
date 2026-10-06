@@ -80,6 +80,9 @@ function AppContent() {
             setUserEmail(cachedUser.email);
             setUserId(cachedUser.id);
             setCurrentScreen('dashboard');
+            getCurrentUserProfile(cachedUser.email, cachedUser.id).then((p) => {
+              if (p) setUserProfile(p);
+            });
             const localData = await loadHeatMaps(cachedUser.id);
             if (localData && localData.length > 0) {
               setHeatmaps(localData);
@@ -400,6 +403,9 @@ function AppContent() {
         onClose={() => setShowAccountModal(false)}
         onLogout={handleLogout}
         onProfileUpdated={(p) => setUserProfile(p)}
+        userEmail={userEmail}
+        userId={userId}
+        userProfile={userProfile}
       />
     </SafeAreaView>
   );

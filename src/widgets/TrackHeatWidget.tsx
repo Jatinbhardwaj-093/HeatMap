@@ -70,35 +70,28 @@ export function TrackHeatWidget({ map, config, width, height, isDark = true }: T
 
   // Layout sizing
   const isSingleRow = height < 95;
-  const isCompactWidth = width < 260; // 2 or 3 wide
-  
-  // Compact padding to give maximum room for the 7 rows
-  const paddingV = isSingleRow ? 5 : 7;
+  const paddingV = isSingleRow ? 6 : 8;
   const paddingH = isSingleRow ? 8 : 10;
-  const headerMargin = isSingleRow ? 2 : 4;
 
-  // Circular button dimensions
-  const btnSize = isSingleRow ? 18 : 20;
+  // Vertical action button dimensions
+  const btnWidth = isSingleRow ? 22 : 26;
+  const btnMarginLeft = isSingleRow ? 8 : 10;
 
-  // Habit title font size
-  const titleFontSize = isSingleRow
-    ? Math.min(12, Math.max(10, Math.floor(width / 24)))
-    : Math.min(14, Math.max(11, Math.floor(width / 20)));
-
-  const headerHeight = Math.max(btnSize, titleFontSize + 2);
-
-  // Available vertical space for 7 matrix rows - strictly measured so Sunday never clips
-  const availableGridHeight = Math.max(28, height - paddingV * 2 - headerHeight - headerMargin - 4);
-  const gapY = isSingleRow ? 1 : 2;
+  // Available vertical space for 7 matrix rows (Monday to Sunday) - full height without title clutter
+  const availableGridHeight = Math.max(28, height - paddingV * 2);
+  const gapY = isSingleRow ? 1.5 : 2;
   const rawCellSize = Math.floor((availableGridHeight - gapY * 6) / 7);
   const cellSize = isSingleRow
-    ? Math.min(7, Math.max(4, rawCellSize))
-    : Math.min(12, Math.max(6, rawCellSize));
+    ? Math.min(8, Math.max(4, rawCellSize))
+    : Math.min(14, Math.max(6, rawCellSize));
+
+  // The exact grid height of the 7 rows
+  const gridHeight = cellSize * 7 + gapY * 6;
 
   // Available horizontal space for week columns
-  const availableWidth = width - paddingH * 2;
+  const availableWidth = Math.max(40, width - paddingH * 2 - btnWidth - btnMarginLeft);
   const gapX = isSingleRow ? 1.5 : 2;
-  const numWeeks = Math.max(4, Math.floor((availableWidth + gapX) / (cellSize + gapX)));
+  const numWeeks = Math.max(3, Math.floor((availableWidth + gapX) / (cellSize + gapX)));
 
   const today = new Date();
   const dayOfWeek = (today.getDay() + 6) % 7; // Mon = 0, Sun = 6
@@ -169,75 +162,19 @@ export function TrackHeatWidget({ map, config, width, height, isDark = true }: T
         paddingBottom: paddingV,
         paddingLeft: paddingH,
         paddingRight: paddingH,
+        flexDirection: 'row',
+        alignItems: 'center',
         justifyContent: 'space-between',
       }}
       clickAction="OPEN_APP"
     >
-      {/* Top Header: Habit Title + Circular Today Toggle Button */}
+      {/* 1. Contribution Matrix: 7 rows with generous breathing room and zero bottom-clipping */}
       <FlexWidget
         style={{
           flexDirection: 'row',
-          justifyContent: 'space-between',
           alignItems: 'center',
-          width: 'match_parent',
-          marginBottom: headerMargin,
-        }}
-      >
-        <FlexWidget
-          style={{
-            flex: 1,
-            marginRight: 6,
-          }}
-        >
-          <TextWidget
-            text={displayTitle}
-            maxLines={1}
-            truncate="END"
-            style={{
-              fontSize: titleFontSize,
-              fontWeight: 'bold',
-              color: textPrimary,
-            }}
-          />
-        </FlexWidget>
-
-        {/* Circular Log Today Button */}
-        <FlexWidget
-          style={{
-            width: btnSize,
-            height: btnSize,
-            borderRadius: Math.floor(btnSize / 2),
-            alignItems: 'center',
-            justifyContent: 'center',
-            backgroundColor: toggleBtnBg as `#${string}`,
-            borderColor: toggleBtnBorder as `#${string}`,
-            borderWidth: 1,
-            marginRight: 2,
-          }}
-          clickAction="TOGGLE_TODAY"
-          clickActionData={{ habitId: map.id }}
-          accessibilityLabel={isTodayDone ? `Mark ${displayTitle} not done` : `Mark ${displayTitle} done today`}
-        >
-          <TextWidget
-            text={isTodayDone ? '✓' : '+'}
-            style={{
-              width: btnSize,
-              textAlign: 'center',
-              fontSize: isSingleRow ? 10 : 12,
-              fontWeight: 'bold',
-              color: toggleBtnTextColor as `#${string}`,
-            }}
-          />
-        </FlexWidget>
-      </FlexWidget>
-
-      {/* Contribution Grid: Stretched cleanly with exact 7-row height */}
-      <FlexWidget
-        style={{
-          flexDirection: 'row',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          width: 'match_parent',
+          height: gridHeight,
+          flex: 1,
         }}
       >
         {columns.map((col, colIdx) => (
@@ -245,6 +182,7 @@ export function TrackHeatWidget({ map, config, width, height, isDark = true }: T
             key={`col-${colIdx}`}
             style={{
               flexDirection: 'column',
+              marginRight: colIdx === columns.length - 1 ? 0 : gapX,
             }}
           >
             {col.map((cell, dIdx) => (
@@ -261,6 +199,36 @@ export function TrackHeatWidget({ map, config, width, height, isDark = true }: T
             ))}
           </FlexWidget>
         ))}
+      </FlexWidget>
+
+      {/* 2. Vertical Action / Log Today Button on Very Right */}
+      <FlexWidget
+        style={{
+          width: btnWidth,
+          height: gridHeight,
+          borderRadius: Math.floor(btnWidth / 2),
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: toggleBtnBg as `#${string}`,
+          borderColor: toggleBtnBorder as `#${string}`,
+          borderWidth: 1,
+          marginLeft: btnMarginLeft,
+        }}
+        clickAction="TOGGLE_TODAY"
+        clickActionData={{ habitId: map.id }}
+        accessibilityLabel={isTodayDone ? `Mark ${displayTitle} not done` : `Mark ${displayTitle} done today`}
+      >
+        <TextWidget
+          text={isTodayDone ? '✓' : '+'}
+          maxLines={1}
+          style={{
+            width: btnWidth,
+            textAlign: 'center',
+            fontSize: isSingleRow ? 11 : 13,
+            fontWeight: 'bold',
+            color: toggleBtnTextColor as `#${string}`,
+          }}
+        />
       </FlexWidget>
     </FlexWidget>
   );

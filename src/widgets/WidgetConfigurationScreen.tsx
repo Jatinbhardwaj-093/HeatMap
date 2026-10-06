@@ -273,22 +273,52 @@ export function WidgetConfigurationScreen({ widgetInfo, renderWidget, setResult 
                     },
                   ]}
                 >
-                  <View style={styles.previewHeader}>
-                    <Text
-                      style={[
-                        styles.previewTitle,
-                        { color: isPreviewDark ? '#F0F3F6' : '#1F2328' },
-                      ]}
-                      numberOfLines={1}
-                    >
-                      {previewTitle}
-                    </Text>
+                  {/* Clean widget preview: 7-row matrix on left, vertical toggle pill on right */}
+                  <View style={styles.previewContentRow}>
+                    <View style={styles.previewMatrix}>
+                      {previewGrid.map((week, wIdx) => (
+                        <View key={wIdx} style={styles.previewCol}>
+                          {week.map((cell, dIdx) => {
+                            const cellBg = cell.isFuture
+                              ? 'transparent'
+                              : cell.isCompleted
+                              ? isPreviewDark
+                                ? isPaletteObsidian
+                                  ? '#F0F3F6'
+                                  : previewPalette.levels[3] || previewPalette.accent
+                                : isPaletteObsidian
+                                ? '#24292F'
+                                : previewPalette.lightLevels?.[3] || previewPalette.accent
+                              : isPreviewDark
+                              ? '#161B22'
+                              : '#EBEDF0';
+
+                            return (
+                              <View
+                                key={dIdx}
+                                style={[
+                                  styles.previewCell,
+                                  {
+                                    backgroundColor: cellBg,
+                                    borderColor: isPreviewDark ? '#21262D' : '#D0D7DE',
+                                    borderWidth: cell.isFuture ? 0 : 0.5,
+                                  },
+                                ]}
+                              />
+                            );
+                          })}
+                        </View>
+                      ))}
+                    </View>
+
+                    {/* Vertical Toggle Pill Button on right */}
                     <View
                       style={[
                         styles.previewActionBtn,
                         {
                           backgroundColor: previewBtnBg,
                           borderColor: previewBtnBorder,
+                          borderWidth: 1,
                         },
                       ]}
                     >
@@ -301,43 +331,6 @@ export function WidgetConfigurationScreen({ widgetInfo, renderWidget, setResult 
                         {isTodayDone ? '✓' : '+'}
                       </Text>
                     </View>
-                  </View>
-
-                  {/* 7-row matrix */}
-                  <View style={styles.previewMatrix}>
-                    {previewGrid.map((week, wIdx) => (
-                      <View key={wIdx} style={styles.previewCol}>
-                        {week.map((cell, dIdx) => {
-                          const cellBg = cell.isFuture
-                            ? 'transparent'
-                            : cell.isCompleted
-                            ? isPreviewDark
-                              ? isPaletteObsidian
-                                ? '#F0F3F6'
-                                : previewPalette.levels[3] || previewPalette.accent
-                              : isPaletteObsidian
-                              ? '#24292F'
-                              : previewPalette.lightLevels?.[3] || previewPalette.accent
-                            : isPreviewDark
-                            ? '#161B22'
-                            : '#EBEDF0';
-
-                          return (
-                            <View
-                              key={dIdx}
-                              style={[
-                                styles.previewCell,
-                                {
-                                  backgroundColor: cellBg,
-                                  borderColor: isPreviewDark ? '#21262D' : '#D0D7DE',
-                                  borderWidth: cell.isFuture ? 0 : 0.5,
-                                },
-                              ]}
-                            />
-                          );
-                        })}
-                      </View>
-                    ))}
                   </View>
                 </View>
               </View>
@@ -512,29 +505,23 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 12,
   },
-  previewHeader: {
+  previewContentRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
-  },
-  previewTitle: {
-    fontSize: 13,
-    fontWeight: '700',
-    flex: 1,
-    marginRight: 8,
+    justifyContent: 'space-between',
+    width: '100%',
   },
   previewActionBtn: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+    width: 26,
+    height: 115,
+    borderRadius: 13,
     alignItems: 'center',
     justifyContent: 'center',
+    marginLeft: 10,
   },
   previewActionText: {
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: '700',
-    lineHeight: 14,
     textAlign: 'center',
   },
   previewMatrix: {

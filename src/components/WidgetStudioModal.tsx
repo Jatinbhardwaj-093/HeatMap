@@ -97,13 +97,12 @@ export const WidgetStudioModal: React.FC<WidgetStudioModalProps> = ({
 
   const cellSize = isSingleRow ? 7 : 11;
   const cellGap = isSingleRow ? 2 : 2.5;
-  const titleFontSize = isSingleRow ? 11 : 14;
+  const gridHeight = cellSize * 7 + cellGap * 6;
+  const btnWidth = isSingleRow ? 22 : 26;
 
   const previewWidth =
     preset === '2x1' || preset === '2x2' ? 160 :
     preset === '4x1' || preset === '4x2' ? 320 : 380;
-
-  const previewMinHeight = isSingleRow ? 84 : 128;
 
   // Resolved preview theme
   const isWidgetDark =
@@ -379,16 +378,16 @@ export const WidgetStudioModal: React.FC<WidgetStudioModalProps> = ({
 
             {/* Widget Preview Canvas */}
             <View style={[styles.canvasBox, { backgroundColor: theme.surfaceHighlight, borderColor: theme.borderSubtle }]}>
-              {/* Native Home Screen Widget: Habit Name + Direct Action + Stretched Matrix */}
+              {/* Native Home Screen Widget: 7-Row Matrix on Left + Vertical Action Button on Right */}
               <View
                 style={[
                   styles.nativeWidget,
                   {
                     width: previewWidth,
-                    minHeight: previewMinHeight,
-                    backgroundColor: isWidgetDark ? '#161B22' : '#FFFFFF',
+                    backgroundColor: isWidgetDark ? '#0D1117' : '#FFFFFF',
                     borderColor: isWidgetDark ? '#30363D' : '#D0D7DE',
-                    padding: isSingleRow ? 8 : 12,
+                    paddingVertical: isSingleRow ? 8 : 10,
+                    paddingHorizontal: isSingleRow ? 10 : 12,
                     ...(Platform.OS === 'web'
                       ? {
                           boxShadow: isWidgetDark
@@ -399,51 +398,8 @@ export const WidgetStudioModal: React.FC<WidgetStudioModalProps> = ({
                   },
                 ]}
               >
-                {/* Top: Habit Name + Compact Toggle Button */}
-                <View style={[styles.widgetHeader, { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: isSingleRow ? 4 : 8 }]}>
-                  <Text
-                    style={[
-                      styles.widgetHabitTitle,
-                      {
-                        color: isWidgetDark ? '#F0F6FC' : '#1F2328',
-                        fontSize: titleFontSize,
-                        flex: 1,
-                        marginRight: 6,
-                      },
-                    ]}
-                    numberOfLines={1}
-                  >
-                    {displayTitle}
-                  </Text>
-
-                  {/* Circular '+' / '✓' button matching widget */}
-                  <View
-                    style={{
-                      width: isSingleRow ? 18 : 20,
-                      height: isSingleRow ? 18 : 20,
-                      borderRadius: isSingleRow ? 9 : 10,
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      backgroundColor: previewBtnBg,
-                      borderColor: previewBtnBorder,
-                      borderWidth: 1,
-                    }}
-                  >
-                    <Text
-                      style={{
-                        fontSize: isSingleRow ? 9 : 11,
-                        fontWeight: '700',
-                        color: previewBtnTextColor,
-                        fontFamily: fontStack,
-                      }}
-                    >
-                      {isTodayDone ? '✓' : '+'}
-                    </Text>
-                  </View>
-                </View>
-
-                {/* Pure Contribution Matrix - Future days are transparent */}
-                <View style={[styles.matrixColumns, { gap: cellGap }]}>
+                {/* 1. Contribution Matrix */}
+                <View style={[styles.matrixColumns, { gap: cellGap, flex: 1 }]}>
                   {widgetGrid.map((week, wIdx) => (
                     <View key={`ww-${wIdx}`} style={[styles.matrixColumn, { gap: cellGap }]}>
                       {week.map((day) =>
@@ -470,6 +426,33 @@ export const WidgetStudioModal: React.FC<WidgetStudioModalProps> = ({
                       )}
                     </View>
                   ))}
+                </View>
+
+                {/* 2. Vertical Action / Log Today Button on Right */}
+                <View
+                  style={{
+                    width: btnWidth,
+                    height: gridHeight,
+                    borderRadius: Math.floor(btnWidth / 2),
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    backgroundColor: previewBtnBg,
+                    borderColor: previewBtnBorder,
+                    borderWidth: 1,
+                    marginLeft: isSingleRow ? 8 : 10,
+                  }}
+                >
+                  <Text
+                    style={{
+                      fontSize: isSingleRow ? 11 : 13,
+                      fontWeight: 'bold',
+                      color: previewBtnTextColor,
+                      fontFamily: fontStack,
+                      textAlign: 'center',
+                    }}
+                  >
+                    {isTodayDone ? '✓' : '+'}
+                  </Text>
                 </View>
               </View>
             </View>
@@ -754,9 +737,11 @@ const styles = StyleSheet.create({
   },
 
   nativeWidget: {
-    borderRadius: 18,
+    borderRadius: 12,
     borderWidth: 1,
-    alignItems: 'stretch',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     alignSelf: 'center',
     ...Platform.select({
       ios: {

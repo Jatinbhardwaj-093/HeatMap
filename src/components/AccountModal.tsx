@@ -24,6 +24,9 @@ interface AccountModalProps {
   onClose: () => void;
   onLogout: () => void;
   onProfileUpdated?: (profile: UserProfile) => void;
+  userEmail?: string;
+  userId?: string;
+  userProfile?: UserProfile | null;
 }
 
 const fontStack = Platform.select({
@@ -37,17 +40,29 @@ export const AccountModal: React.FC<AccountModalProps> = ({
   onClose,
   onLogout,
   onProfileUpdated,
+  userEmail,
+  userId,
+  userProfile,
 }) => {
   const theme = useAppTheme();
   const isDark = useIsDark();
 
   const [activeTab, setActiveTab] = useState<'profile' | 'security'>('profile');
-  const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [loadingProfile, setLoadingProfile] = useState(true);
+  const [profile, setProfile] = useState<UserProfile | null>(userProfile || null);
+  const [loadingProfile, setLoadingProfile] = useState(false);
 
-  // Profile form
-  const [displayName, setDisplayName] = useState('');
-  const [username, setUsername] = useState('');
+  // Profile form defaults
+  const initialEmail = userEmail || userProfile?.email || '';
+  const initialPrefix = initialEmail ? initialEmail.split('@')[0] : '';
+  const initialDisplayName =
+    userProfile?.displayName ||
+    (initialPrefix ? initialPrefix.charAt(0).toUpperCase() + initialPrefix.slice(1).replace(/[._-]/g, ' ') : 'Member');
+  const initialUsername =
+    userProfile?.username ||
+    (initialPrefix ? initialPrefix.toLowerCase() : 'member');
+
+  const [displayName, setDisplayName] = useState(initialDisplayName);
+  const [username, setUsername] = useState(initialUsername);
   const [savingProfile, setSavingProfile] = useState(false);
   const [profileStatus, setProfileStatus] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
@@ -62,23 +77,38 @@ export const AccountModal: React.FC<AccountModalProps> = ({
 
   useEffect(() => {
     if (visible) {
-      setLoadingProfile(true);
       setProfileStatus(null);
       setPasswordStatus(null);
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
 
-      getCurrentUserProfile().then((p) => {
+      // Instantly populate default values from props so fields are NEVER blank
+      const activeEmail = userEmail || userProfile?.email || '';
+      const prefix = activeEmail ? activeEmail.split('@')[0] : '';
+      const defaultName =
+        userProfile?.displayName ||
+        (prefix ? prefix.charAt(0).toUpperCase() + prefix.slice(1).replace(/[._-]/g, ' ') : 'Member');
+      const defaultUser =
+        userProfile?.username ||
+        (prefix ? prefix.toLowerCase() : 'member');
+
+      setDisplayName(defaultName);
+      setUsername(defaultUser);
+      if (userProfile) {
+        setProfile(userProfile);
+      }
+
+      getCurrentUserProfile(userEmail, userId).then((p) => {
         if (p) {
           setProfile(p);
-          setDisplayName(p.displayName || '');
-          setUsername(p.username || '');
+          if (p.displayName) setDisplayName(p.displayName);
+          if (p.username) setUsername(p.username);
         }
         setLoadingProfile(false);
       });
     }
-  }, [visible]);
+  }, [visible, userEmail, userId, userProfile]);
 
   const handleSaveProfile = async () => {
     setSavingProfile(true);
@@ -289,12 +319,18 @@ export const AccountModal: React.FC<AccountModalProps> = ({
                   >
                     <Mail size={14} color={theme.textMuted} />
                     <Text style={[styles.readonlyText, { color: theme.textSecondary }]}>
-                      {profile?.email || 'Not provided'}
+                      {profile?.email || userEmail || 'Offline Local Mode'}
                     </Text>
-                    <View style={styles.verifiedTag}>
-                      <Check size={11} color="#39D353" strokeWidth={3} />
-                      <Text style={styles.verifiedText}>Active</Text>
-                    </View>
+                    {(profile?.email || userEmail) ? (
+                      <View style={styles.verifiedTag}>
+                        <Check size={11} color="#39D353" strokeWidth={3} />
+                        <Text style={styles.verifiedText}>Active</Text>
+                      </View>
+                    ) : (
+                      <View style={[styles.verifiedTag, { borderColor: theme.borderSubtle, backgroundColor: theme.surfaceHighlight }]}>
+                        <Text style={[styles.verifiedText, { color: theme.textSecondary }]}>Guest</Text>
+                      </View>
+                    )}
                   </View>
                 </View>
 
