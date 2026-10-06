@@ -14,7 +14,7 @@ import {
 import { SafeAreaView, SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar as ExpoStatusBar } from 'expo-status-bar';
 import { HeatMapModel, ViewMode } from './src/types/heatmap';
-import { loadHeatMaps, saveHeatMaps, forceSyncFromCloud, getResolvedUserId } from './src/utils/storage';
+import { loadHeatMaps, saveHeatMaps, deleteHeatMap, forceSyncFromCloud, getResolvedUserId } from './src/utils/storage';
 import { getTodayKey } from './src/utils/dateUtils';
 import { Header } from './src/components/Header';
 import { HeatmapCard } from './src/components/HeatmapCard';
@@ -67,8 +67,14 @@ function AppContent() {
 
   const theme = useAppTheme();
   const isDark = useIsDark();
+  const lastLocalMutationRef = useRef<number>(0);
 
   const refreshHabits = async (forceCloud = false) => {
+    // Avoid racing against a local user edit within the last 4 seconds
+    if (!forceCloud && Date.now() - lastLocalMutationRef.current < 4000) {
+      return;
+    }
+
     try {
       setSyncStatus('syncing');
       const activeId = userId || (await getResolvedUserId());
@@ -79,7 +85,7 @@ function AppContent() {
       const data = forceCloud
         ? (await forceSyncFromCloud(activeId)) || (await loadHeatMaps(activeId))
         : await loadHeatMaps(activeId);
-      if (data && data.length > 0) {
+      if (Array.isArray(data)) {
         setHeatmaps(data);
       }
       setSyncStatus('synced');
@@ -235,6 +241,7 @@ function AppContent() {
   };
 
   const updateHeatmaps = (updated: HeatMapModel[]) => {
+    lastLocalMutationRef.current = Date.now();
     setHeatmaps(updated);
     saveHeatMaps(updated, userId);
   };
@@ -282,9 +289,11 @@ function AppContent() {
     updateHeatmaps(updated);
   };
 
-  const handleDeleteMap = (mapId: string) => {
+  const handleDeleteMap = async (mapId: string) => {
+    lastLocalMutationRef.current = Date.now();
     const updated = heatmaps.filter((m) => m.id !== mapId);
-    updateHeatmaps(updated);
+    setHeatmaps(updated);
+    await deleteHeatMap(mapId, userId);
   };
 
   const handleUpdateMapViewMode = (mapId: string, mode: ViewMode) => {

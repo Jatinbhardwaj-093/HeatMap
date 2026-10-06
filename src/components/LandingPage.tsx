@@ -169,9 +169,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   };
 
   const GITHUB_REPO = 'https://github.com/Jatinbhardwaj-093/HeatMap';
-  const RELEASE_TAG_URL = `${GITHUB_REPO}/releases/tag/v1.2.0`;
-  const MAC_DMG_URL = `${GITHUB_REPO}/releases/download/v1.2.0/TrackHeat-1.2.0-arm64.dmg`;
-  const ANDROID_APK_URL = `${GITHUB_REPO}/releases/download/v1.2.0/TrackHeat-1.2.0.apk`;
+  const RELEASE_TAG_URL = `${GITHUB_REPO}/releases/tag/v1.2.1`;
+  const MAC_DMG_URL = `${GITHUB_REPO}/releases/download/v1.2.1/TrackHeat-1.2.1-arm64.dmg`;
+  const ANDROID_APK_URL = `${GITHUB_REPO}/releases/download/v1.2.1/TrackHeat-1.2.1.apk`;
 
   const handleDownloadMac = () => {
     Linking.openURL(MAC_DMG_URL).catch(() => Linking.openURL(RELEASE_TAG_URL));
@@ -860,7 +860,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 <View style={styles.mobilePlatformTitleRow}>
                   <Text style={[styles.mobilePlatformTitle, { color: theme.text }]}>macOS Universal</Text>
                   <View style={[styles.mobilePlatformBadge, { backgroundColor: 'rgba(57, 211, 83, 0.1)', borderColor: 'rgba(57, 211, 83, 0.3)' }]}>
-                    <Text style={[styles.mobilePlatformBadgeText, { color: isDark ? '#39D353' : '#1A7F37' }]}>DMG · v1.2.0</Text>
+                    <Text style={[styles.mobilePlatformBadgeText, { color: isDark ? '#39D353' : '#1A7F37' }]}>DMG · v1.2.1</Text>
                   </View>
                 </View>
                 <Text style={[styles.mobilePlatformSubtitle, { color: theme.textSecondary }]}>
@@ -883,7 +883,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 <View style={styles.mobilePlatformTitleRow}>
                   <Text style={[styles.mobilePlatformTitle, { color: theme.text }]}>Android Mobile</Text>
                   <View style={[styles.mobilePlatformBadge, { backgroundColor: 'rgba(57, 211, 83, 0.1)', borderColor: 'rgba(57, 211, 83, 0.3)' }]}>
-                    <Text style={[styles.mobilePlatformBadgeText, { color: isDark ? '#39D353' : '#1A7F37' }]}>APK · v1.2.0</Text>
+                    <Text style={[styles.mobilePlatformBadgeText, { color: isDark ? '#39D353' : '#1A7F37' }]}>APK · v1.2.1</Text>
                   </View>
                 </View>
                 <Text style={[styles.mobilePlatformSubtitle, { color: theme.textSecondary }]}>
@@ -951,7 +951,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   <Monitor size={20} color={theme.text} />
                 </View>
                 <View style={[styles.osTag, { backgroundColor: 'rgba(57, 211, 83, 0.1)', borderColor: 'rgba(57, 211, 83, 0.3)' }]}>
-                  <Text style={[styles.osTagText, { color: isDark ? '#39D353' : '#1A7F37' }]}>DMG · v1.2.0</Text>
+                  <Text style={[styles.osTagText, { color: isDark ? '#39D353' : '#1A7F37' }]}>DMG · v1.2.1</Text>
                 </View>
               </View>
 
@@ -977,7 +977,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   <Smartphone size={20} color={theme.text} />
                 </View>
                 <View style={[styles.osTag, { backgroundColor: 'rgba(57, 211, 83, 0.1)', borderColor: 'rgba(57, 211, 83, 0.3)' }]}>
-                  <Text style={[styles.osTagText, { color: isDark ? '#39D353' : '#1A7F37' }]}>APK · v1.2.0</Text>
+                  <Text style={[styles.osTagText, { color: isDark ? '#39D353' : '#1A7F37' }]}>APK · v1.2.1</Text>
                 </View>
               </View>
 
