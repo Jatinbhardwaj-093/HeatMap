@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/Jatinbhardwaj-093/HeatMap/releases/tag/v1.1.0"><img src="https://img.shields.io/badge/Release-v1.1.0-238636.svg?style=flat-square" alt="Version 1.1.0" /></a>
+  <a href="https://github.com/Jatinbhardwaj-093/HeatMap/releases/tag/v1.2.0"><img src="https://img.shields.io/badge/Release-v1.2.0-238636.svg?style=flat-square" alt="Version 1.2.0" /></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square" alt="License: MIT" /></a>
   <img src="https://img.shields.io/badge/Expo-SDK_57-black.svg?style=flat-square&logo=expo" alt="Expo SDK 57" />
   <img src="https://img.shields.io/badge/React_Native-0.86-61DAFB.svg?style=flat-square&logo=react" alt="React Native 0.86" />
@@ -22,8 +22,8 @@
   <a href="#downloads--distribution">Downloads</a> •
   <a href="#core-philosophy">Philosophy</a> •
   <a href="#key-capabilities">Capabilities</a> •
-  <a href="#security--privacy-architecture">Security</a> •
   <a href="#screenshots">Screenshots</a> •
+  <a href="#security--privacy-architecture">Security</a> •
   <a href="#quickstart">Quickstart</a> •
   <a href="#architecture">Architecture</a> •
   <a href="#tech-stack">Tech Stack</a> •
@@ -34,19 +34,19 @@
 
 ## Downloads & Distribution
 
-Official binary releases for version 1.1.0:
+Official binary releases for version 1.2.0:
 
 | Platform | Format | Status | Link |
 | :--- | :--- | :--- | :--- |
-| **macOS** | DMG (Apple Silicon / ARM64) | Production | [Download TrackHeat-1.1.0-arm64.dmg](https://github.com/Jatinbhardwaj-093/HeatMap/releases/download/v1.1.0/TrackHeat-1.1.0-arm64.dmg) |
-| **Android** | Standalone APK | Production | [Download TrackHeat-1.1.0.apk](https://github.com/Jatinbhardwaj-093/HeatMap/releases/download/v1.1.0/TrackHeat-1.1.0.apk) |
+| **macOS** | DMG (Apple Silicon / ARM64) | Production | [Download TrackHeat-1.2.0-arm64.dmg](https://github.com/Jatinbhardwaj-093/HeatMap/releases/download/v1.2.0/TrackHeat-1.2.0-arm64.dmg) |
+| **Android** | Standalone APK | Production | [Download TrackHeat-1.2.0.apk](https://github.com/Jatinbhardwaj-093/HeatMap/releases/download/v1.2.0/TrackHeat-1.2.0.apk) |
 | **Web** | Progressive Web Application | Live | [https://trackheat.surge.sh](https://trackheat.surge.sh) |
 | **iOS** | Native IPA with WidgetKit | In Development | Coming Soon |
 
 ---
 
 <p align="center">
-  <img src="assets/screenshots/dashboard.png" width="94%" alt="TrackHeat Dashboard Overview" />
+  <img src="assets/screenshots/web-dashboard-dark.png" width="94%" alt="TrackHeat Web Dashboard Overview" />
 </p>
 
 ## Core Philosophy
@@ -63,20 +63,93 @@ Inspired by software version control commit momentum, TrackHeat translates human
 
 ## Key Capabilities
 
-- **Interactive Android Home Screen Widgets**: Real-time RemoteViews widgets (2x2 small and 4x2 medium) powered by `react-native-android-widget`. Includes 1-tap direct completion toggle, 7-row matrix visualization, custom habit aliases, theme switching (System / Dark / Light), and five color palettes.
-- **Native Android Widget Configuration**: Built-in system configuration activity (`WidgetConfigurationScreen`) with live 7-row interactive matrix preview, custom alias naming, and palette selection.
-- **Full-Year Annual Grid (52 Weeks)**: View 364 days of consistency in a single centered layout with accurate calendar alignment and month headers.
-- **Zero-Scroll Mobile Micro-Matrix**: Mobile viewports automatically calculate micro cell dimensions (~4.5px cells with 1.5px gaps) with non-overlapping bi-monthly markers (Jan, Mar, May, Jul, Sep, Nov) and compact weekday labels (M, W, F, S), eliminating horizontal scroll fatigue.
-- **Dynamic Streak Intensity**: Tile brightness and color depth scale organically with consecutive streak length (1 day, 3 days, 7 days, and 14+ days).
-- **Curated Color Palettes**:
-  - `Emerald Matrix`: Standard GitHub contribution greens
-  - `Industrial Amber`: Warm high-contrast amber
-  - `Cold Cyan`: Terminal cyan blue
-  - `Obsidian`: High-contrast monochrome
-  - `Crimson`: High-intensity ruby
-- **Per-Habit Independent View Modes**: Toggle between Annual Macro (52 weeks) and Monthly Micro views on each habit card independently.
-- **Offline-First Persistence with Cloud Sync**: Dual-tier storage architecture leveraging local `AsyncStorage` alongside seamless background Supabase authentication sync (`user_metadata.habits`).
-- **Native macOS Desktop Client**: Packaged via Electron with custom title bar traffic-light alignment, native dragging regions, and offline disk operation.
+- **Interactive Android Home Screen Widgets**:
+  - Headless RemoteViews AppWidgetProvider powered by `react-native-android-widget`.
+  - Multiple home screen layouts: 4x2 wide macro, 2x2 compact with top-left quick toggle header, 4x1 horizontal bar, and 2x1 single-row pill.
+  - Direct 1-tap logging directly from the Android home screen without opening the application.
+  - Perfect dead-center glyph alignment (`+` and `✓`) with balanced margins preventing descender text cutoff.
+  - Transparent future days eliminate calendar confusion.
+
+- **Native Android Widget Configuration Activity**:
+  - Live 7-row interactive matrix preview responding in real time to custom aliases, theme selection (System / Dark / Light), and color palette selection.
+  - Dedicated configuration screen launched during initial widget placement.
+
+- **Full-Year Annual Grid (52 Weeks)**:
+  - 364 days of visual consistency in a single centered layout with accurate calendar alignment and month headers.
+  - Dynamic streak scaling across 4 intensity thresholds (1 day, 3 days, 7 days, 14+ days).
+
+- **Zero-Scroll Mobile Micro-Matrix**:
+  - Mobile viewports dynamically calculate micro cell dimensions (~4.5px cells with 1.5px gaps) with non-overlapping bi-monthly markers (Jan, Mar, May, Jul, Sep, Nov) and weekday labels (M, W, F, S), eliminating horizontal scrolling entirely.
+
+- **Curated Color Palettes (Theme-Optimized)**:
+  - `Emerald Matrix`: Classic GitHub contribution greens.
+  - `Industrial Amber`: High-contrast amber warmth.
+  - `Cold Cyan`: Terminal cyan blue.
+  - `Obsidian`: High-contrast monochrome (deep charcoal on Light theme, bright silver on Dark theme).
+  - `Crimson`: High-intensity ruby red.
+
+- **Per-Habit Independent View Modes**:
+  - Toggle between Annual Macro (52 weeks) and Monthly Micro views independently on each habit card.
+
+- **Dual-Tier Offline Persistence with Real-Time Cloud Sync**:
+  - Instant local disk persistence via `AsyncStorage`.
+  - Authoritative background synchronization with Supabase user metadata (`user.user_metadata.habits`).
+  - Real-time cross-platform sync across Web, Android, and macOS clients on focus, resume, and manual trigger.
+
+- **Hardened Native macOS Client**:
+  - Packaged via Electron for Apple Silicon (ARM64).
+  - Frameless window integration with custom traffic-light clearance and window dragging regions.
+  - Sandboxed `app://` protocol and offline disk operation.
+
+---
+
+## Screenshots
+
+### Android Home Screen Widgets & Configuration
+
+<div align="center">
+  <img src="assets/screenshots/android-widgets-homescreen.png" width="94%" alt="TrackHeat Android Home Screen Widgets" />
+  <p><em>Android home screen showcasing multi-size widgets (4x2, 2x2, 4x1, 2x1) in dark and light themes with instant 1-tap logging</em></p>
+</div>
+
+<br />
+
+<div align="center">
+  <img src="assets/screenshots/android-widget-configuration.png" width="70%" alt="TrackHeat Android Widget Configuration" />
+  <p><em>Native Android widget configuration screen with real-time interactive matrix preview and custom alias settings</em></p>
+</div>
+
+---
+
+### Web Desktop Experience
+
+<div align="center">
+  <img src="assets/screenshots/web-dashboard-dark.png" width="94%" alt="TrackHeat Web Desktop Dark Dashboard" />
+  <p><em>Desktop dashboard in dark mode featuring 52-week centered matrix grid, streak statistics, and action controls</em></p>
+</div>
+
+<br />
+
+<div align="center">
+  <img src="assets/screenshots/web-dashboard-light.png" width="94%" alt="TrackHeat Web Desktop Light Dashboard" />
+  <p><em>Desktop dashboard in light mode demonstrating high-contrast Emerald and Cold Cyan contribution matrices</em></p>
+</div>
+
+---
+
+### Mobile Application Experience
+
+<div align="center">
+  <img src="assets/screenshots/mobile-dashboard-dark.png" width="70%" alt="TrackHeat Mobile Dashboard Annual View" />
+  <p><em>Mobile Android dashboard showing zero-scroll annual micro-matrix fitted 100% inside card boundaries</em></p>
+</div>
+
+<br />
+
+<div align="center">
+  <img src="assets/screenshots/mobile-dashboard-monthly.png" width="70%" alt="TrackHeat Mobile Dashboard Monthly View" />
+  <p><em>Mobile Android dashboard showing monthly calendar breakdown alongside yearly macro view</em></p>
+</div>
 
 ---
 
@@ -100,22 +173,6 @@ TrackHeat is engineered with strict defensive security principles:
 3. **Authentication Controls**:
    - Current password re-authentication verification required before committing password updates.
    - Strict username sanitization (`/^[a-zA-Z0-9_.-]{3,25}$/`) preventing injection and malformed identifiers.
-
----
-
-## Screenshots
-
-<div align="center">
-  <img src="assets/screenshots/landing.png" width="94%" alt="TrackHeat Landing Page" />
-  <p><em>TrackHeat responsive landing page with live 52-week matrix simulator</em></p>
-</div>
-
-<br />
-
-<div align="center">
-  <img src="assets/screenshots/dashboard.png" width="94%" alt="TrackHeat Dashboard" />
-  <p><em>Individual tracker dashboard featuring centered matrix grids and inline streak metrics</em></p>
-</div>
 
 ---
 
@@ -175,7 +232,16 @@ trackheat/
 │   ├── favicon.png          # 3x3 matrix grid icon
 │   ├── icon.png             # Unified cross-platform app icon
 │   └── screenshots/         # Documentation screenshots
+│       ├── android-widgets-homescreen.png
+│       ├── android-widget-configuration.png
+│       ├── mobile-dashboard-dark.png
+│       ├── mobile-dashboard-monthly.png
+│       ├── web-dashboard-dark.png
+│       ├── web-dashboard-dark-monthly.png
+│       ├── web-dashboard-light.png
+│       └── web-dashboard-light-monthly.png
 ├── electron/
+│   ├── afterPack.js         # macOS ad-hoc deep code signing hook
 │   └── main.js              # Hardened Electron desktop runner & custom app:// protocol
 ├── src/
 │   ├── components/          # Core application UI components
@@ -229,7 +295,7 @@ trackheat/
 | **Core Runtime** | React & React Native | `react@19.2.3` / `react-native@0.86.3` |
 | **Language** | TypeScript | `~6.0.3` |
 | **Web Runtime** | React Native Web | `~0.21.0` |
-| **Desktop Runtime** | Electron | `^34.0.0` with `electron-builder` |
+| **Desktop Runtime** | Electron | `^34.2.0` with `electron-builder` |
 | **Android Widgets** | react-native-android-widget | Headless RemoteViews AppWidgetProvider |
 | **Database & Auth** | Supabase | `@supabase/supabase-js ^2.116.0` |
 | **Local Storage** | AsyncStorage | `@react-native-async-storage/async-storage 2.2.0` |
