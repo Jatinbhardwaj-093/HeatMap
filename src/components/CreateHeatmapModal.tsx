@@ -109,13 +109,14 @@ export const CreateHeatmapModal: React.FC<CreateHeatmapModalProps> = ({
                     {(Object.keys(PALETTES) as PaletteId[]).map((pId) => {
                       const pal = PALETTES[pId];
                       const isSelected = paletteId === pId;
+                      const palAccent = isDark ? pal.accent : (pal.lightAccent || pal.accent);
                       return (
                         <TouchableOpacity
                           key={pId}
                           style={[
                             styles.paletteItem,
                             { backgroundColor: theme.surfaceHighlight, borderColor: theme.borderSubtle },
-                            isSelected && { borderColor: pal.accent, backgroundColor: theme.surface },
+                            isSelected && { borderColor: palAccent, backgroundColor: theme.surface },
                           ]}
                           onPress={() => setPaletteId(pId)}
                           activeOpacity={0.7}
@@ -125,13 +126,13 @@ export const CreateHeatmapModal: React.FC<CreateHeatmapModalProps> = ({
                               style={[
                                 styles.paletteName,
                                 { color: theme.text },
-                                isSelected && { color: pal.accent, fontWeight: '700' },
+                                isSelected && { color: palAccent, fontWeight: '700' },
                               ]}
                             >
                               {pal.name}
                             </Text>
                             {isSelected && (
-                              <Check size={14} color={pal.accent} strokeWidth={2.5} />
+                              <Check size={14} color={palAccent} strokeWidth={2.5} />
                             )}
                           </View>
 
@@ -169,11 +170,22 @@ export const CreateHeatmapModal: React.FC<CreateHeatmapModalProps> = ({
                   onPress={handleCreate}
                   style={[
                     styles.createBtn,
-                    { backgroundColor: PALETTES[paletteId].accent },
+                    {
+                      backgroundColor: isDark
+                        ? (paletteId === 'obsidian' ? '#F0F3F6' : PALETTES[paletteId].accent)
+                        : (paletteId === 'obsidian' ? '#24292F' : (PALETTES[paletteId].lightAccent || PALETTES[paletteId].accent)),
+                    },
                   ]}
                   activeOpacity={0.8}
                 >
-                  <Text style={styles.createText}>Create Tracker</Text>
+                  <Text
+                    style={[
+                      styles.createText,
+                      isDark && paletteId === 'obsidian' && { color: '#090A0C' },
+                    ]}
+                  >
+                    Create Tracker
+                  </Text>
                 </TouchableOpacity>
               </View>
             </View>

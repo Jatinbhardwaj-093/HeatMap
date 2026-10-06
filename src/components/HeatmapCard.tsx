@@ -41,6 +41,8 @@ export const HeatmapCard: React.FC<HeatmapCardProps> = ({
 
   const { stats, streakMap } = calculateStats(heatmap);
   const palette = PALETTES[heatmap.paletteId] || PALETTES.emerald;
+  const isObsidian = heatmap.paletteId === 'obsidian';
+  const activeAccent = isDark ? palette.accent : (palette.lightAccent || palette.accent);
   const todayKey = getTodayKey();
   const todayEntry = heatmap.entries[todayKey];
   const isTodayLogged = !!todayEntry?.completed;
@@ -67,7 +69,7 @@ export const HeatmapCard: React.FC<HeatmapCardProps> = ({
       {/* 1. Habit Header: Title + Palette Indicator + Independent View Switcher + Trash Button */}
       <View style={styles.cardHeader}>
         <View style={styles.titleGroup}>
-          <View style={[styles.paletteIndicator, { backgroundColor: palette.accent }]} />
+          <View style={[styles.paletteIndicator, { backgroundColor: activeAccent }]} />
           <Text style={[styles.titleText, { color: theme.text }]} numberOfLines={1}>
             {heatmap.title}
           </Text>
@@ -105,19 +107,37 @@ export const HeatmapCard: React.FC<HeatmapCardProps> = ({
           style={[
             styles.quickLogButton,
             isTodayLogged
-              ? { backgroundColor: palette.levels[2] || palette.accent, borderColor: palette.accent }
+              ? {
+                  backgroundColor: isDark
+                    ? (isObsidian ? '#F0F3F6' : (palette.levels[2] || palette.accent))
+                    : (isObsidian ? '#24292F' : (palette.lightLevels?.[3] || activeAccent)),
+                  borderColor: isDark
+                    ? (isObsidian ? '#F0F3F6' : palette.accent)
+                    : (isObsidian ? '#24292F' : activeAccent),
+                }
               : { backgroundColor: theme.surface, borderColor: theme.borderSubtle },
           ]}
         >
           {isTodayLogged ? (
             <>
-              <Check size={13} color="#FFFFFF" strokeWidth={2.5} />
-              <Text style={styles.quickLogTextActive}>Completed Today</Text>
+              <Check
+                size={13}
+                color={isDark && isObsidian ? '#090A0C' : '#FFFFFF'}
+                strokeWidth={2.5}
+              />
+              <Text
+                style={[
+                  styles.quickLogTextActive,
+                  isDark && isObsidian && { color: '#090A0C' },
+                ]}
+              >
+                Completed Today
+              </Text>
             </>
           ) : (
             <>
-              <Plus size={13} color={palette.accent} strokeWidth={2.5} />
-              <Text style={[styles.quickLogTextPending, { color: palette.accent }]}>Mark Done Today</Text>
+              <Plus size={13} color={activeAccent} strokeWidth={2.5} />
+              <Text style={[styles.quickLogTextPending, { color: activeAccent }]}>Mark Done Today</Text>
             </>
           )}
         </TouchableOpacity>
@@ -128,12 +148,12 @@ export const HeatmapCard: React.FC<HeatmapCardProps> = ({
               styles.streakBadge,
               {
                 backgroundColor: theme.surface,
-                borderColor: palette.accent,
+                borderColor: activeAccent,
               },
             ]}
           >
-            <Flame size={12} color={palette.accent} strokeWidth={2.5} />
-            <Text style={[styles.streakText, { color: palette.accent }]}>
+            <Flame size={12} color={activeAccent} strokeWidth={2.5} />
+            <Text style={[styles.streakText, { color: activeAccent }]}>
               {stats.currentStreak}d streak
             </Text>
           </View>
@@ -165,7 +185,7 @@ export const HeatmapCard: React.FC<HeatmapCardProps> = ({
       <View style={[styles.statsLine, { borderTopColor: theme.borderSubtle }]}>
         <View style={styles.statItem}>
           <Text style={[styles.statKey, { color: theme.textMuted }]}>Streak</Text>
-          <Text style={[styles.statVal, { color: palette.accent }]}>{stats.currentStreak}d</Text>
+          <Text style={[styles.statVal, { color: activeAccent }]}>{stats.currentStreak}d</Text>
         </View>
         <Text style={[styles.statDot, { color: theme.borderSubtle }]}>·</Text>
         <View style={styles.statItem}>

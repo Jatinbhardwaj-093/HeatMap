@@ -104,3 +104,8 @@ export const PALETTES: Record<PaletteId, ColorPalette> = {
 };
 
 export const DEFAULT_PALETTE_ID: PaletteId = 'emerald';
+
+export function getPaletteAccent(paletteId: PaletteId, isDark: boolean): string {
+  const pal = PALETTES[paletteId] || PALETTES.emerald;
+  return isDark ? pal.accent : (pal.lightAccent || pal.accent);
+}

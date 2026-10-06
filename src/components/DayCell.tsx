@@ -80,7 +80,14 @@ export const DayCell: React.FC<DayCellProps> = ({
           style={[
             styles.dayText,
             {
-              color: level >= 2 ? '#FFFFFF' : (isDark ? '#8B949E' : '#57606A'),
+              color:
+                level === 0
+                  ? (isDark ? '#8B949E' : '#57606A')
+                  : isDark && paletteId === 'obsidian' && level >= 3
+                  ? '#090A0C'
+                  : !isDark && level === 1
+                  ? '#1F2328'
+                  : '#FFFFFF',
             },
           ]}
         >

@@ -52,6 +52,8 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
   const existingEntry = heatmap.entries[dateKey];
   const isCompleted = !!existingEntry?.completed;
   const palette = PALETTES[heatmap.paletteId] || PALETTES.emerald;
+  const isObsidian = heatmap.paletteId === 'obsidian';
+  const activeAccent = isDark ? palette.accent : (palette.lightAccent || palette.accent);
 
   const handleToggle = (completed: boolean) => {
     onSave(dateKey, completed);
@@ -92,7 +94,7 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
               <View style={styles.modalHeader}>
                 <View style={styles.headerLeft}>
                   <View style={styles.habitBadge}>
-                    <View style={[styles.habitDot, { backgroundColor: palette.accent }]} />
+                    <View style={[styles.habitDot, { backgroundColor: activeAccent }]} />
                     <Text style={[styles.habitTitle, { color: theme.textSecondary }]} numberOfLines={1}>
                       {heatmap.title.toUpperCase()}
                     </Text>
@@ -162,7 +164,11 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
                     styles.segment,
                     isCompleted && [
                       styles.segmentActive,
-                      { backgroundColor: palette.levels[3] || palette.accent },
+                      {
+                        backgroundColor: isDark
+                          ? (isObsidian ? '#F0F3F6' : (palette.levels[3] || palette.accent))
+                          : (isObsidian ? '#24292F' : (palette.lightLevels?.[3] || activeAccent)),
+                      },
                       Platform.select({
                         web: {
                           boxShadow: '0 2px 6px rgba(0, 0, 0, 0.25)',
@@ -181,13 +187,25 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
                 >
                   <Check
                     size={14}
-                    color={isCompleted ? '#FFFFFF' : theme.textSecondary}
+                    color={
+                      !isCompleted
+                        ? theme.textSecondary
+                        : isDark && isObsidian
+                        ? '#090A0C'
+                        : '#FFFFFF'
+                    }
                     strokeWidth={2.5}
                   />
                   <Text
                     style={[
                       styles.segmentText,
-                      { color: isCompleted ? '#FFFFFF' : theme.textSecondary },
+                      {
+                        color: !isCompleted
+                          ? theme.textSecondary
+                          : isDark && isObsidian
+                          ? '#090A0C'
+                          : '#FFFFFF',
+                      },
                       isCompleted && { fontWeight: '700' },
                     ]}
                   >
