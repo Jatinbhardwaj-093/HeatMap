@@ -24,6 +24,9 @@ import {
   Moon,
   Sparkles,
   Lock,
+  History,
+  Tag,
+  ExternalLink,
 } from 'lucide-react-native';
 import { useAppTheme, useIsDark, useThemeMode } from '../theme/theme';
 import { isMacDesktop, dragRegion, noDragRegion } from '../utils/platform';
@@ -173,6 +176,102 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   const MAC_DMG_URL = `${GITHUB_REPO}/releases/download/v1.2.2/TrackHeat-1.2.2-arm64.dmg`;
   const ANDROID_APK_URL = `${GITHUB_REPO}/releases/download/v1.2.2/TrackHeat-1.2.2.apk`;
 
+  const RELEASES_DATA = [
+    {
+      version: 'v1.2.2',
+      date: 'October 2026',
+      tag: 'Latest Stable',
+      isLatest: true,
+      summary: 'High-reliability update featuring automated background sync, vector-centered widget icons, and calibrated window safe areas.',
+      highlights: [
+        'Local Authority Account Persistence: Real-time optimistic caching and Supabase session synchronization for user display names and handles.',
+        '100% Background Cloud Sync: Removed manual synchronization buttons; state reconciles completely in the background.',
+        'Vector SVG Widget Actions: Replaced Android RemoteViews text glyphs with geometric SVGs for mathematically centered icons across all densities.',
+        'Widget Safe Areas: Calibrated top spacing for camera cutouts and status bars, plus an authentic 20-week preview matrix.',
+        'Calibrated macOS Clearances: Desktop window dragging clearance under native traffic lights while maintaining compact web dashboard navbar.',
+      ],
+      links: [
+        { label: 'Download .DMG (macOS)', url: MAC_DMG_URL, primary: true },
+        { label: 'Download .APK (Android)', url: ANDROID_APK_URL, primary: true },
+        { label: 'GitHub Release', url: RELEASE_TAG_URL },
+      ],
+    },
+    {
+      version: 'v1.2.1',
+      date: 'October 2026',
+      tag: 'Maintenance',
+      isLatest: false,
+      summary: 'Dynamic widget layout scaling and typography refinement for home screen habit cards.',
+      highlights: [
+        'Adaptive Widget Formats: Responsive layout handling for 2x1 horizontal quick-log pills and 2x2 multi-week matrix views.',
+        'Habit Identity Header: Habit title display next to log toggle with automatic font scaling.',
+        'Typography Polish: Resolved font metric descent clipping on compact Android launchers.',
+        'Asset Catalog: Re-architected screenshot gallery with high-density responsive presentation.',
+      ],
+      links: [
+        { label: 'Download .DMG (macOS)', url: `${GITHUB_REPO}/releases/download/v1.2.1/TrackHeat-1.2.1-arm64.dmg` },
+        { label: 'Download .APK (Android)', url: `${GITHUB_REPO}/releases/download/v1.2.1/TrackHeat-1.2.1.apk` },
+        { label: 'GitHub Release', url: `${GITHUB_REPO}/releases/tag/v1.2.1` },
+      ],
+    },
+    {
+      version: 'v1.2.0',
+      date: 'October 2026',
+      tag: 'Feature',
+      isLatest: false,
+      summary: 'Introduction of native Android home screen widgets and the Obsidian monochrome palette.',
+      highlights: [
+        'Interactive Android Widgets: Glanceable home screen widgets with direct 1-tap logging without opening the application.',
+        'Widget Configuration Screen: Dedicated in-app studio for habit selection, theme picking, and live grid previews.',
+        'Obsidian Palette: Ultra-clean monochromatic colorway engineered for high contrast in both light and dark modes.',
+        'Android Preview Pipeline: Automated signed standalone APK releases distributed through EAS.',
+      ],
+      links: [
+        { label: 'GitHub Release', url: `${GITHUB_REPO}/releases/tag/v1.2.0` },
+      ],
+    },
+    {
+      version: 'v1.1.0',
+      date: 'September 2026',
+      tag: 'Feature',
+      isLatest: false,
+      summary: 'Cross-platform expansion introducing universal macOS desktop client and Supabase cloud sync.',
+      highlights: [
+        'macOS Desktop Application: Native Electron client with draggable frameless window title bar and native macOS controls.',
+        'Cloud Synchronization: Supabase PostgreSQL database backend with offline cache reconciliation.',
+        'Progressive Web App: Deployed on high-performance global CDN edge for zero-install access.',
+        'Matrix Performance: Virtualized rendering optimizations for multi-year habit histories.',
+      ],
+      links: [
+        { label: 'GitHub Release', url: `${GITHUB_REPO}/releases/tag/v1.1.0` },
+      ],
+    },
+    {
+      version: 'v1.0.0',
+      date: 'September 2026',
+      tag: 'Initial Release',
+      isLatest: false,
+      summary: 'Foundational release of the binary habit matrix engine inspired by GitHub contribution graphs.',
+      highlights: [
+        'Binary Habit Matrix: Clean day-by-day contribution graph visualization with streak calculation.',
+        'Local-First Storage: Zero-latency tracking with full offline persistence and privacy.',
+        'Dynamic Color Themes: 10 curated themes including GitHub Green, GitLab Orange, Synthwave, and Minimal Dark.',
+      ],
+      links: [
+        { label: 'GitHub Release', url: `${GITHUB_REPO}/releases/tag/v1.0.0` },
+      ],
+    },
+  ];
+
+  const pageScrollRef = useRef<ScrollView>(null);
+  const [releasesY, setReleasesY] = useState(0);
+
+  const handleScrollToReleases = () => {
+    if (pageScrollRef.current && releasesY > 0) {
+      pageScrollRef.current.scrollTo({ y: releasesY - 20, animated: true });
+    }
+  };
+
   const handleDownloadMac = () => {
     Linking.openURL(MAC_DMG_URL).catch(() => Linking.openURL(RELEASE_TAG_URL));
   };
@@ -203,6 +302,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
   return (
     <ScrollView
+      ref={pageScrollRef}
       style={[styles.container, { backgroundColor: theme.background }]}
       contentContainerStyle={[styles.contentContainer, isMobile && styles.contentContainerMobile]}
       showsVerticalScrollIndicator={false}
@@ -227,7 +327,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             <View style={styles.brandTitleRow}>
               <Text style={[styles.brandText, isMobile && styles.brandTextMobile, { color: theme.text }]}>TRACKHEAT</Text>
               {!isMobile && (
-                <View
+                <TouchableOpacity
                   style={[
                     styles.statusTag,
                     {
@@ -235,10 +335,12 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                       borderColor: isDark ? 'rgba(57, 211, 83, 0.4)' : 'rgba(26, 127, 55, 0.3)',
                     },
                   ]}
+                  onPress={handleScrollToReleases}
+                  activeOpacity={0.7}
                 >
                   <View style={[styles.statusDot, { backgroundColor: theme.success }]} />
-                  <Text style={[styles.statusText, { color: theme.success }]}>V1.2 · LIVE</Text>
-                </View>
+                  <Text style={[styles.statusText, { color: theme.success }]}>v1.2.2 · RELEASES</Text>
+                </TouchableOpacity>
               )}
             </View>
           </View>
@@ -257,6 +359,17 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           >
             {isDark ? <Sun size={15} color="#F59E0B" /> : <Moon size={15} color="#656D76" />}
           </TouchableOpacity>
+
+          {!isMobile && (
+            <TouchableOpacity
+              style={[styles.navGithubBtn, { borderColor: theme.borderSubtle, backgroundColor: theme.surface }]}
+              onPress={handleScrollToReleases}
+              activeOpacity={0.7}
+            >
+              <History size={13} color={theme.textSecondary} />
+              <Text style={[styles.navGithubText, { color: theme.textSecondary }]}>Releases</Text>
+            </TouchableOpacity>
+          )}
 
           {!isMobile && (
             <TouchableOpacity
@@ -1072,6 +1185,141 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         )}
       </View>
 
+      {/* ─── RELEASE HISTORY & CHANGELOG ─────────────────────────── */}
+      <View
+        style={[styles.sectionWrapper, isMobile && styles.sectionWrapperMobile]}
+        onLayout={(e) => setReleasesY(e.nativeEvent.layout.y)}
+      >
+        <View style={styles.sectionHeaderCol}>
+          <Text style={[styles.sectionOverline, { color: isDark ? '#39D353' : '#1A7F37' }]}>
+            VERSION LOG
+          </Text>
+          <Text style={[styles.sectionTitle, isMobile && styles.sectionTitleMobile, { color: theme.text }]}>
+            Release History & Changelog
+          </Text>
+          <Text style={[styles.sectionDescription, { color: theme.textSecondary }]}>
+            TrackHeat evolves continuously with offline-first reliability, high-density matrix visualizations, and native OS integrations.
+          </Text>
+        </View>
+
+        <View style={styles.releasesContainer}>
+          {RELEASES_DATA.map((rel) => (
+            <View
+              key={rel.version}
+              style={[
+                styles.releaseCard,
+                {
+                  backgroundColor: theme.surface,
+                  borderColor: rel.isLatest
+                    ? (isDark ? 'rgba(57, 211, 83, 0.4)' : 'rgba(26, 127, 55, 0.35)')
+                    : theme.border,
+                },
+              ]}
+            >
+              <View style={[styles.releaseHeader, isMobile && styles.releaseHeaderMobile]}>
+                <View style={styles.releaseVersionRow}>
+                  <Text style={[styles.releaseVersion, { color: theme.text }]}>{rel.version}</Text>
+                  <View
+                    style={[
+                      styles.releaseBadge,
+                      {
+                        backgroundColor: rel.isLatest
+                          ? (isDark ? 'rgba(57, 211, 83, 0.15)' : 'rgba(26, 127, 55, 0.12)')
+                          : theme.surfaceHighlight,
+                        borderColor: rel.isLatest
+                          ? (isDark ? 'rgba(57, 211, 83, 0.4)' : 'rgba(26, 127, 55, 0.3)')
+                          : theme.borderSubtle,
+                      },
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.releaseBadgeText,
+                        {
+                          color: rel.isLatest
+                            ? (isDark ? '#39D353' : '#1A7F37')
+                            : theme.textSecondary,
+                        },
+                      ]}
+                    >
+                      {rel.tag.toUpperCase()}
+                    </Text>
+                  </View>
+                </View>
+                <Text style={[styles.releaseDate, { color: theme.textMuted }]}>{rel.date}</Text>
+              </View>
+
+              <Text style={[styles.releaseSummary, { color: theme.textSecondary }]}>
+                {rel.summary}
+              </Text>
+
+              <View style={styles.highlightsContainer}>
+                {rel.highlights.map((item, idx) => (
+                  <View key={idx} style={styles.highlightRow}>
+                    <View
+                      style={[
+                        styles.highlightBullet,
+                        { backgroundColor: rel.isLatest ? (isDark ? '#39D353' : '#1A7F37') : theme.textMuted },
+                      ]}
+                    />
+                    <Text style={[styles.highlightText, { color: theme.textSecondary }]}>
+                      {item}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+
+              <View style={styles.releaseActionsRow}>
+                {rel.links.map((link, lIdx) => (
+                  <TouchableOpacity
+                    key={lIdx}
+                    style={[
+                      styles.releaseActionBtn,
+                      link.primary
+                        ? {
+                            backgroundColor: isDark ? 'rgba(57, 211, 83, 0.12)' : 'rgba(26, 127, 55, 0.08)',
+                            borderColor: isDark ? 'rgba(57, 211, 83, 0.35)' : 'rgba(26, 127, 55, 0.3)',
+                          }
+                        : {
+                            backgroundColor: theme.surfaceHighlight,
+                            borderColor: theme.borderSubtle,
+                          },
+                    ]}
+                    onPress={() => Linking.openURL(link.url)}
+                    activeOpacity={0.7}
+                  >
+                    {link.label.includes('Download') ? (
+                      <Download
+                        size={12}
+                        color={link.primary ? (isDark ? '#39D353' : '#1A7F37') : theme.textSecondary}
+                      />
+                    ) : (
+                      <ExternalLink
+                        size={12}
+                        color={link.primary ? (isDark ? '#39D353' : '#1A7F37') : theme.textSecondary}
+                      />
+                    )}
+                    <Text
+                      style={[
+                        styles.releaseActionText,
+                        {
+                          color: link.primary
+                            ? (isDark ? '#39D353' : '#1A7F37')
+                            : theme.textSecondary,
+                          fontWeight: link.primary ? '600' : '500',
+                        },
+                      ]}
+                    >
+                      {link.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+          ))}
+        </View>
+      </View>
+
       {/* ─── BOTTOM CALL TO ACTION ───────────────────────────────── */}
       <View style={[styles.bottomCtaCard, isMobile && styles.bottomCtaCardMobile, { backgroundColor: theme.surface, borderColor: theme.border }]}>
         <View style={styles.bottomCtaContent}>
@@ -1752,6 +2000,12 @@ const styles = StyleSheet.create({
     lineHeight: 25,
     letterSpacing: -0.3,
   },
+  sectionDescription: {
+    fontSize: 14,
+    lineHeight: 20,
+    marginTop: 6,
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
+  },
   // Mobile Streamlined Architecture Card
   mobilePillarsCard: {
     borderWidth: 1,
@@ -2168,6 +2422,106 @@ const styles = StyleSheet.create({
   },
   footerLinkText: {
     fontSize: 12,
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
+  },
+
+  // Release History & Changelog
+  releasesContainer: {
+    width: '100%',
+    gap: 16,
+  },
+  releaseCard: {
+    borderWidth: 1,
+    borderRadius: 8,
+    padding: 20,
+  },
+  releaseHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+    gap: 12,
+  },
+  releaseHeaderMobile: {
+    flexDirection: 'column',
+    alignItems: 'flex-start',
+    gap: 6,
+  },
+  releaseVersionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  releaseVersion: {
+    fontSize: 18,
+    fontWeight: '800',
+    letterSpacing: -0.2,
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
+  },
+  releaseBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 4,
+    borderWidth: 1,
+  },
+  releaseBadgeText: {
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
+  },
+  releaseDate: {
+    fontSize: 12,
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
+  },
+  releaseSummary: {
+    fontSize: 13.5,
+    lineHeight: 20,
+    marginBottom: 12,
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
+  },
+  highlightsContainer: {
+    gap: 6,
+    marginBottom: 14,
+  },
+  highlightRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+  },
+  highlightBullet: {
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    marginTop: 7,
+  },
+  highlightText: {
+    fontSize: 12.5,
+    lineHeight: 18,
+    flex: 1,
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
+  },
+  releaseActionsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 8,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255, 255, 255, 0.06)',
+  },
+  releaseActionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 4,
+    borderWidth: 1,
+  },
+  releaseActionText: {
+    fontSize: 11,
+    letterSpacing: 0.3,
     fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
   },
 });

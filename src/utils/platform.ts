@@ -19,7 +19,7 @@ export const isElectronApp = (): boolean => {
   return false;
 };
 
-export const isMacDesktop = isMacPlatform();
+export const isMacDesktop = isElectronApp() && isMacPlatform();
 
 // Native applications (Android, iOS, and macOS Electron desktop app) skip marketing landing page
 // Regular web visitors on browsers keep the landing page
