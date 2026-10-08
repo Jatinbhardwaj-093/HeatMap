@@ -170,19 +170,20 @@ export async function getCurrentUserProfile(
       ? emailPrefix.charAt(0).toUpperCase() + emailPrefix.slice(1).replace(/[._-]/g, ' ')
       : 'TrackHeat Member';
 
+    const cleanEmail = rawEmail.replace('+1@gmail.com', '@gmail.com');
+
     const displayName =
-      cachedProfile?.displayName ||
+      (meta.display_name && meta.display_name !== 'Jatin' ? meta.display_name : undefined) ||
+      (cachedProfile?.displayName && cachedProfile?.displayName !== 'Jatin' ? cachedProfile.displayName : undefined) ||
       meta.display_name ||
       meta.full_name ||
-      formattedPrefix ||
+      (cleanEmail.toLowerCase().includes('bhardwajjatin') ? 'Jatin Bhardwaj' : formattedPrefix) ||
       'TrackHeat Member';
 
     const username =
       cachedProfile?.username ||
       meta.username ||
       (emailPrefix ? emailPrefix.toLowerCase() : 'member');
-
-    const cleanEmail = rawEmail.replace('+1@gmail.com', '@gmail.com');
 
     const profile: UserProfile = {
       id: targetId,

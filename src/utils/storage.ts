@@ -51,15 +51,7 @@ function getLegacyStorageKey(userId?: string): string {
 
 const DELETED_MAPS_KEY_PREFIX = '@trackheat_deleted_maps_';
 
-export const DUMMY_SHOWCASE_HABIT_IDS = new Set([
-  'hm-deep-work',
-  'hm-strength-training',
-  'hm-reading-research',
-  'hm-clean-nutrition',
-  'hm-evening-reflection',
-  'hm-fitness-strength',
-  'hm-diet-clean',
-]);
+export const DUMMY_SHOWCASE_HABIT_IDS = new Set<string>();
 
 export const CLIENT_INSTANCE_ID = Math.random().toString(36).substring(2, 10);
 
@@ -99,7 +91,7 @@ export async function broadcastHabitsChanged(sourceUserId?: string, habitsPayloa
 export async function getDeletedMapIds(userId?: string): Promise<Set<string>> {
   const resolvedId = userId || (await getResolvedUserId());
   const key = `${DELETED_MAPS_KEY_PREFIX}${resolvedId || 'guest'}`;
-  const deletedSet = new Set<string>(DUMMY_SHOWCASE_HABIT_IDS);
+  const deletedSet = new Set<string>();
   try {
     const raw = await AsyncStorage.getItem(key);
     if (raw) {
