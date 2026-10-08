@@ -93,10 +93,10 @@ Inspired by software version control commit momentum, TrackHeat translates human
 - **Per-Habit Independent View Modes**:
   - Toggle between Annual Macro (52 weeks) and Monthly Micro views independently on each habit card.
 
-- **Dual-Tier Offline Persistence with Real-Time Cloud Sync**:
-  - Instant local disk persistence via `AsyncStorage`.
-  - Authoritative background synchronization with Supabase user metadata (`user.user_metadata.habits`).
-  - Real-time cross-platform sync across Web, Android, and macOS clients on focus, resume, and manual trigger.
+- **Sub-50ms Simultaneous Cross-Device Synchronization**:
+  - Native Supabase Realtime broadcast channels (`trackheat_sync_hub`) over persistent WebSockets.
+  - Zero-latency simultaneous multi-device sync: marking done, unchecking, or modifying habits on any device broadcasts compact state packets directly to web and macOS clients in <50ms without waiting for HTTP roundtrips.
+  - Dual-tier offline-first storage via `AsyncStorage` with cloud-authoritative reconciliation to prevent resurrection of deleted or unchecked entries.
 
 - **Hardened Native macOS Client**:
   - Packaged via Electron for Apple Silicon (ARM64).
@@ -286,6 +286,7 @@ trackheat/
 │   │   ├── LandingPage.tsx  # Responsive landing page with direct release download links
 │   │   ├── LoginScreen.tsx  # Keyboard-aware auth screen with guest mode support
 │   │   ├── MonthlyView.tsx  # Month calendar grid with date selection
+│   │   ├── ReleasesScreen.tsx # Standalone version changelog and direct binary download center
 │   │   ├── StatsOverview.tsx# Aggregate metrics & current streak totals
 │   │   ├── ViewSwitcher.tsx # Segmented control for Month and Year views
 │   │   ├── WidgetStudioModal.tsx # Home screen widget configuration & preview studio
