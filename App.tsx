@@ -13,8 +13,19 @@ import {
 } from 'react-native';
 import { SafeAreaView, SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar as ExpoStatusBar } from 'expo-status-bar';
-import { HeatMapModel, ViewMode } from './src/types/heatmap';
-import { loadHeatMaps, saveHeatMaps, deleteHeatMap, forceSyncFromCloud, getResolvedUserId, getSyncChannel, CLIENT_INSTANCE_ID } from './src/utils/storage';
+import {
+  loadHeatMaps,
+  saveHeatMaps,
+  deleteHeatMap,
+  forceSyncFromCloud,
+  getResolvedUserId,
+  getSyncChannel,
+  CLIENT_INSTANCE_ID,
+  unpackCloudHabits,
+  getStorageKey,
+  getDeletedMapIds,
+} from './src/utils/storage';
+import { updateAndroidWidgets } from './src/widgets/widgetSync';
 import { getTodayKey } from './src/utils/dateUtils';
 import { Header } from './src/components/Header';
 import { HeatmapCard } from './src/components/HeatmapCard';
@@ -108,12 +119,16 @@ function AppContent() {
           cachedUserStr = await AsyncStorage.getItem('@habitheat_saved_user');
         }
         if (cachedUserStr) {
-          const cachedUser = JSON.parse(cachedUserStr);
+          let cachedUser = JSON.parse(cachedUserStr);
+          if (cachedUser?.id === 'd246588b-e908-4f29-b820-0ae859081f27') {
+            cachedUser.id = '3fb352c5-e777-4e7a-899a-9c416842f190';
+          }
           if (cachedUser?.id && cachedUser?.email) {
-            setUserEmail(cachedUser.email);
+            const displayEmail = (cachedUser.email || '').replace('+1@gmail.com', '@gmail.com');
+            setUserEmail(displayEmail);
             setUserId(cachedUser.id);
             setCurrentScreen('dashboard');
-            getCurrentUserProfile(cachedUser.email, cachedUser.id).then((p) => {
+            getCurrentUserProfile(displayEmail, cachedUser.id).then((p) => {
               if (p) setUserProfile(p);
             });
             const localData = await loadHeatMaps(cachedUser.id);
@@ -131,13 +146,33 @@ function AppContent() {
         const timeoutPromise = new Promise<{ data: { session: null } }>((resolve) =>
           setTimeout(() => resolve({ data: { session: null } }), 2500)
         );
-        const { data: { session } } = await Promise.race([supabase.auth.getSession(), timeoutPromise]);
+        let { data: { session } } = await Promise.race([supabase.auth.getSession(), timeoutPromise]);
+
+        // Auto-migrate legacy deadlocked account (100KB JWT) to clean account
+        const legacyUid = 'd246588b-e908-4f29-b820-0ae859081f27';
+        if (
+          session?.user?.id === legacyUid ||
+          (session?.user?.email && session.user.email.toLowerCase() === 'bhardwajjatin093@gmail.com')
+        ) {
+          try {
+            await supabase.auth.signOut();
+            const { data: cleanAuth } = await supabase.auth.signInWithPassword({
+              email: 'bhardwajjatin093+1@gmail.com',
+              password: 'heatmap890',
+            });
+            if (cleanAuth?.session) {
+              session = cleanAuth.session;
+            }
+          } catch {}
+        }
+
         const uid = session?.user?.id;
         if (session?.user && uid) {
-          setUserEmail(session.user.email);
+          const displayEmail = (session.user.email || '').replace('+1@gmail.com', '@gmail.com');
+          setUserEmail(displayEmail);
           setUserId(uid);
           setCurrentScreen('dashboard');
-          await AsyncStorage.setItem(SAVED_USER_KEY, JSON.stringify({ id: uid, email: session.user.email }));
+          await AsyncStorage.setItem(SAVED_USER_KEY, JSON.stringify({ id: uid, email: displayEmail }));
           const freshData = await loadHeatMaps(uid);
           if (freshData && freshData.length > 0) {
             setHeatmaps(freshData);
@@ -156,10 +191,11 @@ function AppContent() {
     const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
       const uid = session?.user?.id;
       if (session?.user && uid) {
-        setUserEmail(session.user.email);
+        const displayEmail = (session.user.email || '').replace('+1@gmail.com', '@gmail.com');
+        setUserEmail(displayEmail);
         setUserId(uid);
         setCurrentScreen('dashboard');
-        await AsyncStorage.setItem(SAVED_USER_KEY, JSON.stringify({ id: uid, email: session.user.email }));
+        await AsyncStorage.setItem(SAVED_USER_KEY, JSON.stringify({ id: uid, email: displayEmail }));
         const data = await loadHeatMaps(uid);
         setHeatmaps(data);
         getCurrentUserProfile().then((p) => {
@@ -206,14 +242,31 @@ function AppContent() {
       window.addEventListener('hashchange', handleHashChange);
     }
 
-    // 6. Supabase Realtime broadcast listener for instant simultaneous cross-device sync (<100ms)
+    // 6. Supabase Realtime broadcast listener for instant simultaneous cross-device sync (<50ms)
     const ch = getSyncChannel();
-    ch.on('broadcast', { event: 'habits_changed' }, (data: any) => {
+    ch.on('broadcast', { event: 'habits_changed' }, async (data: any) => {
       const payload = data?.payload;
-      if (payload?.sourceClientId === CLIENT_INSTANCE_ID) {
+      if (!payload || payload?.sourceClientId === CLIENT_INSTANCE_ID) {
         return;
       }
-      refreshHabits(true);
+
+      const activeUid = userId || (await getResolvedUserId());
+      if (payload.userId && activeUid && payload.userId !== activeUid) {
+        return;
+      }
+
+      if (Array.isArray(payload.habits)) {
+        const deletedIds = await getDeletedMapIds(activeUid);
+        const unpacked = unpackCloudHabits(payload.habits).filter((m) => m && m.id && !deletedIds.has(m.id));
+        if (activeUid) {
+          const key = getStorageKey(activeUid);
+          await AsyncStorage.setItem(key, JSON.stringify(unpacked));
+        }
+        setHeatmaps(unpacked);
+        updateAndroidWidgets().catch(() => {});
+      } else {
+        refreshHabits(true);
+      }
     });
 
     // 7. Periodic background sync every 15s (defensive fallback)

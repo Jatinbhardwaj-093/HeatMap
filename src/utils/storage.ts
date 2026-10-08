@@ -77,7 +77,7 @@ export function getSyncChannel() {
   return syncChannel;
 }
 
-export async function broadcastHabitsChanged(sourceUserId?: string) {
+export async function broadcastHabitsChanged(sourceUserId?: string, habitsPayload?: HeatMapModel[]) {
   try {
     const ch = getSyncChannel();
     await ch.send({
@@ -86,6 +86,7 @@ export async function broadcastHabitsChanged(sourceUserId?: string) {
       payload: {
         sourceClientId: CLIENT_INSTANCE_ID,
         userId: sourceUserId,
+        habits: habitsPayload ? compactHabitsForCloud(habitsPayload) : undefined,
         timestamp: Date.now(),
       },
     });
@@ -418,29 +419,33 @@ export async function loadHeatMaps(userId?: string): Promise<HeatMapModel[]> {
         const unpackedCloud = unpackCloudHabits(rawCloudHabits);
         const cloudHabits = unpackedCloud.filter((m: HeatMapModel) => m && m.id && !deletedIds.has(m.id));
 
-        // Bidirectional CRDT merge: local + cloud
-        const merged = mergeHabitLists(localMaps, cloudHabits, deletedIds);
+        const hasPendingSync = await AsyncStorage.getItem(`@trackheat_pending_sync_${resolvedId}`);
+        let finalMaps: HeatMapModel[];
 
-        // Never wipe local habits if cloud returned empty while local has entries
-        if (merged.length > 0 || (localMaps.length === 0 && cloudHabits.length === 0)) {
-          const mergedJson = JSON.stringify(merged);
-          const localJson = JSON.stringify(localMaps);
-          const cloudJson = JSON.stringify(cloudHabits);
-
-          // If merged data has changes compared to local, persist locally
-          if (mergedJson !== localJson) {
-            localMaps = merged;
-            await AsyncStorage.setItem(key, mergedJson);
-            await AsyncStorage.setItem(`@trackheat_last_synced_${resolvedId}`, new Date().toISOString());
+        if (hasPendingSync === 'true') {
+          finalMaps = mergeHabitLists(localMaps, cloudHabits, deletedIds);
+          if (JSON.stringify(finalMaps) !== JSON.stringify(cloudHabits)) {
+            syncHabitsToCloud(finalMaps, resolvedId).catch(() => {});
           }
-
-          // If local had habits/entries not yet in cloud, push to cloud
-          if (mergedJson !== cloudJson) {
-            syncHabitsToCloud(merged, resolvedId).catch(() => {});
+        } else {
+          // Cloud is authoritative when there are no uncommitted local changes
+          if (cloudHabits.length > 0) {
+            finalMaps = cloudHabits;
+          } else if (localMaps.length > 0) {
+            finalMaps = localMaps;
+            syncHabitsToCloud(finalMaps, resolvedId).catch(() => {});
           } else {
-            await AsyncStorage.removeItem(`@trackheat_pending_sync_${resolvedId}`);
+            finalMaps = [];
           }
         }
+
+        const finalJson = JSON.stringify(finalMaps);
+        if (finalJson !== JSON.stringify(localMaps)) {
+          localMaps = finalMaps;
+          await AsyncStorage.setItem(key, finalJson);
+          await AsyncStorage.setItem(`@trackheat_last_synced_${resolvedId}`, new Date().toISOString());
+        }
+        await AsyncStorage.removeItem(`@trackheat_pending_sync_${resolvedId}`);
       }
     } catch (err) {
       console.warn('Cloud sync error in loadHeatMaps:', err);
@@ -467,11 +472,8 @@ export async function saveHeatMaps(maps: HeatMapModel[], userId?: string): Promi
     await AsyncStorage.setItem(`@trackheat_local_updated_at_${resolvedId || 'guest'}`, Date.now().toString());
 
     if (resolvedId) {
-      syncHabitsToCloud(cleanMaps, resolvedId).then((success) => {
-        if (success) {
-          broadcastHabitsChanged(resolvedId).catch(() => {});
-        }
-      }).catch((err) => {
+      broadcastHabitsChanged(resolvedId, cleanMaps).catch(() => {});
+      syncHabitsToCloud(cleanMaps, resolvedId).catch((err) => {
         console.warn('saveHeatMaps cloud sync error:', err);
       });
     }
@@ -511,13 +513,10 @@ export async function deleteHeatMap(mapId: string, userId?: string): Promise<Hea
   await AsyncStorage.setItem(key, JSON.stringify(updatedMaps));
   await AsyncStorage.setItem(`@trackheat_local_updated_at_${resolvedId || 'guest'}`, Date.now().toString());
 
-  // 4. Immediately sync to cloud with deleted_habit_ids
+  // 4. Immediately sync to cloud with deleted_habit_ids and broadcast to open clients
   if (resolvedId) {
-    syncHabitsToCloud(updatedMaps, resolvedId).then((success) => {
-      if (success) {
-        broadcastHabitsChanged(resolvedId).catch(() => {});
-      }
-    }).catch((err) => {
+    broadcastHabitsChanged(resolvedId, updatedMaps).catch(() => {});
+    syncHabitsToCloud(updatedMaps, resolvedId).catch((err) => {
       console.warn('deleteHeatMap cloud sync error:', err);
     });
   }
@@ -573,25 +572,31 @@ export async function forceSyncFromCloud(userId?: string): Promise<HeatMapModel[
       }
     } catch {}
 
-    const merged = mergeHabitLists(localMaps, cloudHabits, deletedIds);
-    if (merged.length > 0 || (localMaps.length === 0 && cloudHabits.length === 0)) {
-      await AsyncStorage.setItem(key, JSON.stringify(merged));
-      await AsyncStorage.setItem(`@trackheat_last_synced_${resolvedId}`, new Date().toISOString());
-      await AsyncStorage.removeItem(`@trackheat_pending_sync_${resolvedId}`);
+    const hasPendingSync = await AsyncStorage.getItem(`@trackheat_pending_sync_${resolvedId}`);
+    let finalMaps: HeatMapModel[];
 
-      if (JSON.stringify(merged) !== JSON.stringify(cloudHabits)) {
-        syncHabitsToCloud(merged, resolvedId).then((success) => {
-          if (success) {
-            broadcastHabitsChanged(resolvedId).catch(() => {});
-          }
-        }).catch(() => {});
+    if (hasPendingSync === 'true') {
+      finalMaps = mergeHabitLists(localMaps, cloudHabits, deletedIds);
+      if (JSON.stringify(finalMaps) !== JSON.stringify(cloudHabits)) {
+        syncHabitsToCloud(finalMaps, resolvedId).catch(() => {});
       }
-
-      updateAndroidWidgets().catch(() => {});
-      return merged;
+    } else {
+      // Cloud is authoritative when there are no uncommitted local mutations
+      if (cloudHabits.length > 0) {
+        finalMaps = cloudHabits;
+      } else if (localMaps.length > 0) {
+        finalMaps = localMaps;
+        syncHabitsToCloud(finalMaps, resolvedId).catch(() => {});
+      } else {
+        finalMaps = [];
+      }
     }
 
-    return localMaps;
+    await AsyncStorage.setItem(key, JSON.stringify(finalMaps));
+    await AsyncStorage.setItem(`@trackheat_last_synced_${resolvedId}`, new Date().toISOString());
+    await AsyncStorage.removeItem(`@trackheat_pending_sync_${resolvedId}`);
+    updateAndroidWidgets().catch(() => {});
+    return finalMaps;
   } catch (err) {
     console.warn('forceSyncFromCloud error:', err);
   }
