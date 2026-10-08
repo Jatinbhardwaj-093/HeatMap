@@ -468,27 +468,27 @@ export const WidgetStudioModal: React.FC<WidgetStudioModalProps> = ({
                       style={{
                         flexDirection: 'row',
                         alignItems: 'center',
-                        marginBottom: 8,
+                        marginBottom: 5,
                         width: '100%',
                       }}
                     >
                       {/* Log Button on Top Left */}
                       <View
                         style={{
-                          width: 20,
-                          height: 20,
-                          borderRadius: 10,
+                          width: 16,
+                          height: 16,
+                          borderRadius: 8,
                           alignItems: 'center',
                           justifyContent: 'center',
                           backgroundColor: previewBtnBg,
                           borderColor: previewBtnBorder,
                           borderWidth: 1,
-                          marginRight: 8,
+                          marginRight: 6,
                         }}
                       >
                         <Text
                           style={{
-                            fontSize: 11,
+                            fontSize: 9,
                             fontWeight: 'bold',
                             color: previewBtnTextColor,
                             fontFamily: fontStack,
@@ -502,7 +502,7 @@ export const WidgetStudioModal: React.FC<WidgetStudioModalProps> = ({
                       {/* Habit Name */}
                       <Text
                         style={{
-                          fontSize: 12,
+                          fontSize: 11,
                           fontWeight: '700',
                           color: isWidgetDark ? '#F0F3F6' : '#1F2328',
                           fontFamily: fontStack,

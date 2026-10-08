@@ -12,9 +12,22 @@ export async function getResolvedUserId(explicitUserId?: string): Promise<string
   } catch {}
 
   try {
+    const { data: userData } = await supabase.auth.getUser();
+    if (userData?.user?.id) return userData.user.id;
+  } catch {}
+
+  try {
     const rawCached = await AsyncStorage.getItem('@trackheat_saved_user');
     if (rawCached) {
       const parsed = JSON.parse(rawCached);
+      if (parsed?.id) return parsed.id;
+    }
+  } catch {}
+
+  try {
+    const rawLegacy = await AsyncStorage.getItem('@habitheat_saved_user');
+    if (rawLegacy) {
+      const parsed = JSON.parse(rawLegacy);
       if (parsed?.id) return parsed.id;
     }
   } catch {}
@@ -168,6 +181,59 @@ export async function syncHabitsToCloud(maps: HeatMapModel[], userId?: string): 
 }
 
 /**
+ * Merges two habit collections, reconciling entries by dateKey (union).
+ * Respects deleted habit tombstones and preserves completed days.
+ */
+export function mergeHabitLists(
+  localHabits: HeatMapModel[],
+  cloudHabits: HeatMapModel[],
+  deletedIds: Set<string>
+): HeatMapModel[] {
+  const mapById: Record<string, HeatMapModel> = {};
+
+  // 1. Ingest cloud habits first
+  for (const ch of cloudHabits) {
+    if (ch && ch.id && !deletedIds.has(ch.id)) {
+      mapById[ch.id] = { ...ch, entries: { ...(ch.entries || {}) } };
+    }
+  }
+
+  // 2. Merge local habits with union of entries
+  for (const lh of localHabits) {
+    if (!lh || !lh.id || deletedIds.has(lh.id)) continue;
+
+    if (!mapById[lh.id]) {
+      mapById[lh.id] = { ...lh, entries: { ...(lh.entries || {}) } };
+    } else {
+      const existing = mapById[lh.id];
+      const mergedEntries = { ...(existing.entries || {}) };
+      if (lh.entries) {
+        for (const [dateKey, entry] of Object.entries(lh.entries)) {
+          if (!mergedEntries[dateKey]) {
+            mergedEntries[dateKey] = entry;
+          } else {
+            // Keep completed: true if marked done on either device
+            mergedEntries[dateKey] = {
+              ...mergedEntries[dateKey],
+              ...entry,
+              completed: Boolean(mergedEntries[dateKey].completed || entry.completed),
+              notes: entry.notes || mergedEntries[dateKey].notes,
+            };
+          }
+        }
+      }
+      mapById[lh.id] = {
+        ...existing,
+        ...lh,
+        entries: mergedEntries,
+      };
+    }
+  }
+
+  return Object.values(mapById);
+}
+
+/**
  * Loads habits from local storage and hydrates / synchronizes with Supabase cloud storage.
  */
 export async function loadHeatMaps(userId?: string): Promise<HeatMapModel[]> {
@@ -194,92 +260,78 @@ export async function loadHeatMaps(userId?: string): Promise<HeatMapModel[]> {
 
   // If user is authenticated, sync with Supabase cloud user_metadata
   if (resolvedId) {
+    // 1. Check for any guest habits on this device and migrate them automatically
+    try {
+      let guestRaw = await AsyncStorage.getItem('@trackheat_maps_guest');
+      if (!guestRaw) {
+        guestRaw = await AsyncStorage.getItem('@habitheat_maps_guest');
+      }
+      if (guestRaw) {
+        const guestParsed = JSON.parse(guestRaw);
+        if (Array.isArray(guestParsed) && guestParsed.length > 0) {
+          const guestClean = guestParsed.filter((m) => m && m.id && !deletedIds.has(m.id));
+          if (guestClean.length > 0) {
+            localMaps = mergeHabitLists(localMaps, guestClean, deletedIds);
+            await AsyncStorage.setItem(key, JSON.stringify(localMaps));
+            // Push migrated habits to cloud
+            await syncHabitsToCloud(localMaps, resolvedId);
+          }
+          // Clear guest keys now that they are securely attached to the account
+          await AsyncStorage.removeItem('@trackheat_maps_guest');
+          await AsyncStorage.removeItem('@habitheat_maps_guest');
+        }
+      }
+    } catch (migErr) {
+      console.warn('Guest migration error in loadHeatMaps:', migErr);
+    }
+
+    // 2. Hydrate & merge with Supabase cloud user_metadata
     try {
       const user = await getFreshAuthenticatedUser();
 
-      // Ingest any cloud deleted_habit_ids from metadata into local tombstones
-      const cloudDeletedIds = user?.user_metadata?.deleted_habit_ids;
-      if (Array.isArray(cloudDeletedIds)) {
-        let changed = false;
-        for (const did of cloudDeletedIds) {
-          if (!deletedIds.has(did)) {
-            deletedIds.add(did);
-            changed = true;
+      if (user) {
+        // Ingest any cloud deleted_habit_ids from metadata into local tombstones
+        const cloudDeletedIds = user?.user_metadata?.deleted_habit_ids;
+        if (Array.isArray(cloudDeletedIds)) {
+          let changed = false;
+          for (const did of cloudDeletedIds) {
+            if (!deletedIds.has(did)) {
+              deletedIds.add(did);
+              changed = true;
+            }
+          }
+          if (changed) {
+            const dKey = `${DELETED_MAPS_KEY_PREFIX}${resolvedId}`;
+            await AsyncStorage.setItem(dKey, JSON.stringify(Array.from(deletedIds)));
           }
         }
-        if (changed) {
-          const dKey = `${DELETED_MAPS_KEY_PREFIX}${resolvedId}`;
-          await AsyncStorage.setItem(dKey, JSON.stringify(Array.from(deletedIds)));
-        }
-      }
 
-      // Filter cloud habits by deleted IDs
-      const rawCloudHabits = user?.user_metadata?.habits;
-      const cloudHabits = Array.isArray(rawCloudHabits)
-        ? rawCloudHabits.filter((m: HeatMapModel) => m && m.id && !deletedIds.has(m.id))
-        : null;
+        // Filter cloud habits by deleted IDs
+        const rawCloudHabits = user?.user_metadata?.habits;
+        const cloudHabits = Array.isArray(rawCloudHabits)
+          ? rawCloudHabits.filter((m: HeatMapModel) => m && m.id && !deletedIds.has(m.id))
+          : [];
 
-      // Re-filter local maps in case cloud had new tombstones
-      localMaps = localMaps.filter((m) => m && m.id && !deletedIds.has(m.id));
+        // Bidirectional CRDT merge: local + cloud
+        const merged = mergeHabitLists(localMaps, cloudHabits, deletedIds);
 
-      const pendingSync = await AsyncStorage.getItem(`@trackheat_pending_sync_${resolvedId}`);
-      const rawLocalUpdated = await AsyncStorage.getItem(`@trackheat_local_updated_at_${resolvedId}`);
-      const localUpdatedAt = rawLocalUpdated ? parseInt(rawLocalUpdated, 10) : 0;
-      const cloudUpdatedAtStr = user?.user_metadata?.habits_updated_at;
-      const cloudUpdatedAt = cloudUpdatedAtStr ? new Date(cloudUpdatedAtStr).getTime() : 0;
+        const mergedJson = JSON.stringify(merged);
+        const localJson = JSON.stringify(localMaps);
+        const cloudJson = JSON.stringify(cloudHabits);
 
-      if (cloudHabits !== null) {
-        if (pendingSync === 'true' || localUpdatedAt > cloudUpdatedAt) {
-          // Local has newer changes or pending offline sync:
-          // Merge local entries into cloud habits, respecting deletions
-          const mapById: Record<string, HeatMapModel> = {};
-          cloudHabits.forEach((m) => {
-            if (!deletedIds.has(m.id)) {
-              mapById[m.id] = m;
-            }
-          });
-          localMaps.forEach((m) => {
-            if (!deletedIds.has(m.id)) {
-              if (mapById[m.id]) {
-                mapById[m.id] = {
-                  ...mapById[m.id],
-                  ...m,
-                  entries: { ...mapById[m.id].entries, ...m.entries },
-                };
-              } else {
-                mapById[m.id] = m;
-              }
-            }
-          });
-          localMaps = Object.values(mapById);
-          await AsyncStorage.setItem(key, JSON.stringify(localMaps));
-          await syncHabitsToCloud(localMaps, resolvedId);
-        } else {
-          // Cloud has newer authoritative habits
-          localMaps = cloudHabits;
-          await AsyncStorage.setItem(key, JSON.stringify(cloudHabits));
+        // If merged data has changes compared to local, persist locally
+        if (mergedJson !== localJson) {
+          localMaps = merged;
+          await AsyncStorage.setItem(key, mergedJson);
           await AsyncStorage.setItem(`@trackheat_last_synced_${resolvedId}`, new Date().toISOString());
+        }
+
+        // If local had habits/entries not yet in cloud, push to cloud
+        if (mergedJson !== cloudJson) {
+          await syncHabitsToCloud(merged, resolvedId);
+        } else {
           await AsyncStorage.removeItem(`@trackheat_pending_sync_${resolvedId}`);
         }
-      } else if (localMaps.length > 0) {
-        // Cloud has no habits yet: push local habits to cloud
-        await syncHabitsToCloud(localMaps, resolvedId);
-      } else {
-        // Brand new account AND empty local storage: check for guest data to migrate
-        try {
-          let guestRaw = await AsyncStorage.getItem('@trackheat_maps_guest');
-          if (!guestRaw) {
-            guestRaw = await AsyncStorage.getItem('@habitheat_maps_guest');
-          }
-          if (guestRaw) {
-            const guestParsed = JSON.parse(guestRaw);
-            if (Array.isArray(guestParsed) && guestParsed.length > 0) {
-              localMaps = guestParsed.filter((m) => m && m.id && !deletedIds.has(m.id));
-              await AsyncStorage.setItem(key, JSON.stringify(localMaps));
-              await syncHabitsToCloud(localMaps, resolvedId);
-            }
-          }
-        } catch {}
       }
     } catch (err) {
       console.warn('Cloud sync error in loadHeatMaps:', err);
@@ -360,7 +412,7 @@ export async function deleteHeatMap(mapId: string, userId?: string): Promise<Hea
 }
 
 /**
- * Explicitly forces a fresh pull from Supabase cloud storage.
+ * Explicitly forces a fresh pull from Supabase cloud storage, merging with local data.
  */
 export async function forceSyncFromCloud(userId?: string): Promise<HeatMapModel[] | null> {
   const resolvedId = userId || (await getResolvedUserId());
@@ -368,6 +420,7 @@ export async function forceSyncFromCloud(userId?: string): Promise<HeatMapModel[
 
   try {
     const user = await getFreshAuthenticatedUser();
+    if (!user) return null;
 
     const deletedIds = await getDeletedMapIds(resolvedId);
 
@@ -388,15 +441,34 @@ export async function forceSyncFromCloud(userId?: string): Promise<HeatMapModel[
     }
 
     const rawCloudHabits = user?.user_metadata?.habits;
-    if (Array.isArray(rawCloudHabits)) {
-      const cleanHabits = rawCloudHabits.filter((m: HeatMapModel) => m && m.id && !deletedIds.has(m.id));
-      const key = getStorageKey(resolvedId);
-      await AsyncStorage.setItem(key, JSON.stringify(cleanHabits));
-      await AsyncStorage.setItem(`@trackheat_last_synced_${resolvedId}`, new Date().toISOString());
-      await AsyncStorage.removeItem(`@trackheat_pending_sync_${resolvedId}`);
-      updateAndroidWidgets().catch(() => {});
-      return cleanHabits;
+    const cloudHabits = Array.isArray(rawCloudHabits)
+      ? rawCloudHabits.filter((m: HeatMapModel) => m && m.id && !deletedIds.has(m.id))
+      : [];
+
+    const key = getStorageKey(resolvedId);
+    let localMaps: HeatMapModel[] = [];
+    try {
+      const raw = await AsyncStorage.getItem(key);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) {
+          localMaps = parsed.filter((m: HeatMapModel) => m && m.id && !deletedIds.has(m.id));
+        }
+      }
+    } catch {}
+
+    const merged = mergeHabitLists(localMaps, cloudHabits, deletedIds);
+    await AsyncStorage.setItem(key, JSON.stringify(merged));
+    await AsyncStorage.setItem(`@trackheat_last_synced_${resolvedId}`, new Date().toISOString());
+    await AsyncStorage.removeItem(`@trackheat_pending_sync_${resolvedId}`);
+
+    // If local had habits/entries that need uploading to cloud, sync now
+    if (JSON.stringify(merged) !== JSON.stringify(cloudHabits)) {
+      await syncHabitsToCloud(merged, resolvedId);
     }
+
+    updateAndroidWidgets().catch(() => {});
+    return merged;
   } catch (err) {
     console.warn('forceSyncFromCloud error:', err);
   }

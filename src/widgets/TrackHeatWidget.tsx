@@ -74,29 +74,31 @@ export function TrackHeatWidget({ map, config, width, height, isDark = true }: T
   const isSingleRow = height < 95;
 
   // Single row sizing (height 1: no header title, slim vertical button on right)
-  const paddingV = isSingleRow ? 6 : 8;
+  const paddingV = isSingleRow ? 6 : 6;
+  const paddingBottomH2 = 8;
   const paddingH = isSingleRow ? 8 : 10;
   const btnWidth = 18;
   const btnMarginLeft = 6;
   const btnMarginRight = 2;
 
   // Height 2 sizing (header with top-left button + habit title, full-width matrix below)
-  const btnSize = 20;
-  const headerMarginBottom = 8;
-  const headerHeight = 22;
+  // Sleek 16x16 circular button saves vertical space and prevents row 7 cutoff
+  const btnSize = 16;
+  const headerMarginBottom = 5;
+  const headerHeight = 18;
   // Scaled-down title font size so descenders never get cut off
-  const titleFontSize = Math.min(12, Math.max(10, Math.floor(width / 26)));
+  const titleFontSize = Math.min(11, Math.max(9.5, Math.floor(width / 28)));
 
-  // Available vertical space for 7 matrix rows (Monday to Sunday)
+  // Available vertical space for 7 matrix rows (Monday to Sunday) with safety buffer
   const availableGridHeight = isSingleRow
     ? Math.max(28, height - paddingV * 2)
-    : Math.max(28, height - paddingV * 2 - headerHeight - headerMarginBottom);
+    : Math.max(28, height - paddingV - paddingBottomH2 - headerHeight - headerMarginBottom - 4);
 
   const gapY = isSingleRow ? 1.5 : 2;
   const rawCellSize = Math.floor((availableGridHeight - gapY * 6) / 7);
   const cellSize = isSingleRow
     ? Math.min(8, Math.max(4, rawCellSize))
-    : Math.min(13, Math.max(5.5, rawCellSize));
+    : Math.min(12, Math.max(5, rawCellSize));
 
   // The exact grid height of the 7 rows
   const gridHeight = cellSize * 7 + gapY * 6;
@@ -265,7 +267,7 @@ export function TrackHeatWidget({ map, config, width, height, isDark = true }: T
         borderColor: border,
         borderWidth: 1,
         paddingTop: paddingV,
-        paddingBottom: paddingV,
+        paddingBottom: paddingBottomH2,
         paddingLeft: paddingH,
         paddingRight: paddingH,
         flexDirection: 'column',
@@ -283,7 +285,7 @@ export function TrackHeatWidget({ map, config, width, height, isDark = true }: T
           marginBottom: headerMarginBottom,
         }}
       >
-        {/* Log Today Button on Left Top (perfectly centered icon) */}
+        {/* Log Today Button on Left Top (perfectly centered icon, compact 16x16) */}
         <FlexWidget
           style={{
             width: btnSize,
@@ -294,7 +296,7 @@ export function TrackHeatWidget({ map, config, width, height, isDark = true }: T
             backgroundColor: toggleBtnBg as `#${string}`,
             borderColor: toggleBtnBorder as `#${string}`,
             borderWidth: 1,
-            marginRight: 8,
+            marginRight: 6,
           }}
           clickAction="TOGGLE_TODAY"
           clickActionData={{ habitId: map.id }}
@@ -303,8 +305,8 @@ export function TrackHeatWidget({ map, config, width, height, isDark = true }: T
           <SvgWidget
             svg={isTodayDone ? checkSvg : plusSvg}
             style={{
-              width: 11,
-              height: 11,
+              width: 9,
+              height: 9,
             }}
           />
         </FlexWidget>

@@ -193,16 +193,16 @@ function AppContent() {
       }
     });
 
-    // 3. Listen for app foregrounding on mobile to auto-sync
+    // 3. Listen for app foregrounding on mobile to auto-sync with cloud
     const appStateSub = AppState.addEventListener('change', (nextState) => {
       if (nextState === 'active') {
-        refreshHabits(false);
+        refreshHabits(true);
       }
     });
 
-    // 4. Listen for window focus on web and macOS desktop
+    // 4. Listen for window focus on web and macOS desktop to auto-sync with cloud
     const handleWindowFocus = () => {
-      refreshHabits(false);
+      refreshHabits(true);
     };
     if (typeof window !== 'undefined' && window.addEventListener) {
       window.addEventListener('focus', handleWindowFocus);
@@ -408,16 +408,26 @@ function AppContent() {
           onBack={shouldSkipLanding ? undefined : () => setCurrentScreen('landing')} 
           onLoginSuccess={async () => {
             setCurrentScreen('dashboard');
-            const id = await getResolvedUserId();
-            if (id) {
-              setUserId(id);
-              const data = await loadHeatMaps(id);
-              if (data && data.length > 0) {
-                setHeatmaps(data);
+            try {
+              const { data: { session } } = await supabase.auth.getSession();
+              const u = session?.user;
+              const resolvedId = u?.id || (await getResolvedUserId());
+              if (resolvedId) {
+                setUserId(resolvedId);
+                if (u?.email) {
+                  setUserEmail(u.email);
+                  await AsyncStorage.setItem(SAVED_USER_KEY, JSON.stringify({ id: resolvedId, email: u.email }));
+                }
+                const data = (await forceSyncFromCloud(resolvedId)) || (await loadHeatMaps(resolvedId));
+                if (Array.isArray(data)) {
+                  setHeatmaps(data);
+                }
+                getCurrentUserProfile(u?.email, resolvedId).then((p) => {
+                  if (p) setUserProfile(p);
+                });
               }
-              getCurrentUserProfile().then((p) => {
-                if (p) setUserProfile(p);
-              });
+            } catch (err) {
+              console.warn('onLoginSuccess sync error:', err);
             }
           }}
           onContinueAsGuest={handleContinueAsGuest}

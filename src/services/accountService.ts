@@ -278,7 +278,6 @@ export async function updateUserProfile(params: {
     try {
       const updatePromise = supabase.auth.updateUser({
         data: {
-          ...(user.user_metadata || {}),
           display_name: cleanDisplayName,
           full_name: cleanDisplayName,
           username: cleanUsername,

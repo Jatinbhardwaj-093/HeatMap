@@ -347,9 +347,9 @@ export function WidgetConfigurationScreen({ widgetInfo, renderWidget, setResult 
                           ]}
                         >
                           {isTodayDone ? (
-                            <Check size={11} color={previewBtnTextColor} strokeWidth={3} />
+                            <Check size={9} color={previewBtnTextColor} strokeWidth={3} />
                           ) : (
-                            <Plus size={11} color={previewBtnTextColor} strokeWidth={3} />
+                            <Plus size={9} color={previewBtnTextColor} strokeWidth={3} />
                           )}
                         </View>
                         <Text
@@ -593,24 +593,24 @@ const styles = StyleSheet.create({
   previewHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 5,
     width: '100%',
   },
   previewHeaderBtn: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 8,
+    marginRight: 6,
   },
   previewHeaderBtnText: {
-    fontSize: 11,
+    fontSize: 9,
     fontWeight: '700',
     textAlign: 'center',
   },
   previewHeaderTitle: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '700',
     flex: 1,
   },
