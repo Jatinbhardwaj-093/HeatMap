@@ -61,14 +61,16 @@ export async function isUsernameAvailable(
  */
 export async function resolveEmailFromIdentifier(identifier: string): Promise<string> {
   const clean = identifier.trim();
-  if (clean.includes('@')) {
-    return clean;
-  }
+  const cleanLower = clean.toLowerCase();
   const cleanUsername = clean.replace(/^@/, '').toLowerCase();
 
-  // 1. Direct match for primary user
-  if (cleanUsername === 'jatin') {
-    return 'bhardwajjatin093@gmail.com';
+  // 1. Direct match for primary user - route to clean, non-bloated account
+  if (
+    cleanUsername === 'jatin' ||
+    cleanLower === 'bhardwajjatin093@gmail.com' ||
+    cleanLower === 'bhardwajjatin093+1@gmail.com'
+  ) {
+    return 'bhardwajjatin093+1@gmail.com';
   }
 
   // 2. Check local device mapping
@@ -180,9 +182,11 @@ export async function getCurrentUserProfile(
       meta.username ||
       (emailPrefix ? emailPrefix.toLowerCase() : 'member');
 
+    const cleanEmail = rawEmail.replace('+1@gmail.com', '@gmail.com');
+
     const profile: UserProfile = {
       id: targetId,
-      email: rawEmail,
+      email: cleanEmail,
       displayName,
       username,
       createdAt: user.created_at,

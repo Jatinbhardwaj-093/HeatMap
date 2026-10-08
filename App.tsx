@@ -14,7 +14,7 @@ import {
 import { SafeAreaView, SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar as ExpoStatusBar } from 'expo-status-bar';
 import { HeatMapModel, ViewMode } from './src/types/heatmap';
-import { loadHeatMaps, saveHeatMaps, deleteHeatMap, forceSyncFromCloud, getResolvedUserId } from './src/utils/storage';
+import { loadHeatMaps, saveHeatMaps, deleteHeatMap, forceSyncFromCloud, getResolvedUserId, getSyncChannel, CLIENT_INSTANCE_ID } from './src/utils/storage';
 import { getTodayKey } from './src/utils/dateUtils';
 import { Header } from './src/components/Header';
 import { HeatmapCard } from './src/components/HeatmapCard';
@@ -206,10 +206,20 @@ function AppContent() {
       window.addEventListener('hashchange', handleHashChange);
     }
 
-    // 6. Periodic background sync every 30s
+    // 6. Supabase Realtime broadcast listener for instant simultaneous cross-device sync (<100ms)
+    const ch = getSyncChannel();
+    ch.on('broadcast', { event: 'habits_changed' }, (data: any) => {
+      const payload = data?.payload;
+      if (payload?.sourceClientId === CLIENT_INSTANCE_ID) {
+        return;
+      }
+      refreshHabits(true);
+    });
+
+    // 7. Periodic background sync every 15s (defensive fallback)
     const syncInterval = setInterval(() => {
       refreshHabits(false);
-    }, 30000);
+    }, 15000);
 
     return () => {
       authListener.subscription.unsubscribe();

@@ -51,20 +51,64 @@ function getLegacyStorageKey(userId?: string): string {
 
 const DELETED_MAPS_KEY_PREFIX = '@trackheat_deleted_maps_';
 
+export const DUMMY_SHOWCASE_HABIT_IDS = new Set([
+  'hm-deep-work',
+  'hm-strength-training',
+  'hm-reading-research',
+  'hm-clean-nutrition',
+  'hm-evening-reflection',
+  'hm-fitness-strength',
+  'hm-diet-clean',
+]);
+
+export const CLIENT_INSTANCE_ID = Math.random().toString(36).substring(2, 10);
+
+let syncChannel: ReturnType<typeof supabase.channel> | null = null;
+
+export function getSyncChannel() {
+  if (!syncChannel) {
+    syncChannel = supabase.channel('trackheat_sync_hub', {
+      config: {
+        broadcast: { ack: false },
+      },
+    });
+    syncChannel.subscribe();
+  }
+  return syncChannel;
+}
+
+export async function broadcastHabitsChanged(sourceUserId?: string) {
+  try {
+    const ch = getSyncChannel();
+    await ch.send({
+      type: 'broadcast',
+      event: 'habits_changed',
+      payload: {
+        sourceClientId: CLIENT_INSTANCE_ID,
+        userId: sourceUserId,
+        timestamp: Date.now(),
+      },
+    });
+  } catch {}
+}
+
 /**
  * Retrieves the set of deleted habit IDs for the given user (tombstones).
  */
 export async function getDeletedMapIds(userId?: string): Promise<Set<string>> {
   const resolvedId = userId || (await getResolvedUserId());
   const key = `${DELETED_MAPS_KEY_PREFIX}${resolvedId || 'guest'}`;
+  const deletedSet = new Set<string>(DUMMY_SHOWCASE_HABIT_IDS);
   try {
     const raw = await AsyncStorage.getItem(key);
     if (raw) {
       const list = JSON.parse(raw);
-      if (Array.isArray(list)) return new Set(list);
+      if (Array.isArray(list)) {
+        for (const id of list) deletedSet.add(id);
+      }
     }
   } catch {}
-  return new Set();
+  return deletedSet;
 }
 
 /**
@@ -423,7 +467,11 @@ export async function saveHeatMaps(maps: HeatMapModel[], userId?: string): Promi
     await AsyncStorage.setItem(`@trackheat_local_updated_at_${resolvedId || 'guest'}`, Date.now().toString());
 
     if (resolvedId) {
-      syncHabitsToCloud(cleanMaps, resolvedId).catch((err) => {
+      syncHabitsToCloud(cleanMaps, resolvedId).then((success) => {
+        if (success) {
+          broadcastHabitsChanged(resolvedId).catch(() => {});
+        }
+      }).catch((err) => {
         console.warn('saveHeatMaps cloud sync error:', err);
       });
     }
@@ -465,7 +513,11 @@ export async function deleteHeatMap(mapId: string, userId?: string): Promise<Hea
 
   // 4. Immediately sync to cloud with deleted_habit_ids
   if (resolvedId) {
-    syncHabitsToCloud(updatedMaps, resolvedId).catch((err) => {
+    syncHabitsToCloud(updatedMaps, resolvedId).then((success) => {
+      if (success) {
+        broadcastHabitsChanged(resolvedId).catch(() => {});
+      }
+    }).catch((err) => {
       console.warn('deleteHeatMap cloud sync error:', err);
     });
   }
@@ -528,7 +580,11 @@ export async function forceSyncFromCloud(userId?: string): Promise<HeatMapModel[
       await AsyncStorage.removeItem(`@trackheat_pending_sync_${resolvedId}`);
 
       if (JSON.stringify(merged) !== JSON.stringify(cloudHabits)) {
-        syncHabitsToCloud(merged, resolvedId).catch(() => {});
+        syncHabitsToCloud(merged, resolvedId).then((success) => {
+          if (success) {
+            broadcastHabitsChanged(resolvedId).catch(() => {});
+          }
+        }).catch(() => {});
       }
 
       updateAndroidWidgets().catch(() => {});
