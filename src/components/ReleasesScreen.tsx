@@ -48,7 +48,7 @@ interface ReleaseData {
   }[];
 }
 
-const GITHUB_REPO = 'https://github.com/Jatinbhardwaj-093/HeatMap';
+const GITHUB_REPO = 'https://github.com/Jatinbhardwaj-093/TrackHeat';
 
 const ALL_RELEASES: ReleaseData[] = [
   {

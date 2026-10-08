@@ -173,7 +173,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
     }));
   };
 
-  const GITHUB_REPO = 'https://github.com/Jatinbhardwaj-093/HeatMap';
+  const GITHUB_REPO = 'https://github.com/Jatinbhardwaj-093/TrackHeat';
   const RELEASE_TAG_URL = `${GITHUB_REPO}/releases/tag/v1.2.2`;
   const MAC_DMG_URL = `${GITHUB_REPO}/releases/download/v1.2.2/TrackHeat-1.2.2-arm64.dmg`;
   const ANDROID_APK_URL = `${GITHUB_REPO}/releases/download/v1.2.2/TrackHeat-1.2.2.apk`;

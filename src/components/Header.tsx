@@ -1,13 +1,14 @@
 import React from 'react';
 import { StyleSheet, View, Text, TouchableOpacity, Platform, Image } from 'react-native';
-import { Smartphone, Sun, Moon, Monitor, User } from 'lucide-react-native';
+import { Smartphone, Sun, Moon, Monitor, User, Download } from 'lucide-react-native';
 import { useAppTheme, useThemeMode } from '../theme/theme';
-import { isMacDesktop, dragRegion, noDragRegion } from '../utils/platform';
+import { isMacDesktop, isElectronApp, dragRegion, noDragRegion } from '../utils/platform';
 
 interface HeaderProps {
   onOpenWidgetStudio: () => void;
   onOpenAccountModal: () => void;
   onLogout?: () => void;
+  onOpenReleases?: () => void;
   userEmail?: string;
   userName?: string;
   userHandle?: string;
@@ -19,6 +20,7 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenWidgetStudio,
   onOpenAccountModal,
   onLogout,
+  onOpenReleases,
   userEmail,
   userName,
   userHandle,
@@ -41,6 +43,29 @@ export const Header: React.FC<HeaderProps> = ({
   };
 
   const displayName = userName || (userHandle ? `@${userHandle}` : userEmail);
+
+  const getDownloadTarget = () => {
+    if (typeof window === 'undefined' || typeof navigator === 'undefined') {
+      return { label: 'Download', url: '#releases' };
+    }
+    const ua = navigator.userAgent || '';
+    if (/Android/i.test(ua)) {
+      return {
+        label: 'Download APK',
+        url: 'https://github.com/Jatinbhardwaj-093/TrackHeat/releases/download/v1.2.2/TrackHeat-1.2.2.apk',
+      };
+    }
+    if (/Macintosh|Mac OS X/i.test(ua) && !/iPhone|iPad|iPod/i.test(ua)) {
+      return {
+        label: 'Download for Mac',
+        url: 'https://github.com/Jatinbhardwaj-093/TrackHeat/releases/download/v1.2.2/TrackHeat-1.2.2-arm64.dmg',
+      };
+    }
+    return {
+      label: 'Download App',
+      url: '#releases',
+    };
+  };
 
   return (
     <View
@@ -76,6 +101,33 @@ export const Header: React.FC<HeaderProps> = ({
 
         {/* Right Actions */}
         <View style={[styles.actionButtons, noDragRegion]}>
+
+          {/* Download App (Web only: device-tailored download pill) */}
+          {Platform.OS === 'web' && !isElectronApp() && (
+            <TouchableOpacity
+              style={[
+                styles.actionBtn,
+                styles.downloadBtn,
+                { backgroundColor: theme.surfaceHighlight, borderColor: theme.borderSubtle },
+              ]}
+              onPress={() => {
+                const target = getDownloadTarget();
+                if (target.url.startsWith('#')) {
+                  if (typeof window !== 'undefined') window.location.hash = target.url;
+                  onOpenReleases?.();
+                } else {
+                  if (typeof window !== 'undefined') window.open(target.url, '_blank');
+                }
+              }}
+              activeOpacity={0.7}
+              accessibilityLabel={getDownloadTarget().label}
+            >
+              <Download size={14} color={theme.text} strokeWidth={2} />
+              <Text style={[styles.widgetBtnText, { color: theme.text }]}>
+                {getDownloadTarget().label}
+              </Text>
+            </TouchableOpacity>
+          )}
 
           {/* Theme Switcher */}
           <TouchableOpacity
@@ -187,6 +239,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   widgetBtn: {
+    width: 'auto',
+    flexDirection: 'row',
+    paddingHorizontal: 10,
+    gap: 6,
+  },
+  downloadBtn: {
     width: 'auto',
     flexDirection: 'row',
     paddingHorizontal: 10,

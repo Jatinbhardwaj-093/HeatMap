@@ -59,7 +59,7 @@ function AppContent() {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   
   const [heatmaps, setHeatmaps] = useState<HeatMapModel[]>([]);
-  const [loading, setLoading] = useState(shouldSkipLanding);
+  const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'synced' | 'offline'>('idle');
 
@@ -101,7 +101,7 @@ function AppContent() {
 
   useEffect(() => {
     async function initAuthAndData() {
-      // 1. Immediately check cached user for zero-latency dashboard restore
+      // 1. Immediately restore cached user & local habits in 0ms (offline-first)
       try {
         let cachedUserStr = await AsyncStorage.getItem(SAVED_USER_KEY);
         if (!cachedUserStr) {
@@ -124,13 +124,14 @@ function AppContent() {
         }
       } catch (e) {
         // ignore cache read errors
-      } finally {
-        setLoading(false);
       }
 
-      // 2. Validate / Hydrate session from Supabase
+      // 2. Validate session from Supabase in background with strict 2.5s timeout
       try {
-        const { data: { session } } = await supabase.auth.getSession();
+        const timeoutPromise = new Promise<{ data: { session: null } }>((resolve) =>
+          setTimeout(() => resolve({ data: { session: null } }), 2500)
+        );
+        const { data: { session } } = await Promise.race([supabase.auth.getSession(), timeoutPromise]);
         const uid = session?.user?.id;
         if (session?.user && uid) {
           setUserEmail(session.user.email);
@@ -138,32 +139,15 @@ function AppContent() {
           setCurrentScreen('dashboard');
           await AsyncStorage.setItem(SAVED_USER_KEY, JSON.stringify({ id: uid, email: session.user.email }));
           const freshData = await loadHeatMaps(uid);
-          setHeatmaps(freshData);
+          if (freshData && freshData.length > 0) {
+            setHeatmaps(freshData);
+          }
           getCurrentUserProfile().then((p) => {
             if (p) setUserProfile(p);
           });
-        } else {
-          // If no active session, attempt background token refresh if cached user exists
-          const cachedUserStr = await AsyncStorage.getItem(SAVED_USER_KEY);
-          if (cachedUserStr) {
-            const { data: refreshed } = await supabase.auth.refreshSession();
-            if (refreshed.session?.user) {
-              const rUid = refreshed.session.user.id;
-              setUserEmail(refreshed.session.user.email);
-              setUserId(rUid);
-              setCurrentScreen('dashboard');
-              const freshData = await loadHeatMaps(rUid);
-              setHeatmaps(freshData);
-              getCurrentUserProfile().then((p) => {
-                if (p) setUserProfile(p);
-              });
-            }
-          }
         }
       } catch (err) {
-        // If offline or network issue, maintain current cached dashboard
-      } finally {
-        setLoading(false);
+        // Maintain local dashboard if offline
       }
     }
 
@@ -236,7 +220,7 @@ function AppContent() {
       }
       clearInterval(syncInterval);
     };
-  }, [userId, userEmail]);
+  }, []);
 
   const handleLogout = async () => {
     await AsyncStorage.removeItem(SAVED_USER_KEY);
@@ -336,15 +320,6 @@ function AppContent() {
     return heatmaps.filter((m) => m.title.toLowerCase().includes(q));
   }, [heatmaps, searchQuery]);
 
-  if (loading) {
-    return (
-      <View style={[{ flex: 1, backgroundColor: theme.background, justifyContent: 'center', alignItems: 'center' }]}>
-        <Text style={{ color: theme.textSecondary, fontFamily: fontStack }}>
-          Loading TrackHeat...
-        </Text>
-      </View>
-    );
-  }
 
   if (currentScreen === 'releases') {
     return (
@@ -444,6 +419,12 @@ function AppContent() {
         onOpenWidgetStudio={() => setShowWidgetStudio(true)}
         onOpenAccountModal={() => setShowAccountModal(true)}
         onLogout={handleLogout}
+        onOpenReleases={() => {
+          if (typeof window !== 'undefined') {
+            window.location.hash = '#releases';
+          }
+          setCurrentScreen('releases');
+        }}
         userEmail={userEmail}
         userName={userProfile?.displayName}
         userHandle={userProfile?.username}

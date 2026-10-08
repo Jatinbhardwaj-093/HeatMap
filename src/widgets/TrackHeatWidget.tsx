@@ -81,24 +81,24 @@ export function TrackHeatWidget({ map, config, width, height, isDark = true }: T
   const btnMarginLeft = 6;
   const btnMarginRight = 2;
 
-  // Height 2 sizing (header with top-left button + habit title, full-width matrix below)
-  // Sleek 16x16 circular button saves vertical space and prevents row 7 cutoff
-  const btnSize = 16;
-  const headerMarginBottom = 5;
-  const headerHeight = 18;
-  // Scaled-down title font size so descenders never get cut off
-  const titleFontSize = Math.min(11, Math.max(9.5, Math.floor(width / 28)));
+  // Height 2 sizing (header with top-left button + habit title, centered matrix below)
+  const btnSize = 18;
+  const headerMarginBottom = 6;
+  const headerHeight = 20;
+  // Clear, readable title font size
+  const titleFontSize = Math.min(13, Math.max(11, Math.floor(width / 24)));
 
-  // Available vertical space for 7 matrix rows (Monday to Sunday) with safety buffer
+  // Available vertical space for 7 matrix rows (Monday to Sunday)
   const availableGridHeight = isSingleRow
     ? Math.max(28, height - paddingV * 2)
-    : Math.max(28, height - paddingV - paddingBottomH2 - headerHeight - headerMarginBottom - 4);
+    : Math.max(28, height - paddingV - paddingBottomH2 - headerHeight - headerMarginBottom);
 
   const gapY = isSingleRow ? 1.5 : 2;
   const rawCellSize = Math.floor((availableGridHeight - gapY * 6) / 7);
+  // Slightly smaller cell size for ample safety clearance
   const cellSize = isSingleRow
     ? Math.min(8, Math.max(4, rawCellSize))
-    : Math.min(12, Math.max(5, rawCellSize));
+    : Math.min(9.5, Math.max(5, rawCellSize - 1.5));
 
   // The exact grid height of the 7 rows
   const gridHeight = cellSize * 7 + gapY * 6;
@@ -285,7 +285,7 @@ export function TrackHeatWidget({ map, config, width, height, isDark = true }: T
           marginBottom: headerMarginBottom,
         }}
       >
-        {/* Log Today Button on Left Top (perfectly centered icon, compact 16x16) */}
+        {/* Log Today Button on Left Top (perfectly centered icon) */}
         <FlexWidget
           style={{
             width: btnSize,
@@ -305,13 +305,13 @@ export function TrackHeatWidget({ map, config, width, height, isDark = true }: T
           <SvgWidget
             svg={isTodayDone ? checkSvg : plusSvg}
             style={{
-              width: 9,
-              height: 9,
+              width: 10,
+              height: 10,
             }}
           />
         </FlexWidget>
 
-        {/* Habit Name right next to button with ample height so descenders don't get cut */}
+        {/* Habit Name right next to button with ample height */}
         <FlexWidget
           style={{
             flex: 1,
@@ -335,13 +335,15 @@ export function TrackHeatWidget({ map, config, width, height, isDark = true }: T
         </FlexWidget>
       </FlexWidget>
 
-      {/* 2. Contribution Matrix: 7 rows stretched edge-to-edge */}
+      {/* 2. Contribution Matrix: 7 rows centered horizontally & vertically */}
       <FlexWidget
         style={{
           flexDirection: 'row',
           alignItems: 'center',
+          justifyContent: 'center',
           height: gridHeight,
           width: 'match_parent',
+          flex: 1,
         }}
       >
         {columns.map((col, colIdx) => (

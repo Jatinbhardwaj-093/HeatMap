@@ -82,97 +82,160 @@ export async function recordDeletedMapId(mapId: string, userId?: string): Promis
 }
 
 /**
- * Retrieves the authoritative user object from Supabase, refreshing session tokens if expired.
+ * Compacts habits for minimal cloud payload footprint (< 2KB total).
+ * Strips redundant nested keys and empty days, ensuring JWT tokens remain tiny.
  */
-export async function getFreshAuthenticatedUser(): Promise<any | null> {
-  try {
-    let { data: { session } } = await supabase.auth.getSession();
-    const nowSec = Math.floor(Date.now() / 1000);
-
-    // If session is missing or expiring within 60 seconds, refresh it
-    if (!session || !session.expires_at || session.expires_at < nowSec + 60) {
-      const { data: refreshed, error: refErr } = await supabase.auth.refreshSession();
-      if (!refErr && refreshed?.session) {
-        session = refreshed.session;
+export function compactHabitsForCloud(habits: HeatMapModel[]): any[] {
+  return habits.map((h) => {
+    const compactEntries: Record<string, any> = {};
+    if (h.entries) {
+      for (const [dateKey, entry] of Object.entries(h.entries)) {
+        if (!entry) continue;
+        if (entry.completed && !entry.notes) {
+          compactEntries[dateKey] = true;
+        } else if (entry.completed || entry.notes) {
+          compactEntries[dateKey] = {
+            c: entry.completed ? 1 : 0,
+            ...(entry.notes ? { n: entry.notes } : {}),
+          };
+        }
       }
     }
+    return {
+      id: h.id,
+      title: h.title,
+      category: h.category,
+      paletteId: h.paletteId,
+      defaultView: h.defaultView,
+      createdAt: h.createdAt,
+      entries: compactEntries,
+    };
+  });
+}
 
-    if (!session?.access_token) {
-      return null;
+/**
+ * Unpacks cloud habits back into full client HeatMapModel instances.
+ */
+export function unpackCloudHabits(rawList: any[]): HeatMapModel[] {
+  if (!Array.isArray(rawList)) return [];
+  return rawList.map((item) => {
+    const unpackedEntries: Record<string, any> = {};
+    if (item.entries && typeof item.entries === 'object') {
+      for (const [dateKey, val] of Object.entries(item.entries)) {
+        if (val === true || val === 1) {
+          unpackedEntries[dateKey] = { date: dateKey, completed: true };
+        } else if (typeof val === 'object' && val !== null) {
+          unpackedEntries[dateKey] = {
+            date: dateKey,
+            completed: Boolean((val as any).c ?? (val as any).completed),
+            notes: (val as any).n || (val as any).notes,
+          };
+        }
+      }
     }
+    return {
+      id: item.id || `hm-${Date.now()}`,
+      title: item.title || 'Untitled Tracker',
+      category: item.category || 'HABIT',
+      paletteId: item.paletteId || 'github',
+      defaultView: item.defaultView || 'YEAR',
+      createdAt: item.createdAt || new Date().toISOString(),
+      entries: unpackedEntries,
+    };
+  });
+}
 
-    // Always fetch fresh metadata from server
-    const { data: userData, error: userErr } = await supabase.auth.getUser();
-    if (!userErr && userData?.user) {
-      return userData.user;
-    }
+/**
+ * Retrieves the authoritative user object from Supabase, refreshing session tokens if expired.
+ * Guarded with a strict 3.5s timeout so network latency never blocks the app.
+ */
+export async function getFreshAuthenticatedUser(): Promise<any | null> {
+  const timeoutPromise = new Promise<null>((resolve) => setTimeout(() => resolve(null), 3500));
 
-    // If getUser failed, try one more refresh
-    const { data: refreshed2 } = await supabase.auth.refreshSession();
-    if (refreshed2?.session?.user) {
-      const { data: retryUser } = await supabase.auth.getUser();
-      return retryUser?.user || refreshed2.session.user;
-    }
-
-    return session?.user || null;
-  } catch (err) {
-    console.warn('getFreshAuthenticatedUser error:', err);
+  const fetchPromise = (async () => {
     try {
-      const { data: { session } } = await supabase.auth.getSession();
+      let { data: { session } } = await supabase.auth.getSession();
+      const nowSec = Math.floor(Date.now() / 1000);
+
+      // If session is missing or expiring within 60 seconds, refresh it
+      if (!session || !session.expires_at || session.expires_at < nowSec + 60) {
+        const { data: refreshed, error: refErr } = await supabase.auth.refreshSession();
+        if (!refErr && refreshed?.session) {
+          session = refreshed.session;
+        }
+      }
+
+      if (!session?.access_token) {
+        return null;
+      }
+
+      // Fetch fresh metadata from server
+      const { data: userData, error: userErr } = await supabase.auth.getUser();
+      if (!userErr && userData?.user) {
+        return userData.user;
+      }
+
       return session?.user || null;
     } catch {
       return null;
     }
-  }
+  })();
+
+  return Promise.race([fetchPromise, timeoutPromise]);
 }
 
 /**
  * Pushes habit data to Supabase user_metadata with session refresh and retry support.
+ * Automatically compacts data to prevent oversized auth headers.
  */
 export async function syncHabitsToCloud(maps: HeatMapModel[], userId?: string): Promise<boolean> {
   const resolvedId = userId || (await getResolvedUserId());
   if (!resolvedId) return false;
 
   try {
-    let user = await getFreshAuthenticatedUser();
-    if (!user) return false;
+    const timeoutPromise = new Promise<boolean>((resolve) => setTimeout(() => resolve(false), 4000));
 
-    const deletedIds = await getDeletedMapIds(resolvedId);
-    const cleanMaps = maps.filter((m) => m && m.id && !deletedIds.has(m.id));
+    const syncPromise = (async () => {
+      let user = await getFreshAuthenticatedUser();
+      if (!user) return false;
 
-    let { error } = await supabase.auth.updateUser({
-      data: {
-        habits: cleanMaps,
-        habits_updated_at: new Date().toISOString(),
-        deleted_habit_ids: Array.from(deletedIds),
-      },
-    });
+      const deletedIds = await getDeletedMapIds(resolvedId);
+      const cleanMaps = maps.filter((m) => m && m.id && !deletedIds.has(m.id));
+      const compactMaps = compactHabitsForCloud(cleanMaps);
 
-    if (error) {
-      console.warn('First updateUser attempt failed, refreshing session:', error.message);
-      await supabase.auth.refreshSession();
-      const retryResult = await supabase.auth.updateUser({
+      let { error } = await supabase.auth.updateUser({
         data: {
-          habits: cleanMaps,
+          habits: compactMaps,
           habits_updated_at: new Date().toISOString(),
           deleted_habit_ids: Array.from(deletedIds),
         },
       });
-      error = retryResult.error;
-    }
 
-    if (error) {
-      console.warn('Supabase updateUser error:', error.message);
-      await AsyncStorage.setItem(`@trackheat_pending_sync_${resolvedId}`, 'true');
-      return false;
-    }
+      if (error) {
+        await supabase.auth.refreshSession();
+        const retryResult = await supabase.auth.updateUser({
+          data: {
+            habits: compactMaps,
+            habits_updated_at: new Date().toISOString(),
+            deleted_habit_ids: Array.from(deletedIds),
+          },
+        });
+        error = retryResult.error;
+      }
 
-    const nowIso = new Date().toISOString();
-    await AsyncStorage.setItem(`@trackheat_last_synced_${resolvedId}`, nowIso);
-    await AsyncStorage.removeItem(`@trackheat_pending_sync_${resolvedId}`);
-    return true;
+      if (error) {
+        await AsyncStorage.setItem(`@trackheat_pending_sync_${resolvedId}`, 'true');
+        return false;
+      }
+
+      const nowIso = new Date().toISOString();
+      await AsyncStorage.setItem(`@trackheat_last_synced_${resolvedId}`, nowIso);
+      await AsyncStorage.removeItem(`@trackheat_pending_sync_${resolvedId}`);
+      return true;
+    })();
+
+    return Promise.race([syncPromise, timeoutPromise]);
   } catch (err) {
-    console.warn('syncHabitsToCloud exception:', err);
     if (resolvedId) {
       await AsyncStorage.setItem(`@trackheat_pending_sync_${resolvedId}`, 'true');
     }
@@ -306,31 +369,33 @@ export async function loadHeatMaps(userId?: string): Promise<HeatMapModel[]> {
           }
         }
 
-        // Filter cloud habits by deleted IDs
+        // Unpack and filter cloud habits by deleted IDs
         const rawCloudHabits = user?.user_metadata?.habits;
-        const cloudHabits = Array.isArray(rawCloudHabits)
-          ? rawCloudHabits.filter((m: HeatMapModel) => m && m.id && !deletedIds.has(m.id))
-          : [];
+        const unpackedCloud = unpackCloudHabits(rawCloudHabits);
+        const cloudHabits = unpackedCloud.filter((m: HeatMapModel) => m && m.id && !deletedIds.has(m.id));
 
         // Bidirectional CRDT merge: local + cloud
         const merged = mergeHabitLists(localMaps, cloudHabits, deletedIds);
 
-        const mergedJson = JSON.stringify(merged);
-        const localJson = JSON.stringify(localMaps);
-        const cloudJson = JSON.stringify(cloudHabits);
+        // Never wipe local habits if cloud returned empty while local has entries
+        if (merged.length > 0 || (localMaps.length === 0 && cloudHabits.length === 0)) {
+          const mergedJson = JSON.stringify(merged);
+          const localJson = JSON.stringify(localMaps);
+          const cloudJson = JSON.stringify(cloudHabits);
 
-        // If merged data has changes compared to local, persist locally
-        if (mergedJson !== localJson) {
-          localMaps = merged;
-          await AsyncStorage.setItem(key, mergedJson);
-          await AsyncStorage.setItem(`@trackheat_last_synced_${resolvedId}`, new Date().toISOString());
-        }
+          // If merged data has changes compared to local, persist locally
+          if (mergedJson !== localJson) {
+            localMaps = merged;
+            await AsyncStorage.setItem(key, mergedJson);
+            await AsyncStorage.setItem(`@trackheat_last_synced_${resolvedId}`, new Date().toISOString());
+          }
 
-        // If local had habits/entries not yet in cloud, push to cloud
-        if (mergedJson !== cloudJson) {
-          await syncHabitsToCloud(merged, resolvedId);
-        } else {
-          await AsyncStorage.removeItem(`@trackheat_pending_sync_${resolvedId}`);
+          // If local had habits/entries not yet in cloud, push to cloud
+          if (mergedJson !== cloudJson) {
+            syncHabitsToCloud(merged, resolvedId).catch(() => {});
+          } else {
+            await AsyncStorage.removeItem(`@trackheat_pending_sync_${resolvedId}`);
+          }
         }
       }
     } catch (err) {
@@ -441,9 +506,8 @@ export async function forceSyncFromCloud(userId?: string): Promise<HeatMapModel[
     }
 
     const rawCloudHabits = user?.user_metadata?.habits;
-    const cloudHabits = Array.isArray(rawCloudHabits)
-      ? rawCloudHabits.filter((m: HeatMapModel) => m && m.id && !deletedIds.has(m.id))
-      : [];
+    const unpackedCloud = unpackCloudHabits(rawCloudHabits);
+    const cloudHabits = unpackedCloud.filter((m: HeatMapModel) => m && m.id && !deletedIds.has(m.id));
 
     const key = getStorageKey(resolvedId);
     let localMaps: HeatMapModel[] = [];
@@ -458,17 +522,20 @@ export async function forceSyncFromCloud(userId?: string): Promise<HeatMapModel[
     } catch {}
 
     const merged = mergeHabitLists(localMaps, cloudHabits, deletedIds);
-    await AsyncStorage.setItem(key, JSON.stringify(merged));
-    await AsyncStorage.setItem(`@trackheat_last_synced_${resolvedId}`, new Date().toISOString());
-    await AsyncStorage.removeItem(`@trackheat_pending_sync_${resolvedId}`);
+    if (merged.length > 0 || (localMaps.length === 0 && cloudHabits.length === 0)) {
+      await AsyncStorage.setItem(key, JSON.stringify(merged));
+      await AsyncStorage.setItem(`@trackheat_last_synced_${resolvedId}`, new Date().toISOString());
+      await AsyncStorage.removeItem(`@trackheat_pending_sync_${resolvedId}`);
 
-    // If local had habits/entries that need uploading to cloud, sync now
-    if (JSON.stringify(merged) !== JSON.stringify(cloudHabits)) {
-      await syncHabitsToCloud(merged, resolvedId);
+      if (JSON.stringify(merged) !== JSON.stringify(cloudHabits)) {
+        syncHabitsToCloud(merged, resolvedId).catch(() => {});
+      }
+
+      updateAndroidWidgets().catch(() => {});
+      return merged;
     }
 
-    updateAndroidWidgets().catch(() => {});
-    return merged;
+    return localMaps;
   } catch (err) {
     console.warn('forceSyncFromCloud error:', err);
   }

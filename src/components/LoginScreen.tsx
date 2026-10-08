@@ -548,6 +548,17 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
                   placeholderTextColor={theme.textMuted}
                   secureTextEntry={!showPassword}
                   value={password}
+                  returnKeyType="go"
+                  onSubmitEditing={handleAuth}
+                  {...(Platform.OS === 'web'
+                    ? {
+                        onKeyPress: (e: any) => {
+                          if (e.nativeEvent?.key === 'Enter' || e.key === 'Enter') {
+                            handleAuth();
+                          }
+                        },
+                      }
+                    : {})}
                   onFocus={() => {
                     setFocusedField('password');
                     setTimeout(() => {

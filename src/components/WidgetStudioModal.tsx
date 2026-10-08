@@ -95,7 +95,7 @@ export const WidgetStudioModal: React.FC<WidgetStudioModalProps> = ({
     preset === '2x2' ? 9 :
     preset === '4x2' ? 19 : 23;
 
-  const cellSize = isSingleRow ? 7 : 11;
+  const cellSize = isSingleRow ? 7 : 9.5;
   const cellGap = isSingleRow ? 2 : 2.5;
   const gridHeight = cellSize * 7 + cellGap * 6;
   const btnWidth = isSingleRow ? 18 : 22;
@@ -515,7 +515,7 @@ export const WidgetStudioModal: React.FC<WidgetStudioModalProps> = ({
                     </View>
 
                     {/* Contribution Matrix below across full width */}
-                    <View style={[styles.matrixColumns, { gap: cellGap, width: '100%' }]}>
+                    <View style={[styles.matrixColumns, { gap: cellGap, width: '100%', justifyContent: 'center' }]}>
                       {widgetGrid.map((week, wIdx) => (
                         <View key={`ww-${wIdx}`} style={[styles.matrixColumn, { gap: cellGap }]}>
                           {week.map((day) =>

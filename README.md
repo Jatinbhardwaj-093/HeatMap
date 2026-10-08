@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/Jatinbhardwaj-093/HeatMap/releases/tag/v1.2.2"><img src="https://img.shields.io/badge/Release-v1.2.2-238636.svg?style=flat-square" alt="Version 1.2.2" /></a>
+  <a href="https://github.com/Jatinbhardwaj-093/TrackHeat/releases/tag/v1.2.2"><img src="https://img.shields.io/badge/Release-v1.2.2-238636.svg?style=flat-square" alt="Version 1.2.2" /></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square" alt="License: MIT" /></a>
   <img src="https://img.shields.io/badge/Expo-SDK_57-black.svg?style=flat-square&logo=expo" alt="Expo SDK 57" />
   <img src="https://img.shields.io/badge/React_Native-0.86-61DAFB.svg?style=flat-square&logo=react" alt="React Native 0.86" />
@@ -38,8 +38,8 @@ Official binary releases for version 1.2.2:
 
 | Platform | Format | Status | Link |
 | :--- | :--- | :--- | :--- |
-| **macOS** | DMG (Apple Silicon / ARM64) | Production | [Download TrackHeat-1.2.2-arm64.dmg](https://github.com/Jatinbhardwaj-093/HeatMap/releases/download/v1.2.2/TrackHeat-1.2.2-arm64.dmg) |
-| **Android** | Standalone APK | Production | [Download TrackHeat-1.2.2.apk](https://github.com/Jatinbhardwaj-093/HeatMap/releases/download/v1.2.2/TrackHeat-1.2.2.apk) |
+| **macOS** | DMG (Apple Silicon / ARM64) | Production | [Download TrackHeat-1.2.2-arm64.dmg](https://github.com/Jatinbhardwaj-093/TrackHeat/releases/download/v1.2.2/TrackHeat-1.2.2-arm64.dmg) |
+| **Android** | Standalone APK | Production | [Download TrackHeat-1.2.2.apk](https://github.com/Jatinbhardwaj-093/TrackHeat/releases/download/v1.2.2/TrackHeat-1.2.2.apk) |
 | **Web** | Progressive Web Application | Live | [https://trackheat.surge.sh](https://trackheat.surge.sh) |
 | **iOS** | Native IPA with WidgetKit | In Development | Coming Soon |
 
@@ -217,7 +217,7 @@ TrackHeat is engineered with strict defensive security principles:
 ### 1. Clone & Install Dependencies
 
 ```bash
-git clone https://github.com/Jatinbhardwaj-093/HeatMap.git trackheat
+git clone https://github.com/Jatinbhardwaj-093/TrackHeat.git trackheat
 cd trackheat
 npm install
 ```
@@ -337,7 +337,7 @@ trackheat/
 
 ## Contributing
 
-Contributions, issues, and feature requests are welcome. Feel free to open an issue or submit a pull request on [GitHub](https://github.com/Jatinbhardwaj-093/HeatMap).
+Contributions, issues, and feature requests are welcome. Feel free to open an issue or submit a pull request on [GitHub](https://github.com/Jatinbhardwaj-093/TrackHeat).
 
 1. Fork the repository.
 2. Create a feature branch: `git checkout -b feature/MyFeature`
